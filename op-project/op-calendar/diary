@@ -1,0 +1,14 @@
+
+
+Einschlieﬂlich Gruppenterminkalender und personenbezogenem Sekretariatskalender
+
+#include "$GROUPDIARYDIR/terminkalender_walther"
+
+#include "$GROUPDIARYDIR/terminkalender_schaefer"
+
+#include "$GROUPDIARYDIR/gruppenterminkalender"
+
+
+=============================================================================
+
+

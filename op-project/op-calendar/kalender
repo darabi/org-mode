@@ -1,0 +1,2 @@
+#!/bin/sh
+command emacs -l ~/op-project/op-calendar/op-calendar.el -f calendar-in-extra-window -iconic &
