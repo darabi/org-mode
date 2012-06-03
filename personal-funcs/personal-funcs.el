@@ -341,8 +341,7 @@ Includes custom, fl, font-lock, gnus, message, widget."
      (modeline-mousable-minor-mode ((t (:background "white" :foreground "black"))))
      (primary-selection ((t (:background "blue"))))
      (region ((t (:background "blue"))))
-     ;; (secondary-selection ((t (:background "#ffffd0" :foreground "black"))))
-     (secondary-selection ((t (:background "darkslateblue"))))
+     (secondary-selection ((t (:background "yellow" :foreground "black"))))
      (swbuff-current-buffer-face ((t (:foreground "red" :bold t :underline t))))
      (trailing-whitespace ((((class color) (background light)) (:background "#fff0f0"))))
      (underline ((t (:underline t))))
@@ -865,5 +864,18 @@ trailing space to the screen, so we want to mop that up."
 (add-hook 'ediff-after-quit-hooks 'git-mergetool-emacsclient-ediff-after-quit-hook 'append)
 
 ;;; END EDIFF
+
+;;; opening a readonly file with sudo or su
+(defun my-find-file-as-root ()
+  "Opens the file associated with the current buffer using the 
+tramp prefix /sudo:root@localhost:"
+  (interactive)
+  (let ((fname (buffer-file-name)))
+    (if (not fname)
+        (error "Current buffer has no associated file")
+        (if (or (eq 0 (string-match "/su:" (buffer-file-name)))
+                (eq 0 (string-match "/sudo:" (buffer-file-name))))
+            (message "Current buffer already shows a /su: or /sudo: file.")
+            (find-alternate-file (concat "/sudo:root@localhost:" fname))))))
 
 (provide 'personal-funcs)
