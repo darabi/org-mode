@@ -1,0 +1,4 @@
+[subtree "org-mode"]
+	url = git://orgmode.org/org-mode.git
+	path = org-mode
+	branch = master
