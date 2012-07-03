@@ -6,3 +6,7 @@
 	url = https://github.com/magit/magit.git
 	path = magit
 	branch = refs/heads/master
+[subtree "markdown"]
+	url = git://jblevins.org/git/markdown-mode.git
+	path = markdown
+	branch = refs/heads/master
