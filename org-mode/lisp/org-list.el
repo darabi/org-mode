@@ -252,8 +252,6 @@ bullet    when non-nil, cycling bullet do not allow lists at
           to be numbered.
 checkbox  when non-nil, checkbox statistics is updated each time
           you either insert a new checkbox or toggle a checkbox.
-          It also prevents from inserting a checkbox in a
-          description item.
 indent    when non-nil, indenting or outdenting list top-item
           with its subtree will move the whole list and
           outdenting a list whose bullet is * to column 0 will
@@ -491,7 +489,7 @@ group 4: description tag")
 
 (defun org-at-item-description-p ()
   "Is point at a description list item?"
-  (org-list-at-regexp-after-bullet-p "\\(\\S-.+\\)[ \t]+::[ \t]+"))
+  (org-list-at-regexp-after-bullet-p "\\(\\S-.+\\)[ \t]+::\\([ \t]+\\|$\\)"))
 
 (defun org-at-item-checkbox-p ()
   "Is point at a line starting a plain-list item with a checklet?"
@@ -1842,7 +1840,6 @@ Initial position of cursor is restored after the changes."
 	 (inlinetask-re (and (featurep 'org-inlinetask)
 			     (org-inlinetask-outline-regexp)))
 	 (item-re (org-item-re))
-	 (box-rule-p (cdr (assq 'checkbox org-list-automatic-rules)))
 	 (shift-body-ind
 	  (function
 	   ;; Shift the indentation between END and BEG by DELTA.
@@ -1881,9 +1878,6 @@ Initial position of cursor is restored after the changes."
 		 (replace-match new-bul nil nil nil 1))
 	       ;; b. Replace checkbox.
 	       (cond
-		((and new-box box-rule-p
-		      (save-match-data (org-at-item-description-p)))
-		 (message "Cannot add a checkbox to a description list item"))
 		((equal (match-string 3) new-box))
 		((and (match-string 3) new-box)
 		 (replace-match new-box nil nil nil 3))
@@ -2041,7 +2035,7 @@ Possible values are: `folded', `children' or `subtree'.  See
   (let (bpos bcol tpos tcol)
     (save-excursion
       (goto-char item)
-      (looking-at "[ \t]*\\(\\S-+\\)\\(.*[ \t]+::\\)?[ \t]+")
+      (looking-at "[ \t]*\\(\\S-+\\)\\(.*[ \t]+::\\)?\\([ \t]+\\|$\\)")
       (setq bpos (match-beginning 1) tpos (match-end 0)
 	    bcol (progn (goto-char bpos) (current-column))
 	    tcol (progn (goto-char tpos) (current-column)))
@@ -2199,17 +2193,11 @@ item is invisible."
 	       (prevs (org-list-prevs-alist struct))
 	       ;; If we're in a description list, ask for the new term.
 	       (desc (when (org-list-get-tag itemp struct)
-		       (concat (read-string "Term: ") " :: ")))
-	       ;; Don't insert a checkbox if checkbox rule is applied
-	       ;; and it is a description item.
-	       (checkp (and checkbox
-			    (or (not desc)
-				(not (cdr (assq 'checkbox
-						org-list-automatic-rules)))))))
+		       (concat (read-string "Term: ") " :: "))))
 	  (setq struct
-		(org-list-insert-item pos struct prevs checkp desc))
+		(org-list-insert-item pos struct prevs checkbox desc))
 	  (org-list-write-struct struct (org-list-parents-alist struct))
-	  (when checkp (org-update-checkbox-count-maybe))
+	  (when checkbox (org-update-checkbox-count-maybe))
 	  (looking-at org-list-full-item-re)
 	  (goto-char (match-end 0))
 	  t)))))

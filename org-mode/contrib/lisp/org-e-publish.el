@@ -40,21 +40,9 @@
 
 (eval-when-compile (require 'cl))
 (require 'format-spec)
+(require 'org-export)
 
-(declare-function org-element-property "org-element" (property element))
-(declare-function org-element-map "org-element"
-		  (data types fun &optional info first-match))
-
-(declare-function org-export-output-file-name "org-export"
-		  (extension &optional subtreep pub-dir))
-(declare-function
- org-export-to-file "org-export"
- (backend file &optional subtreep visible-only body-only ext-plist))
-(declare-function org-export-get-parent-headline "org-export" (blob info))
-(declare-function org-export-get-environment "org-export"
-		  (&optional backend subtreep ext-plist))
-(declare-function org-export-get-inbuffer-options "org-export"
-		  (&optional backend files))
+(declare-function org-e-latex-compile "org-e-latex" (texfile))
 
 
 
@@ -979,7 +967,7 @@ keyword."
        (when (string= (downcase (org-element-property :key k))
 		      "index")
 	 (let ((index (org-element-property :value k))
-	       (parent (org-export-get-parent-headline k info)))
+	       (parent (org-export-get-parent-headline k)))
 	   (list index (plist-get info :input-file) parent))))
      info)))
   ;; Return parse-tree to avoid altering output.
