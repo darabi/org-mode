@@ -10,3 +10,7 @@
 	url = git://jblevins.org/git/markdown-mode.git
 	path = markdown
 	branch = refs/heads/master
+[subtree "org-confluence"]
+	url = scm.tanpad.com:el/org-confluence
+	path = org-confluence
+	branch = refs/heads/master
