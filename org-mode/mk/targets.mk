@@ -5,6 +5,7 @@ DISTFILES_extra=  Makefile request-assign-future.txt contrib etc
 
 LISPDIRS      = lisp
 OTHERDIRS     = doc etc
+CLEANDIRS     = contrib testing mk
 SUBDIRS       = $(OTHERDIRS) $(LISPDIRS)
 INSTSUB       = $(SUBDIRS:%=install-%)
 ORG_MAKE_DOC ?= info html pdf
@@ -14,6 +15,7 @@ ifneq ($(wildcard .git),)
   ORGVERSION ?= $(subst release_,,$(shell git describe --abbrev=0 HEAD))
   GITSTATUS  ?= $(shell git status -uno --porcelain)
 else
+ -include mk/version.mk
   GITVERSION ?= N/A
   ORGVERSION ?= N/A
 endif
@@ -22,23 +24,34 @@ ifneq ($(GITSTATUS),)
   GITVERSION := $(GITVERSION:.dirty=).dirty
 endif
 
-.PHONY:	all oldorg update update2 up0 up1 up2 compile $(SUBDIRS) \
-	check test install info html pdf card doc docs $(INSTSUB) \
-	autoloads cleanall clean cleancontrib cleanutils cleanrel clean-install \
-	cleanelc cleandirs cleanlisp cleandoc cleandocs cleantest \
+.PHONY:	all oldorg update update2 up0 up1 up2 single $(SUBDIRS) \
+	check test install $(INSTSUB) \
+	info html pdf card refcard doc docs \
+	autoloads cleanall clean $(CLEANDIRS:%=clean%) \
+	clean-install cleanelc cleandirs \
+	cleanlisp cleandoc cleandocs cleantest \
 	compile compile-dirty uncompiled \
 	config config-test config-exe config-all config-eol
 
-CONF_BASE = EMACS lispdir infodir datadir testdir
+CONF_BASE = EMACS DESTDIR ORGCM ORG_MAKE_DOC
+CONF_DEST = lispdir infodir datadir testdir
 CONF_TEST = BTEST_PRE BTEST_POST BTEST_OB_LANGUAGES BTEST_EXTRA
 CONF_EXEC = CP MKDIR RM RMR FIND SUDO PDFTEX TEXI2PDF TEXI2HTML MAKEINFO INSTALL_INFO
-CONF_CALL = BATCH BATCHL ELCDIR BTEST MAKE_LOCAL_MK MAKE_ORG_INSTALL MAKE_ORG_VERSION
+CONF_CALL = BATCH BATCHL ELC ELCDIR BTEST MAKE_LOCAL_MK MAKE_ORG_INSTALL MAKE_ORG_VERSION
 config-eol:: EOL = \#
 config-eol:: config-all
 config config-all::
 	$(info )
 	$(info ========= Emacs executable and Installation paths)
 	$(foreach var,$(CONF_BASE),$(info $(var)	= $($(var))$(EOL)))
+	$(foreach var,$(CONF_DEST),$(info $(var)	= $(DESTDIR)$($(var))$(EOL)))
+	$(info ========= Additional files from contrib/lisp)
+	$(info $(notdir \
+		$(wildcard \
+		$(addsuffix .el, \
+		$(addprefix contrib/lisp/, \
+		$(basename \
+		$(notdir $(ORG_ADD_CONTRIB))))))))
 config-test config-all::
 	$(info )
 	$(info ========= Test configuration)
@@ -52,12 +65,15 @@ config-cmd config-all::
 	$(info ========= Commands used by make)
 	$(foreach var,$(CONF_CALL),$(info $(var)	= $($(var))$(EOL)))
 config config-test config-exe config-all::
-	$(info )
+	@echo ""
 
 oldorg:	compile info	# what the old makefile did when no target was specified
 uncompiled:	cleanlisp autoloads	# for developing
 refcard:	card
 update update2::	up0 all
+
+single:	ORGCM=single
+single:	compile
 
 .PRECIOUS:	local.mk
 local.mk:
@@ -105,34 +121,38 @@ $(INSTSUB):
 	$(MAKE) -C $(@:install-%=%) install
 
 autoloads: lisp
+ifneq ($(ORG_ADD_CONTRIB),)
+	$(CP) $(wildcard \
+		$(addsuffix .el, \
+		$(addprefix contrib/lisp/, \
+		$(basename \
+		$(notdir $(ORG_ADD_CONTRIB)))))) lisp/
+endif
 	$(MAKE) -C $< $@
 
 cleandirs:
 	$(foreach dir, $(SUBDIRS), $(MAKE) -C $(dir) cleanall;)
 
-clean:	cleanrel
-	$(MAKE) -C lisp clean
-	$(MAKE) -C doc clean
+clean:	cleanlisp cleandoc
 
-cleanall: cleandirs cleantest cleancontrib cleanutils
-	-$(FIND) . -name \*~ -o -name \*# -o -name .#\* -exec $(RM) {} \;
+cleanall: cleandirs cleantest cleanaddcontrib
+	-$(FIND) . \( -name \*~ -o -name \*# -o -name .#\* \) -exec $(RM) {} \;
+	-$(FIND) $(CLEANDIRS) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} \;
 
-cleancontrib:
-	-$(FIND) contrib -name \*~ -o -name \*.elc -exec $(RM) {} \;
+$(CLEANDIRS:%=clean%):
+	-$(FIND) $(@:clean%=%) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} \;
 
-cleanutils:
-	-$(FIND) UTILITIES -name \*~ -o -name \*.elc -exec $(RM) {} \;
+cleanelc:
+	$(MAKE) -C lisp $@
 
-cleanrel:
-	$(RMR) RELEASEDIR
-	$(RMR) org-7.*
-	$(RMR) org-7*zip org-7*tar.gz
+cleanaddcontrib:
+	-$(RM) $(wildcard $(addprefix lisp/,$(notdir $(wildcard contrib/lisp/*.el))))
 
-cleanelc cleanlisp:
-	$(MAKE) -C lisp clean
-	-$(FIND) lisp -name \*~ -exec $(RM) {} \;
+cleanlisp:	cleanaddcontrib
+cleanlisp cleandoc:
+	$(MAKE) -C $(@:clean%=%) clean
 
-cleandoc cleandocs:
+cleandocs:
 	$(MAKE) -C doc clean
 	-$(FIND) doc -name \*~ -exec $(RM) {} \;
 

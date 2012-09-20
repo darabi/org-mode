@@ -22,6 +22,10 @@ infodir = $(prefix)/info
 # Define if you only need info documentation, the default includes html and pdf
 #ORG_MAKE_DOC = info # html pdf
 
+# Define if you want to include some (or all) files from contrib/lisp
+# just the filename please (no path prefix, no .el suffix), maybe with globbing
+#ORG_ADD_CONTRIB = org-e-* org-md org-export # e.g. the new exporter
+
 # Where to create temporary files for the testsuite
 # respect TMPDIR if it is already defined in the environment
 TMPDIR ?= /tmp
@@ -33,12 +37,13 @@ BTEST_PRE   =
 # add options after standard load path
 BTEST_POST  =
               # -L <path-to>/ert      # needed for Emacs23, Emacs24 has ert built in
+              # -L <path-to>/ess      # needed for running R tests
               # -L <path-to>/htmlize  # need at least version 1.34 for source code formatting
 BTEST_OB_LANGUAGES = awk C fortran maxima lilypond octave python sh
-              # R is not activated by default because it requires ess to be installed and configured
+              # R                     # requires ESS to be installed and configured
 # extra packages to require for testing
 BTEST_EXTRA =
-
+              # ess-site  # load ESS for R tests
 ##->8-------------------------------------------------------------------
 ## YOU MAY NEED TO ADAPT THESE DEFINITIONS
 ##----------------------------------------------------------------------
@@ -66,7 +71,7 @@ BATCH	= $(EMACS) -batch -Q
 MAKE_LOCAL_MK = $(BATCH) \
 	  --eval '(add-to-list '"'"'load-path "./lisp")' \
 	  --eval '(load "org-compat.el")' \
-	  --eval '(load "../UTILITIES/org-fixup.el")' \
+	  --eval '(load "../mk/org-fixup.el")' \
 	  --eval '(org-make-local-mk)'
 
 # Emacs must be started in lisp directory
@@ -76,18 +81,22 @@ BATCHL	= $(BATCH) \
 # How to generate org-install.el
 MAKE_ORG_INSTALL = $(BATCHL) \
 	  --eval '(load "org-compat.el")' \
-	  --eval '(load "../UTILITIES/org-fixup.el")' \
+	  --eval '(load "../mk/org-fixup.el")' \
 	  --eval '(org-make-org-install)'
 
 # How to generate org-version.el
 MAKE_ORG_VERSION = $(BATCHL) \
 	  --eval '(load "org-compat.el")' \
-	  --eval '(load "../UTILITIES/org-fixup.el")' \
+	  --eval '(load "../mk/org-fixup.el")' \
 	  --eval '(org-make-org-version "$(ORGVERSION)" "$(GITVERSION)" "$(datadir)")'
 
 # How to byte-compile the whole source directory
 ELCDIR	= $(BATCHL) \
 	  --eval '(batch-byte-recompile-directory 0)'
+
+# How to byte-compile a single file
+ELC	= $(BATCHL) \
+	  --eval '(batch-byte-compile)'
 
 # How to make a pdf file from a texinfo file
 TEXI2PDF = texi2pdf --batch --clean
@@ -126,3 +135,11 @@ SUDO	= sudo
 # Name of the program to install info files
 # INSTALL_INFO = ginstall-info # Debian: avoid harmless warning message
 INSTALL_INFO = install-info
+
+# target method for 'compile'
+ORGCM	= dirall
+# ORGCM	= dirall #   1x slowdown compared to default compilation method
+# ORGCM	= single #   4x one Emacs process per compilation
+# ORGCM	= source #   5x ditto, but remove compiled file immediately
+# ORGCM	= slint1 #   3x possibly elicit more warnings
+# ORGCM	= slint2 #   7x possibly elicit even more warnings
