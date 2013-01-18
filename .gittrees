@@ -18,3 +18,7 @@
 	url = git://github.com/baohaojun/org-jira.git
 	path = org-jira
 	branch = refs/heads/master
+[subtree "easy-convert"]
+	url = scm.tanpad.com:el/easy-convert
+	path = easy-convert
+	branch = refs/heads/master
