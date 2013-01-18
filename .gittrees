@@ -14,3 +14,7 @@
 	url = scm.tanpad.com:el/org-confluence
 	path = org-confluence
 	branch = refs/heads/master
+[subtree "org-jira"]
+	url = git://github.com/baohaojun/org-jira.git
+	path = org-jira
+	branch = refs/heads/master
