@@ -52,10 +52,17 @@
 		     (table . org-confluence-table)
 		     (table-cell . org-confluence-table-cell)
 		     (table-row . org-confluence-table-row)
+		     (target . org-confluence-target)
 		     (template . org-confluence-template)
-		     (underline . org-confluence-underline)))
+		     (underline . org-confluence-underline))
+  :filters-alist '((:filter-inline-babel-call . org-confluence-babel-call-filter)
+		   (:filter-babel-call . org-confluence-babel-call-filter)))
 
 ;; All the functions we use
+(defun org-confluence-babel-call-filter (data backend channel)
+  ;; (message "@@@ darabi: %s, %s, %s" data backend channel)
+  (message "@@@ darabi: babel-call-filter"))
+
 (defun org-confluence-bold (bold contents info)
   (format "*%s*" contents))
 
@@ -83,16 +90,25 @@
             (if (org-string-nw-p contents) contents
               ""))))
 
+(defun org-confluence-target (target desc info)
+  (let ((value (org-element-property :value target)))
+    (concat "{anchor:" value "}")))
+
 (defun org-confluence-link (link desc info)
   (let ((raw-link (org-element-property :raw-link link)))
     (concat "["
-            (when (org-string-nw-p desc) (format "%s|" desc))
+            (if (org-string-nw-p desc)
+		(format "%s|" desc)
+		;; use target name as description (otherwise # would
+		;; appear in the text)
+		(format "%s|" raw-link))
             (cond
              ((string-match "^confluence:" raw-link)
               (replace-regexp-in-string "^confluence:" "" raw-link))
              (t
-              raw-link))
+              (concat "#" raw-link)))
             "]")))
+
 (defun org-confluence-section (section contents info)
   contents)
 
@@ -122,7 +138,7 @@
     (concat
      (when (org-export-table-row-starts-header-p table-row info)
        "|")
-     contents "|")))
+     contents " |")))
 
 (defun org-confluence-template (contents info)
   (let ((depth (plist-get info :with-toc)))
