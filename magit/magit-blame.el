@@ -1,4 +1,4 @@
-;;; magit-blame.el --- blame support for magit
+;;; magit-blame.el --- blame support for Magit
 
 ;; Copyright (C) 2012  Rüdiger Sonderfeld
 ;; Copyright (C) 2012  Yann Hodique
@@ -9,7 +9,6 @@
 ;; Copyright (C) 2008  Marius Vollmer
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
-;; Keywords:
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -26,11 +25,14 @@
 
 ;;; Commentary:
 
-;; This code has been backported from Egg (Magit fork) to Magit
+;; Control git-blame from Magit.
+;; This code has been backported from Egg (Magit fork) to Magit.
 
 ;;; Code:
 
+(eval-when-compile (require 'cl-lib))
 (require 'magit)
+(require 'easymenu)
 
 (defface magit-blame-header
   '((t :inherit magit-header))
@@ -63,8 +65,19 @@
     (define-key map (kbd "l") 'magit-blame-locate-commit)
     (define-key map (kbd "RET") 'magit-blame-locate-commit)
     (define-key map (kbd "q") 'magit-blame-mode)
+    (define-key map (kbd "n") 'magit-blame-next-chunk)
+    (define-key map (kbd "p") 'magit-blame-previous-chunk)
     map)
   "Keymap for an annotated section.\\{magit-blame-map}")
+
+(easy-menu-define magit-blame-mode-menu magit-blame-map
+  "Magit blame menu"
+  '("Blame"
+    ["Locate Commit" magit-blame-locate-commit t]
+    ["Next" magit-blame-next-chunk t]
+    ["Previous" magit-blame-previous-chunk t]
+    "---"
+    ["Quit" magit-blame-mode t]))
 
 (defvar magit-blame-buffer-read-only)
 (make-variable-buffer-local 'magit-blame-buffer-read-only)
@@ -122,6 +135,47 @@
     (if sha1
         (magit-show-commit sha1))))
 
+(defun magit-find-next-overlay-change (beg end prop)
+  "Return the next position after BEG where an overlay matching a
+property PROP starts or ends. If there are no matching overlay
+boundaries from BEG to END, the return value is nil."
+  (when (> beg end)
+    (let ((swap beg))
+      (setq beg end end swap)))
+  (save-excursion
+    (goto-char beg)
+    (catch 'found
+      (let ((ov-pos beg))
+        ;; iterate through overlay changes from BEG to END
+        (while (< ov-pos end)
+          (let* ((next-ov-pos (next-overlay-change ov-pos))
+                 ;; search for an overlay with a PROP property
+                 (next-ov
+                  (let ((overlays (overlays-at next-ov-pos)))
+                    (while (and overlays
+                                (not (overlay-get (car overlays) prop)))
+                      (setq overlays (cdr overlays)))
+                    (car overlays))))
+            (if next-ov
+                ;; found the next overlay with prop PROP at next-ov-pos
+                (throw 'found next-ov-pos)
+              ;; no matching overlay found, keep looking
+              (setq ov-pos next-ov-pos))))))))
+
+(defun magit-blame-next-chunk (pos)
+  "Go to the next blame chunk."
+  (interactive "d")
+  (let ((next-chunk-pos (magit-find-next-overlay-change pos (point-max) :blame)))
+    (when next-chunk-pos
+      (goto-char next-chunk-pos))))
+
+(defun magit-blame-previous-chunk (pos)
+  "Go to the previous blame chunk."
+  (interactive "d")
+  (let ((prev-chunk-pos (magit-find-next-overlay-change pos (point-min) :blame)))
+    (when prev-chunk-pos
+      (goto-char prev-chunk-pos))))
+
 (defcustom magit-time-format-string "%Y-%m-%dT%T%z"
   "How to format time in magit-blame header."
   :group 'magit
@@ -132,8 +186,8 @@
 
 The second argument TZ can be used to add the timezone in (-)HHMM
 format to UNIXTIME.  UNIXTIME should be either a number
-containing seconds since epoch or Emacs's (HIGH LOW
-. IGNORED) format."
+containing seconds since epoch or Emacs's (HIGH LOW . IGNORED)
+format."
   (when (numberp tz)
     (unless (numberp unixtime)
       (setq unixtime (float-time unixtime)))
