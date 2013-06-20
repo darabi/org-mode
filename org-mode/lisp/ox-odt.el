@@ -223,7 +223,7 @@ standard Emacs.")
 (defconst org-odt-table-style-format
   "
 <style:style style:name=\"%s\" style:family=\"table\">
-  <style:table-properties style:rel-width=\"%d%%\" fo:margin-top=\"0cm\" fo:margin-bottom=\"0.20cm\" table:align=\"center\"/>
+  <style:table-properties style:rel-width=\"%s%%\" fo:margin-top=\"0cm\" fo:margin-bottom=\"0.20cm\" table:align=\"center\"/>
 </style:style>
 "
   "Template for auto-generated Table styles.")
@@ -4065,7 +4065,7 @@ contextual information."
 	      ;; Delete temporary directory and also other embedded
 	      ;; files that get copied there.
 	      (delete-directory org-odt-zip-dir t)))))
-     (condition-case err
+;;     (condition-case err
 	 (progn
 	   (unless (executable-find "zip")
 	     ;; Not at all OSes ship with zip by default
@@ -4075,6 +4075,7 @@ contextual information."
 	   (progn ,@body)
 	   ;; Create a manifest entry for content.xml.
 	   (org-odt-create-manifest-file-entry "text/xml" "content.xml")
+	   (message "darabi: Created manifest entry")
 	   ;; Write mimetype file
 	   (let* ((mimetypes
 		   '(("odt" . "application/vnd.oasis.opendocument.text")
@@ -4086,6 +4087,7 @@ contextual information."
 	     (org-odt-create-manifest-file-entry mimetype "/" "1.2"))
 	   ;; Write out the manifest entries before zipping
 	   (org-odt-write-manifest-file)
+	   (message "darabi: Created manifest file")
 	   ;; Save all XML files.
 	   (mapc (lambda (file)
 		   (let ((buf (find-buffer-visiting
@@ -4147,12 +4149,13 @@ contextual information."
 	      ;; Case 2: No further conversion.  Return exported
 	      ;; OpenDocument file.
 	      (t target))))
-       (error
-	;; Cleanup work directory and work files.
-	(funcall --cleanup-xml-buffers)
-	(message "OpenDocument export failed: %s"
-		 (error-message-string err))))))
-
+       ;; (error
+       ;; 	;; Cleanup work directory and work files.
+       ;; 	(funcall --cleanup-xml-buffers)
+       ;; 	(message "OpenDocument export failed: %s"
+       ;; 		 (error-message-string err)))
+       ;; )))
+	 ))
 
 ;;;; Export to OpenDocument formula
 
