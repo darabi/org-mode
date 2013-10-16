@@ -409,11 +409,11 @@ returned."
 	  hits))))))
 
 (defconst org-debbugs-mode-map
-  "Keymap for the `org-debbugs-mode' minor mode."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c # c") 'debbugs-gnu-send-control-message)
     (define-key map (kbd "C-c # d") 'debbugs-gnu-display-status)
-    map))
+    map)
+  "Keymap for the `org-debbugs-mode' minor mode.")
 
 ;; Make byte-compiler quiet.
 (defvar gnus-posting-styles)
