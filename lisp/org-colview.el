@@ -169,8 +169,10 @@ This is the compiled version of the format.")
 			    (get-text-property (point-at-bol) 'face))
 		       'default))
 	 (color (list :foreground (face-attribute ref-face :foreground)))
-	 (face (list color 'org-column ref-face))
-	 (face1 (list color 'org-agenda-column-dateline ref-face))
+	 (font (list :height (face-attribute 'default :height)
+		     :family (face-attribute 'default :family)))
+	 (face (list color font 'org-column ref-face))
+	 (face1 (list color font 'org-agenda-column-dateline ref-face))
 	 (cphr (get-text-property (point-at-bol) 'org-complex-heading-regexp))
 	 pom property ass width f string ov column val modval s2 title calc)
     ;; Check if the entry is in another buffer.
@@ -321,6 +323,7 @@ for the duration of the command.")
 (defvar org-colview-initial-truncate-line-value nil
   "Remember the value of `truncate-lines' across colview.")
 
+;;;###autoload
 (defun org-columns-remove-overlays ()
   "Remove all currently active column overlays."
   (interactive)
@@ -413,6 +416,10 @@ If yes, throw an error indicating that changing it does not make sense."
 		    (get-char-property (point) 'org-columns-value))
       (org-columns-next-allowed-value)
     (org-columns-edit-value "TAGS")))
+
+(defvar org-agenda-overriding-columns-format nil
+  "When set, overrides any other format definition for the agenda.
+Don't set this, this is meant for dynamic scoping.")
 
 (defun org-columns-edit-value (&optional key)
   "Edit the value of the property at point in column view.
@@ -664,6 +671,7 @@ around it."
   (let ((value (get-char-property (point) 'org-columns-value)))
     (org-open-link-from-string value arg)))
 
+;;;###autoload
 (defun org-columns-get-format-and-top-level ()
   (let ((fmt (org-columns-get-format)))
     (org-columns-goto-top-level)
@@ -899,10 +907,6 @@ display, or in the #+COLUMNS line of the current buffer."
 		(insert-before-markers "#+COLUMNS: " fmt "\n")))
 	    (org-set-local 'org-columns-default-format fmt))))))
 
-(defvar org-agenda-overriding-columns-format nil
-  "When set, overrides any other format definition for the agenda.
-Don't set this, this is meant for dynamic scoping.")
-
 (defun org-columns-get-autowidth-alist (s cache)
   "Derive the maximum column widths from the format and the cache."
   (let ((start 0) rtn)
@@ -949,6 +953,8 @@ Don't set this, this is meant for dynamic scoping.")
 
 (defvar org-inlinetask-min-level
   (if (featurep 'org-inlinetask) org-inlinetask-min-level 15))
+
+;;;###autoload
 (defun org-columns-compute (property)
   "Sum the values of property PROPERTY hierarchically, for the entire buffer."
   (interactive)
@@ -1052,6 +1058,7 @@ Don't set this, this is meant for dynamic scoping.")
 	(setq sum (+ (string-to-number (pop l)) (/ sum 60))))
       sum)))
 
+;;;###autoload
 (defun org-columns-number-to-string (n fmt &optional printf)
   "Convert a computed column number to a string value, according to FMT."
   (cond
@@ -1114,7 +1121,7 @@ Don't set this, this is meant for dynamic scoping.")
 
 (defun org-columns-uncompile-format (cfmt)
   "Turn the compiled columns format back into a string representation."
-  (let ((rtn "") e s prop title op op-match width fmt printf fun calc)
+  (let ((rtn "") e s prop title op op-match width fmt printf fun calc ee map)
     (while (setq e (pop cfmt))
       (setq prop (car e)
 	    title (nth 1 e)
@@ -1124,8 +1131,10 @@ Don't set this, this is meant for dynamic scoping.")
 	    printf (nth 5 e)
 	    fun (nth 6 e)
 	    calc (nth 7 e))
-      (when (setq op-match (rassoc (list fmt fun calc) org-columns-compile-map))
-	(setq op (car op-match)))
+      (setq map (copy-sequence org-columns-compile-map))
+      (while (setq ee (pop map))
+	(if (equal fmt (nth 1 ee))
+	    (setq op (car ee) map nil)))
       (if (and op printf) (setq op (concat op ";" printf)))
       (if (equal title prop) (setq title nil))
       (setq s (concat "%" (if width (number-to-string width))
@@ -1304,10 +1313,10 @@ PARAMS is a property list of parameters:
 			    (if (eq 'hline x) x (cons "" x)))
 			  tbl))
 	(setq tbl (append tbl (list (cons "/" (make-list nfields "<>"))))))
-      (setq pos (point))
       (when content-lines
 	(while (string-match "^#" (car content-lines))
 	  (insert (pop content-lines) "\n")))
+      (setq pos (point))
       (insert (org-listtable-to-string tbl))
       (when (plist-get params :width)
 	(insert "\n|" (mapconcat (lambda (x) (format "<%d>" (max 3 x)))

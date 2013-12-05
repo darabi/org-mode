@@ -31,7 +31,7 @@ SERVERMK ?= true # or just any value at all, really
 
 #----------------------------------------------------------------------
 
-ORGFULL   = README COPYING AUTHORS lisp/ \
+ORGFULL   = README COPYING lisp/ \
 		Makefile request-assign-future.txt \
 		mk/default.mk mk/targets.mk mk/version.mk \
 		mk/org-fixup.el \
@@ -80,7 +80,7 @@ archive-contents:
 	echo "   (org-plus-contrib . [($(PKG_TAG)) ($(PKG_REQ)) \"$(PKG_DOC)\" tar]))" >> $@
 
 elpaplus:		cleanall info card elpaplus-dirty
-elpaplus-dirty elpaplus-up:	ORG_ADD_CONTRIB=org-*
+elpaplus-dirty elpaplus-up:	ORG_ADD_CONTRIB=org-* ob-* ox-*
 elpaplus-dirty elpaplus-up:	ORGDIR=org-plus-contrib-$(PKG_TAG)
 elpaplus-dirty:
 	@$(MAKE) GITVERSION=$(GITVERSION:release_%=%)-elpaplus version autoloads
