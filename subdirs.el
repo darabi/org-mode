@@ -2,3 +2,5 @@
     (normal-top-level-add-subdirs-to-load-path))
 
 (push (expand-file-name "org-mode/lisp") load-path)
+
+(push (expand-file-name "pmade-com/lisp") load-path)
