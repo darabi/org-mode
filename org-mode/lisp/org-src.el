@@ -3,7 +3,7 @@
 ;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
-;;	   Bastien Guerry <bzg AT gnu DOT org>
+;;	   Bastien Guerry <bzg@gnu.org>
 ;;         Dan Davison <davison at stats dot ox dot ac dot uk>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: http://orgmode.org
@@ -64,10 +64,25 @@ there are kept outside the narrowed region."
 		   (const :tag "from `lang' element")
 		   (const :tag "from `style' element")))))
 
+(defcustom org-edit-src-turn-on-auto-save nil
+  "Non-nil means turn `auto-save-mode' on when editing a source block.
+This will save the content of the source code editing buffer into
+a newly created file, not the base buffer for this source block.
+
+If you want to regularly save the base buffer instead of the source
+code editing buffer, see `org-edit-src-auto-save-idle-delay' instead."
+  :group 'org-edit-structure
+  :version "24.4"
+  :package-version '(Org . "8.0")
+  :type 'boolean)
+
 (defcustom org-edit-src-auto-save-idle-delay 0
-  "Delay of idle time before auto-saving src code buffers.
+  "Delay before saving a source code buffer back into its base buffer.
 When a positive integer N, save after N seconds of idle time.
-When 0 (the default), don't auto-save."
+When 0 (the default), don't auto-save.
+
+If you want to save the source code buffer itself, don't use this.
+Check `org-edit-src-turn-on-auto-save' instead."
   :group 'org-edit-structure
   :version "24.4"
   :package-version '(Org . "8.0")
@@ -164,7 +179,7 @@ but which mess up the display of a snippet in Org exported files.")
 (defcustom org-src-lang-modes
   '(("ocaml" . tuareg) ("elisp" . emacs-lisp) ("ditaa" . artist)
     ("asymptote" . asy) ("dot" . fundamental) ("sqlite" . sql)
-    ("calc" . fundamental) ("C" . c) ("cpp" . c++)
+    ("calc" . fundamental) ("C" . c) ("cpp" . c++) ("C++" . c++)
     ("screen" . shell-script))
   "Alist mapping languages to their major mode.
 The key is the language name, the value is the string that should
@@ -351,7 +366,7 @@ the display of windows containing the Org buffer and the code buffer."
 	(org-src-mode)
 	(set-buffer-modified-p nil)
 	(setq buffer-file-name nil)
-	(when auto-save-default
+	(when org-edit-src-turn-on-auto-save
 	  (setq buffer-auto-save-file-name
 		(concat (make-temp-name "org-src-")
 			(format-time-string "-%Y-%d-%m") ".txt")))
@@ -738,12 +753,14 @@ with \",*\", \",#+\", \",,*\" and \",,#+\"."
       (kill-buffer buffer))
     (goto-char beg)
     (when allow-write-back-p
-      (let ((buffer-undo-list t))
-	(delete-region beg (max beg end))
-	(unless (string-match "\\`[ \t]*\\'" code)
-	  (insert code))
-	(goto-char beg)
-	(if single (just-one-space))))
+      (undo-boundary)
+      (delete-region beg (max beg end))
+      (unless (string-match "\\`[ \t]*\\'" code)
+	(insert code))
+      	;; Make sure the overlay stays in place
+	(when (eq context 'save) (move-overlay ovl beg (point)))
+      (goto-char beg)
+      (if single (just-one-space)))
     (if (memq t (mapcar (lambda (overlay)
 			  (eq (overlay-get overlay 'invisible)
 			      'org-hide-block))
@@ -827,8 +844,9 @@ with \",*\", \",#+\", \",,*\" and \",,#+\"."
   (let ((session (cdr (assoc :session (nth 2 info)))))
     (and session (not (string= session "none"))
 	 (org-babel-comint-buffer-livep session)
-	 ((lambda (f) (and (fboundp f) (funcall f session)))
-	  (intern (format "org-babel-%s-associate-session" (nth 0 info)))))))
+	 (let ((f (intern (format "org-babel-%s-associate-session"
+                                  (nth 0 info)))))
+           (and (fboundp f) (funcall f session))))))
 
 (defun org-src-babel-configure-edit-buffer ()
   (when org-src-babel-info
@@ -936,8 +954,9 @@ fontification of code blocks see `org-src-fontify-block' and
 LANG is a string, and the returned major mode is a symbol."
   (intern
    (concat
-    ((lambda (l) (if (symbolp l) (symbol-name l) l))
-     (or (cdr (assoc lang org-src-lang-modes)) lang)) "-mode")))
+    (let ((l (or (cdr (assoc lang org-src-lang-modes)) lang)))
+      (if (symbolp l) (symbol-name l) l))
+    "-mode")))
 
 (provide 'org-src)
 

@@ -5,6 +5,8 @@
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 
+;; This file is part of GNU Emacs.
+
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
@@ -37,12 +39,14 @@
 ;; {{{email}}} and {{{title}}} macros.
 
 ;;; Code:
+(require 'org-macs)
 
-(declare-function org-element-at-point "org-element" (&optional keep-trail))
+(declare-function org-element-at-point "org-element" ())
 (declare-function org-element-context "org-element" (&optional element))
 (declare-function org-element-property "org-element" (property element))
 (declare-function org-element-type "org-element" (element))
 (declare-function org-remove-double-quotes "org" (s))
+(declare-function org-mode "org" ())
 (declare-function org-file-contents "org" (file &optional noerror))
 (declare-function org-with-wide-buffer "org-macs" (&rest body))
 
@@ -144,7 +148,7 @@ default value.  Return nil if no template was found."
                                (org-element-property :args macro))
                           ;; No argument: remove place-holder.
                           ""))
-                    template)))
+                    template nil 'literal)))
         ;; VALUE starts with "(eval": it is a s-exp, `eval' it.
         (when (string-match "\\`(eval\\>" value)
           (setq value (eval (read value))))

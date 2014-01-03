@@ -1,11 +1,13 @@
 ;;; ox-icalendar.el --- iCalendar Back-End for Org Export Engine
 
-;; Copyright (C) 2004-2012 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;      Nicolas Goaziou <n dot goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: http://orgmode.org
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,23 +25,9 @@
 ;;; Commentary:
 ;;
 ;; This library implements an iCalendar back-end for Org generic
-;; exporter.
+;; exporter.  See Org manual for more information.
 ;;
-;; It provides three commands for export, depending on the chosen
-;; source and desired output: `org-icalendar-export-to-ics' (current
-;; file), `org-icalendar-export-agenda-files' (agenda files into
-;; separate calendars) and `org-icalendar-combined-agenda-file'
-;; (agenda files into one combined calendar).
-;;
-;; It also provides `org-icalendar-export-current-agenda' function,
-;; which will create a calendar file from current agenda view.  It is
-;; meant to be called through `org-agenda-write'.
-;;
-;; This back-end introduces a new keyword, ICALENDAR_EXCLUDE_TAGS,
-;; which allows to specify a different set of exclude tags from other
-;; back-ends.
-;;
-;; It should follow RFC 5545 specifications.
+;; It is expected to conform to RFC 5545.
 
 ;;; Code:
 
@@ -257,10 +245,13 @@ re-read the iCalendar file.")
 
 (org-export-define-derived-backend 'icalendar 'ascii
   :translate-alist '((clock . ignore)
+		     (footnote-definition . ignore)
+		     (footnote-reference . ignore)
 		     (headline . org-icalendar-entry)
 		     (inlinetask . ignore)
 		     (planning . ignore)
 		     (section . ignore)
+		     (inner-template . (lambda (c i) c))
 		     (template . org-icalendar-template))
   :options-alist
   '((:exclude-tags
@@ -823,21 +814,10 @@ Return ICS file name."
   ;; Export part.  Since this back-end is backed up by `ascii', ensure
   ;; links will not be collected at the end of sections.
   (let ((outfile (org-export-output-file-name ".ics" subtreep)))
-    (if async
-	(org-export-async-start
-	    (lambda (f)
-	      (org-export-add-to-stack f 'icalendar)
-	      (run-hook-with-args 'org-icalendar-after-save-hook f))
-	  `(let ((org-ascii-links-to-notes nil))
-	     (expand-file-name
-	      (org-export-to-file
-	       'icalendar ,outfile ,subtreep ,visible-only ,body-only
-	       '(:ascii-charset utf-8)))))
-      (let ((org-ascii-links-to-notes nil))
-	(org-export-to-file 'icalendar outfile subtreep visible-only body-only
-			    '(:ascii-charset utf-8)))
-      (run-hook-with-args 'org-icalendar-after-save-hook outfile)
-      outfile)))
+    (org-export-to-file 'icalendar outfile
+      async subtreep visible-only body-only '(:ascii-charset utf-8)
+      (lambda (file)
+	(run-hook-with-args 'org-icalendar-after-save-hook file) nil))))
 
 ;;;###autoload
 (defun org-icalendar-export-agenda-files (&optional async)
@@ -897,7 +877,8 @@ The file is stored under the name chosen in
   "Export current agenda view to an iCalendar FILE.
 This function assumes major mode for current buffer is
 `org-agenda-mode'."
-  (let ((org-icalendar-combined-agenda-file file)
+  (let (org-export-babel-evaluate ; Don't evaluate Babel block
+	(org-icalendar-combined-agenda-file file)
 	(marker-list
 	 ;; Collect the markers pointing to entries in the current
 	 ;; agenda buffer.
@@ -944,9 +925,8 @@ files to build the calendar from."
 	    ;; Owner.
 	    user-full-name
 	    ;; Timezone.
-	    (if (org-string-nw-p org-icalendar-timezone)
-		org-icalendar-timezone
-	      (cadr (current-time-zone)))
+	    (or (org-string-nw-p org-icalendar-timezone)
+		(cadr (current-time-zone)))
 	    ;; Description.
 	    org-icalendar-combined-description
 	    ;; Contents.
@@ -957,7 +937,8 @@ files to build the calendar from."
 		(catch 'nextfile
 		  (org-check-agenda-file file)
 		  (with-current-buffer (org-get-agenda-file-buffer file)
-		    (let ((marks (cdr (assoc (expand-file-name file) restriction))))
+		    (let ((marks (cdr (assoc (expand-file-name file)
+					     restriction))))
 		      ;; Create ID if necessary.
 		      (when org-icalendar-store-UID
 			(org-icalendar-create-uid file t marks))
@@ -971,7 +952,7 @@ files to build the calendar from."
 				      (lambda (m-list dummy)
 					(mapc (lambda (m)
 						(org-entry-put
-						 m "ICALENDAR_MARK" "t"))
+						 m "ICALENDAR-MARK" "t"))
 					      m-list))
 				      (sort marks '>))
 				     org-export-before-processing-hook)))

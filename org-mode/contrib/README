@@ -30,8 +30,8 @@ org-eval-light.el        --- Evaluate in-buffer code on demand
 org-eval.el              --- The <lisp> tag, adapted from Muse
 org-expiry.el            --- Expiry mechanism for Org entries
 org-export-generic.el    --- Export framework for configurable backends
-org-favtable.el          --- Lookup table of favorite references and links
 org-git-link.el          --- Provide org links to specific file version
+org-index.el             --- A personal index for org and beyond
 org-interactive-query.el --- Interactive modification of tags query
 org-invoice.el           --- Help manage client invoices in OrgMode
 org-jira.el              --- Add a jira:ticket protocol to Org
@@ -49,6 +49,7 @@ org-notmuch.el           --- Support for links to notmuch messages
 org-panel.el 	         --- Simple routines for us with bad memory
 org-registry.el          --- A registry for Org links
 org-screen.el            --- Visit screen sessions through Org-mode links
+org-screenshot.el        --- Take and manage screenshots in Org-mode files
 org-secretary.el         --- Team management with org-mode
 org-static-mathjax.el    --- Muse-like tags in Org-mode
 org-sudoku.el            --- Create and solve SUDOKU puzzles in Org tables
