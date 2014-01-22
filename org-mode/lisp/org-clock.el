@@ -1733,7 +1733,7 @@ PROPNAME lets you set a custom text property instead of :org-clock-minutes."
 	  (ltimes (make-vector lmax 0))
 	  (t1 0)
 	  (level 0)
-	  ts te dt
+	  ts te dt timelist
 	  time)
      (if (stringp tstart) (setq tstart (org-time-string-to-seconds tstart)))
      (if (stringp tend) (setq tend (org-time-string-to-seconds tend)))
@@ -1741,6 +1741,7 @@ PROPNAME lets you set a custom text property instead of :org-clock-minutes."
      (if (consp tend) (setq tend (org-float-time tend)))
      (remove-text-properties (point-min) (point-max)
 			     `(,(or propname :org-clock-minutes) t
+			       :org-clock-invoice-data t
 			       :org-clock-force-headline-inclusion t))
      (save-excursion
        (goto-char (point-max))
@@ -1757,7 +1758,8 @@ PROPNAME lets you set a custom text property instead of :org-clock-minutes."
 		 ts (if tstart (max ts tstart) ts)
 		 te (if tend (min te tend) te)
 		 dt (- te ts)
-		 t1 (if (> dt 0) (+ t1 (floor (/ dt 60))) t1)))
+		 t1 (if (> dt 0) (+ t1 (floor (/ dt 60))) t1))
+	   (push (list ts te t1) timelist))
 	  ((match-end 4)
 	   ;; A naked time
 	   (setq t1 (+ t1 (string-to-number (match-string 5))
@@ -1791,6 +1793,9 @@ PROPNAME lets you set a custom text property instead of :org-clock-minutes."
 		 (goto-char (match-beginning 0))
 		 (put-text-property (point) (point-at-eol)
 				    (or propname :org-clock-minutes) time)
+		 (put-text-property (point) (point-at-eol)
+				    (or propname :org-clock-invoice-data) (list (buffer-substring-no-properties (point) (point-at-eol)) timelist))
+		 (setq timelist nil)
 		 (if headline-filter
 		     (save-excursion
 		       (save-match-data
