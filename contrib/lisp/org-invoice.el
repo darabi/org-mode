@@ -144,33 +144,37 @@ looks like tree2, where the level is 2."
         (work    (org-entry-get nil "WORK" nil))
         (rate    (or (org-entry-get nil "RATE" t) "0"))
         (level   (org-outline-level))
+        (timelist (or (get-text-property (point) :org-clock-invoice-data) 0))
+        (work-minutes (or (get-text-property (point) :org-clock-minutes) 0))
         raw-date long-date)
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" 'selective)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP" t)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" t)))
-    (unless work (setq work (org-entry-get nil "CLOCKSUM" nil)))
-    (unless work (setq work "00:00"))
-    (when date
-      (setq raw-date (apply 'encode-time (org-parse-time-string date)))
-      (setq long-date (format-time-string org-invoice-long-date-format raw-date)))
-    (when (and org-invoice-strip-ts (string-match org-ts-regexp-both title))
-      (setq title (replace-match "" nil nil title)))
-    (when (string-match "^[ \t]+" title)
-      (setq title (replace-match "" nil nil title)))
-    (when (string-match "[ \t]+$" title)
-      (setq title (replace-match "" nil nil title)))
-    (setq work (org-hh:mm-string-to-minutes work))
-    (setq rate (string-to-number rate))
-    (setq org-invoice-current-item (list (cons 'title title)
-          (cons 'date date)
-          (cons 'raw-date raw-date)
-          (cons 'long-date long-date)
-          (cons 'work work)
-          (cons 'rate rate)
-          (cons 'level level)
-          (cons 'price (* rate (/ work 60.0)))))
-    (run-hook-with-args 'org-invoice-heading-hook)
-    org-invoice-current-item))
+    (unless work
+      (setq work (org-minutes-to-hh:mm-string work-minutes)))
+    (when (> work-minutes 0)
+      (when date
+        (setq raw-date (apply 'encode-time (org-parse-time-string date)))
+        (setq long-date (format-time-string org-invoice-long-date-format raw-date)))
+      (when (and org-invoice-strip-ts (string-match org-ts-regexp-both title))
+        (setq title (replace-match "" nil nil title)))
+      (when (string-match "^[ \t]+" title)
+        (setq title (replace-match "" nil nil title)))
+      (when (string-match "[ \t]+$" title)
+        (setq title (replace-match "" nil nil title)))
+      (setq work (org-hh:mm-string-to-minutes work))
+      (setq rate (string-to-number rate))
+      (setq org-invoice-current-item (list (cons 'title title)
+                                           (cons 'date date)
+                                           (cons 'raw-date raw-date)
+                                           (cons 'long-date long-date)
+                                           (cons 'work work)
+                                           (cons 'rate rate)
+                                           (cons 'level level)
+                                           (cons 'timelist timelist)
+                                           (cons 'price (* rate (/ work 60.0)))))
+      (run-hook-with-args 'org-invoice-heading-hook)
+      org-invoice-current-item)))
 
 (defun org-invoice-level-min-max (ls)
   "Return a list where the car is the min level, and the cdr the max."
@@ -182,10 +186,14 @@ looks like tree2, where the level is 2."
         (when (> level max) (setq max level))))
     (cons (or min 0) max)))
 
+(defun org-invoice-sort-list (ls)
+  "Sort the give list by date."
+  (sort ls (lambda (a b) (string< (car a) (car b)))))
+
 (defun org-invoice-collapse-list (ls)
   "Reorganize the given list by dates."
   (let ((min-max (org-invoice-level-min-max ls)) new)
-    (dolist (info ls)
+    (dolist (info (remove-if 'null ls))
       (let* ((date (cdr (assoc 'date info)))
              (work (cdr (assoc 'work info)))
              (price (cdr (assoc 'price info)))
@@ -213,7 +221,7 @@ looks like tree2, where the level is 2."
             (setcdr (assoc 'price (car bucket))
                     (+ price (cdr (assoc 'price (car bucket)))))
             (nconc bucket (list info))))))
-    (nreverse new)))
+    (org-invoice-sort-list new)))
 
 (defun org-invoice-info-to-table (info)
   "Create a single org table row from the given info alist."
@@ -221,20 +229,41 @@ looks like tree2, where the level is 2."
         (total (cdr (assoc 'total-work info)))
         (work  (cdr (assoc 'work info)))
         (price (cdr (assoc 'price info)))
-        (with-price (plist-get org-invoice-table-params :price)))
+        (clockdetails (cdr (assoc 'timelist info)))
+        (with-price (plist-get org-invoice-table-params :price))
+        (with-details (plist-get org-invoice-table-params :clockdetails)))
     (unless total
       (setq
        org-invoice-total-time (+ org-invoice-total-time work)
        org-invoice-total-price (+ org-invoice-total-price price)))
-    (setq total (and total (org-minutes-to-clocksum-string total)))
-    (setq work  (and work  (org-minutes-to-clocksum-string work)))
-    (insert-before-markers
-     (concat "|" title
-             (cond
-              (total (concat "|" total))
-              (work  (concat "|" work)))
-             (and with-price price (concat "|" (format "%.2f" price)))
-             "|" "\n"))))
+    (setq total (and total (org-minutes-to-hh:mm-string total)))
+    (setq work  (and work  (org-minutes-to-hh:mm-string work)))
+    (if with-details
+        (org-invoice-clockdetails-to-table clockdetails title)
+        (insert-before-markers
+         (concat "\n|"  title
+                 (cond
+                   (total (concat "|" total))
+                   (work  (concat "|" work)))
+                 (and with-price price (concat "|" (format "%.2f" price)))
+                 "|")))))
+
+(defun org-invoice-clockdetails-to-table (clockdetails title)
+  (if (cadr clockdetails)
+      (dolist (tl (cadr clockdetails))
+        (let ((start (seconds-to-time (car tl)))
+              (end (seconds-to-time (cadr tl)))
+              (dateformat (plist-get org-invoice-table-params :dateformat))
+              (timeformat (plist-get org-invoice-table-params :timeformat)))
+          (insert-before-markers
+           (concat "\n|"
+                   (format-time-string dateformat start)
+                   "|"
+                   (format-time-string timeformat start)
+                   "|"
+                   (format-time-string timeformat end)
+                   "|" title
+                   "|"))))))
 
 (defun org-invoice-list-to-table (ls)
   "Convert a list of heading info to an org table"
@@ -244,16 +273,16 @@ looks like tree2, where the level is 2."
         (org-invoice-total-time 0)
         (org-invoice-total-price 0))
     (insert-before-markers
-     (concat "| Task / Date | Time" (and with-price "| Price") "|\n"))
+     (concat "| Task / Date | Time" (and with-price "| Price") "| Activity |"))
     (dolist (info ls)
-      (insert-before-markers "|-\n")
+      (insert-before-markers "\n|-")
       (mapc 'org-invoice-info-to-table (if with-header (cdr info) (cdr (cdr info)))))
     (when with-summary
       (insert-before-markers
-       (concat "|-\n|Total:|"
-               (org-minutes-to-clocksum-string org-invoice-total-time)
+       (concat "\n|-\n|Total:|"
+               (org-minutes-to-hh:mm-string org-invoice-total-time)
                (and with-price (concat "|" (format "%.2f" org-invoice-total-price)))
-               "|\n")))))
+               "|")))))
 
 (defun org-invoice-collect-invoice-data ()
   "Collect all the invoice data from the current OrgMode tree and
@@ -283,6 +312,9 @@ information about dblock parameters, please see the Org manual):
        variable.  The only supported values right now are ones
        that look like :tree1, :tree2, etc.
 
+:clockdetails When t, one line per clocked period is shown, if nil
+       (default), all clocked times of a subheading are summed up
+
 :prices Set to nil to turn off the price column.
 
 :headers Set to nil to turn off the group headers.
@@ -290,12 +322,14 @@ information about dblock parameters, please see the Org manual):
 :summary Set to nil to turn off the final summary line."
   (let ((scope (plist-get params :scope))
         (org-invoice-table-params params)
-        (zone (point-marker))
+        (zone (move-marker (make-marker) (point)))
         table)
     (unless scope (setq scope 'default))
     (unless (plist-member params :price) (plist-put params :price t))
     (unless (plist-member params :summary) (plist-put params :summary t))
     (unless (plist-member params :headers) (plist-put params :headers t))
+    (unless (plist-member params :dateformat) (plist-put params :dateformat "%Y-%m-%d"))
+    (unless (plist-member params :timeformat) (plist-put params :timeformat "%Y-%m-%d"))
     (save-excursion
       (cond
        ((eq scope 'tree) (org-invoice-goto-tree "tree1"))
