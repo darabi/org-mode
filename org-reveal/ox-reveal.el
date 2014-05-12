@@ -736,7 +736,7 @@ info is a plist holding export options."
   (let* ((extension (concat "." org-html-extension))
          (file (org-export-output-file-name extension subtreep)))
     (org-export-to-file 'reveal file
-      async subtreep visible-only body-only ext-plist)))
+      subtreep visible-only body-only ext-plist)))
 
 (defun org-reveal-export-to-html-and-browse
   (&optional async subtreep visible-only body-only ext-plist)
