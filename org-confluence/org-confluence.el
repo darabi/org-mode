@@ -10,7 +10,7 @@
 ;;
 ;;; Code:
 
-(require 'org-export)
+(require 'ox)
 
 (defvar org-confluence-emphasis-alist
   '(("*" "*%s*" nil)
