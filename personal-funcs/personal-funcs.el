@@ -937,4 +937,12 @@ in your path. Useful for reading non-regular files like
   (interactive)
   (uniquify-region-lines (point-min) (point-max)))
 
+;;; Date/time functions
+
+(defun millis-to-iso-date (millis)
+  (interactive "NEnter java millisecond value: ")
+  (let ((isodate (concat (format-time-string "%FT%T" (seconds-to-time (/ millis 1000))) (format ".%04dZ" (mod millis 1000)))))
+    (message isodate)
+    isodate))
+
 (provide 'personal-funcs)
