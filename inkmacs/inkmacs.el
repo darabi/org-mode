@@ -15,7 +15,7 @@
 (require 'dbus-introspection)
 (require 'dbus-proxy)
 (require 'org)
-(require 'org-exp)
+(require 'ox)
 (require 'time-stamp)
 ;;TODO this doesnt work out of the box for uninstalled inkscape
 (defcustom inkscape-path
@@ -136,6 +136,10 @@ slow the first time, then not so bad."
   (if (and (not force) (inkscape-desktop))
       (error "There already is a linked inkscape. "))
   (let ((newdesk (car (last (split-string (inkapp-desktop-new ( inkscape-application-get) ) "/")))))
+    ;; FIXME: the timing seems to be a problem here, as sometimes the
+    ;; call to inkscape-document-dbus-proxy-create returns nil
+    ;; (because of an error) and then all subsequent interaction fails
+    (sleep-for 1)
     (set (make-local-variable 'inkscape-desktop-instance) (inkscape-document-dbus-proxy-create newdesk))
     (setq inkscape-desktop-instances (acons file-name inkscape-desktop-instance inkscape-desktop-instances))
     ;;todo inkdoc-load doesnt like if theres no actual file
