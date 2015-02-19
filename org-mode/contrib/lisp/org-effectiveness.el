@@ -33,6 +33,22 @@
 
 (require 'org)
 
+(defcustom org-effectiveness-max-todo 50
+  "This variable is useful to advice to the user about 
+many TODO pending"
+  :type 'integer
+  :group 'org-effectiveness)
+
+(defun org-effectiveness-advice()
+  "Advicing about a possible excess of TODOS"
+  (interactive)
+  (goto-char (point-min))
+  (if (< org-effectiveness-max-todo (count-matches "* TODO"))
+      (message "An excess of TODOS!")))
+
+;; Check advice starting an org file
+(add-hook 'org-mode-hook 'org-effectiveness-advice)
+
 (defun org-effectiveness-count-keyword(keyword)
   "Print a message with the number of keyword outline in the current buffer"
   (interactive "sKeyword: ")
@@ -111,7 +127,7 @@
       (concat "0" (number-to-string m))
     (number-to-string m)))
 
-(defun org-effectiveness-plot(startdate enddate)
+(defun org-effectiveness-plot(startdate enddate &optional save)
   (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
   (setq dates (org-effectiveness-check-dates startdate enddate))
   (setq syear (cadr (assoc 'startyear dates)))
@@ -140,7 +156,7 @@
   (let ((month startmonth)
 	(year startyear)
 	(str ""))
-    (while (and (>= endyear year) (>= endmonth month))
+    (while (or (> endyear year) (and (= endyear year) (>= endmonth month))) 
       (setq str (concat str (number-to-string year) "-" (org-effectiveness-month-to-string month) " " (org-effectiveness-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1) "\n"))
       (if (= month 12)
 	  (progn 
@@ -149,9 +165,19 @@
 	(setq month (+ 1 month))))
       (write-region str nil "/tmp/org-effectiveness"))
 ;; Create the bar graph 
+  (if (eq save t)
+      (setq strplot "/usr/bin/gnuplot -e 'set term png; set output \"/tmp/org-effectiveness.png\"; plot \"/tmp/org-effectiveness\" using 2:xticlabels(1) with histograms' -p")
+    (setq strplot "/usr/bin/gnuplot -e 'plot \"/tmp/org-effectiveness\" using 2:xticlabels(1) with histograms' -p"))
   (if (file-exists-p "/usr/bin/gnuplot")
-      (call-process "/bin/bash" nil t nil "-c" "/usr/bin/gnuplot -e 'plot \"/tmp/org-effectiveness\" using 2:xticlabels(1) with histograms' -p")
+      (call-process "/bin/bash" nil t nil "-c" strplot)
     (message "gnuplot is not installed")))
+
+(defun org-effectiveness-plot-save(startdate enddate &optional save)
+  (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
+  (org-effectiveness-plot startdate enddate t))
+
+;; (defun org-effectiveness-plot(startdate enddate)
+
 
 (defun org-effectiveness-ascii-bar(n &optional label)
   "Print a bar with the percentage from 0 to 100 printed in ascii"
@@ -179,6 +205,18 @@
 	(insert "-")
 	(setq z (+ z 1)))
       (insert "+"))))
+
+(defun org-effectiveness-html-bar(n &optional label)
+  "Print a bar with the percentage from 0 to 100 printed in html"
+  (interactive "nPercentage: \nsLabel: ")
+  (if (or (< n 0) (> n 100))
+      (message "The percentage must be between 0 to 100")
+    (let ((x 0)
+	  (y 0)
+	  (z 0))
+      (insert (format "\n<div class='percentage-%d'>%d</div>" n n))
+)))
+
 
 (defun org-effectiveness-check-dates (startdate enddate)
   "Generate a list with ((startyear startmonth) (endyear endmonth))"
@@ -208,21 +246,53 @@
 (defun org-effectiveness-plot-ascii (startdate enddate)
   (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
   (setq dates (org-effectiveness-check-dates startdate enddate))
-  (setq syear (cadr (assoc 'startyear dates)))
-  (setq smonth (cadr (assoc 'startmonth dates)))
-  (setq eyear (cadr (assoc 'endyear dates)))
-  (setq emonth (cadr (assoc 'endmonth dates)))
-;;  (switch-to-buffer "*org-effectiveness*")
-  (let ((month smonth)
-  	(year syear)
+  (let ((syear (cadr (assoc 'startyear dates)))
+	(smonth (cadr (assoc 'startmonth dates)))
+  	(year (cadr (assoc 'startyear dates)))
+	(month (cadr (assoc 'startmonth dates)))
+	(emonth (cadr (assoc 'endmonth dates)))
+	(eyear (cadr (assoc 'endyear dates)))
+	(buffer (current-buffer))
   	(str ""))
-    (while (and (>= eyear year) (>= emonth month))
-      (org-effectiveness-ascii-bar (string-to-number (org-effectiveness-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1)) (format "%s-%s" year month))
-      (if (= month 12)
+    (while (or (> eyear year) (and (= eyear year) (>= emonth month)))
+      (setq str (org-effectiveness-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1))
+      (switch-to-buffer "*org-effectiveness*")
+      (org-effectiveness-ascii-bar (string-to-number str) (format "%s-%s" year month))
+      (switch-to-buffer buffer)
+      (if (eq month 12)
   	  (progn 
   	    (setq year (+ 1 year))
   	    (setq month 1))
-  	(setq month (+ 1 month))))))
+  	(setq month (+ 1 month)))))
+  (switch-to-buffer "*org-effectiveness*"))
+
+(defun org-effectiveness-plot-html (startdate enddate)
+  "Print html bars about the effectiveness in a buffer"
+  (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
+  (setq dates (org-effectiveness-check-dates startdate enddate))
+  (let ((syear (cadr (assoc 'startyear dates)))
+	(smonth (cadr (assoc 'startmonth dates)))
+  	(year (cadr (assoc 'startyear dates)))
+	(month (cadr (assoc 'startmonth dates)))
+	(emonth (cadr (assoc 'endmonth dates)))
+	(eyear (cadr (assoc 'endyear dates)))
+	(buffer (current-buffer))
+  	(str ""))
+    (switch-to-buffer "*org-effectiveness-html*")
+    (insert "<html><head><title>Graphbar</title><meta http-equiv='Content-type' content='text/html; charset=utf-8'><link rel='stylesheet' type='text/css' href='graphbar.css' title='graphbar'></head><body>")
+    (while (or (> eyear year) (and (= eyear year) (>= emonth month)))
+      (setq str (org-effectiveness-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1))
+      (switch-to-buffer "*org-effectiveness-html*")
+      (org-effectiveness-html-bar (string-to-number str) (format "%s-%s" year month))
+      (switch-to-buffer buffer)
+      (format "%s-%s" year month)
+      (if (eq month 12)
+    	  (progn 
+    	    (setq year (+ 1 year))
+    	    (setq month 1))
+    	(setq month (+ 1 month))))
+    (switch-to-buffer "*org-effectiveness-html*")
+    (insert "</body></html>")))
 
 (provide 'org-effectiveness)
 

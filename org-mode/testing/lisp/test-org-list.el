@@ -1,6 +1,6 @@
 ;;; test-org-list.el --- Tests for org-list.el
 
-;; Copyright (C) 2012, 2013  Nicolas Goaziou
+;; Copyright (C) 2012, 2013, 2014  Nicolas Goaziou
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 
@@ -743,11 +743,19 @@
 	      (org-list-repair))
 	    (buffer-string))))
   ;; Special case: do not move contents of an item within its child.
+  ;; Yet, preserve indentation differences within contents.
   (should
    (equal "- item\n  - child\n  within item"
 	  (org-test-with-temp-text "- item\n    - child\n    within item"
 	    (let ((org-list-indent-offset 0)) (org-list-repair))
-	    (buffer-string)))))
+	    (buffer-string))))
+  (should
+   (equal
+    "- item\n  - child\n  within item\n    indented"
+    (org-test-with-temp-text
+	"- item\n    - child\n   within item\n     indented"
+      (let ((org-list-indent-offset 0)) (org-list-repair))
+      (buffer-string)))))
 
 
 
@@ -792,7 +800,7 @@
 (ert-deftest test-org-list/to-html ()
   "Test `org-list-to-html' specifications."
   (should
-   (equal "<ul class=\"org-ul\">\n<li>a\n</li>\n</ul>"
+   (equal "<ul class=\"org-ul\">\n<li>a</li>\n</ul>"
 	  (let (org-html-indent)
 	    (with-temp-buffer
 	      (insert "<!-- BEGIN RECEIVE ORGLST name -->
@@ -837,9 +845,9 @@
 		    (point)))))))
 
 (ert-deftest test-org-list/to-texinfo ()
-  "Test `org-list-to-latex' specifications."
+  "Test `org-list-to-texinfo' specifications."
   (should
-   (equal "@itemize\n@item \na\n\n@end itemize"
+   (equal "@itemize\n@item\na\n@end itemize"
 	  (with-temp-buffer
 	    (insert "@c BEGIN RECEIVE ORGLST name
 @c END RECEIVE ORGLST name

@@ -1,5 +1,5 @@
 ;;; org-mobile.el --- Code for asymmetric sync with a mobile device
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -459,6 +459,7 @@ agenda view showing the flagged items."
 			      ((stringp x) x)
 			      ((eq (car x) :startgroup) "{")
 			      ((eq (car x) :endgroup) "}")
+			      ((eq (car x) :grouptags) nil)
 			      ((eq (car x) :newline) nil)
 			      ((listp x) (car x))))
 		      def-tags))
@@ -1071,7 +1072,7 @@ be returned that indicates what went wrong."
 	    ;; which prevents correct insertion when point is invisible
 	    (org-show-subtree)
 	    (end-of-line 1)
-	    (org-insert-heading-respect-content '(16) t)
+	    (org-insert-heading-respect-content t)
 	    (org-demote))
 	(beginning-of-line)
 	(insert "* "))

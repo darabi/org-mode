@@ -1,6 +1,6 @@
 ;;; org-compat.el --- Compatibility code for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -260,6 +260,12 @@ ignored in this case."
 		  next (+ from (* n inc)))))
 	(nreverse seq)))))
 
+;; `set-transient-map' is only in Emacs >= 24.4
+(defalias 'org-set-transient-map
+  (if (fboundp 'set-transient-map)
+      'set-transient-map
+    'set-temporary-overlay-map))
+
 ;; Region compatibility
 
 (defvar org-ignore-region nil
@@ -281,17 +287,8 @@ Works on both Emacs and XEmacs."
 	     (> (point) (region-beginning)))
     (exchange-point-and-mark)))
 
-;; Emacs 22 misses `activate-mark'
-(if (fboundp 'activate-mark)
-    (defalias 'org-activate-mark 'activate-mark)
-  (defun org-activate-mark ()
-    (when (mark t)
-      (setq mark-active t)
-      (when (and (boundp 'transient-mark-mode)
-		 (not transient-mark-mode))
-	(setq transient-mark-mode 'lambda))
-      (when (boundp 'zmacs-regions)
-	(setq zmacs-regions t)))))
+;; Old alias for emacs 22 compatibility, now dropped
+(define-obsolete-function-alias 'org-activate-mark 'activate-mark)
 
 ;; Invisibility compatibility
 
@@ -306,8 +303,7 @@ Works on both Emacs and XEmacs."
 (defun org-in-invisibility-spec-p (arg)
   "Is ARG a member of `buffer-invisibility-spec'?"
   (if (consp buffer-invisibility-spec)
-      (member arg buffer-invisibility-spec)
-    nil))
+      (member arg buffer-invisibility-spec)))
 
 (defmacro org-xemacs-without-invisibility (&rest body)
   "Turn off extents with invisibility while executing BODY."
@@ -337,10 +333,15 @@ Works on both Emacs and XEmacs."
       (org-xemacs-without-invisibility (indent-line-to column))
     (indent-line-to column)))
 
-(defun org-move-to-column (column &optional force buffer ignore-invisible)
-  (let ((buffer-invisibility-spec ignore-invisible))
+(defun org-move-to-column (column &optional force buffer)
+  "Move to column COLUMN.
+Pass COLUMN and FORCE to `move-to-column'.
+Pass BUFFER to the XEmacs version of `move-to-column'."
+  (let ((buffer-invisibility-spec
+	 (remove '(org-filtered) buffer-invisibility-spec)))
     (if (featurep 'xemacs)
-	(org-xemacs-without-invisibility (move-to-column column force buffer))
+	(org-xemacs-without-invisibility
+	 (move-to-column column force buffer))
       (move-to-column column force))))
 
 (defun org-get-x-clipboard-compat (value)
@@ -411,6 +412,10 @@ TIME defaults to the current time."
 ;; `user-error' is only available from 24.2.50 on
 (unless (fboundp 'user-error)
   (defalias 'user-error 'error))
+
+;; `font-lock-ensure' is only available from 24.4.50 on
+(unless (fboundp 'font-lock-ensure)
+  (defalias 'font-lock-ensure 'font-lock-fontify-buffer))
 
 (defmacro org-no-popups (&rest body)
   "Suppress popup windows.

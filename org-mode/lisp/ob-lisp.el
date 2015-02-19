@@ -1,6 +1,6 @@
 ;;; ob-lisp.el --- org-babel functions for common lisp evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Authors: Joel Boehland
 ;;	 Eric Schulte
@@ -44,7 +44,7 @@
 (defvar org-babel-header-args:lisp '((package . :any)))
 
 (defcustom org-babel-lisp-dir-fmt
-  "(let ((*default-pathname-defaults* #P%S)) %%s)"
+  "(let ((*default-pathname-defaults* #P%S\n)) %%s\n)"
   "Format string used to wrap code bodies to set the current directory.
 For example a value of \"(progn ;; %s\\n   %%s)\" would ignore the
 current directory string."
@@ -86,7 +86,7 @@ current directory string."
 						 default-directory)))
 				      (format
 				       (if dir (format org-babel-lisp-dir-fmt dir)
-					 "(progn %s)")
+					 "(progn %s\n)")
 				       (buffer-substring-no-properties
 					(point-min) (point-max)))))
 				 (cdr (assoc :package params)))))))

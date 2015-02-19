@@ -1,6 +1,6 @@
 ;;; ob-emacs-lisp.el --- org-babel functions for emacs-lisp code evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -30,8 +30,6 @@
 
 (defvar org-babel-default-header-args:emacs-lisp nil
   "Default arguments for evaluating an emacs-lisp source block.")
-
-(declare-function orgtbl-to-generic "org-table" (table params))
 
 (defun org-babel-expand-body:emacs-lisp (body params)
   "Expand BODY according to PARAMS, return the expanded body."

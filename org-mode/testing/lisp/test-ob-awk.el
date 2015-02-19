@@ -1,6 +1,6 @@
 ;;; test-ob-awk.el --- tests for ob-awk.el
 
-;; Copyright (c) 2010-2013 Sergey Litvinov
+;; Copyright (c) 2010-2014 Sergey Litvinov
 ;; Authors: Sergey Litvinov
 
 ;; This file is not part of GNU Emacs.
@@ -29,15 +29,20 @@
     (org-babel-next-src-block)
     (should (= 42 (org-babel-execute-src-block)))))
 
-(ert-deftest ob-awk/input-src-block ()
+(ert-deftest ob-awk/input-src-block-1 ()
   "Test a code block as an input"
   (org-test-at-id "9e998b2a-3581-43fe-b26d-07d3c507b86a"
     (org-babel-next-src-block 2)
     (should (= 43 (org-babel-execute-src-block)))))
 
-(ert-deftest ob-awk/input-src-block ()
+(ert-deftest ob-awk/input-src-block-2 ()
   "Test a code block as an input"
   (org-test-at-id "9e998b2a-3581-43fe-b26d-07d3c507b86a"
     (org-babel-next-src-block 3)
     (should (= 150 (org-babel-execute-src-block)))))
 
+(ert-deftest ob-awk/tabular-input ()
+  "Test a code block as an input"
+  (org-test-at-id "9e998b2a-3581-43fe-b26d-07d3c507b86a"
+    (org-babel-next-src-block 4)
+    (should (equal '(("a" "b" "c")) (org-babel-execute-src-block)))))

@@ -1,6 +1,6 @@
 ;;; org-macro.el --- Macro Replacement Code for Org Mode
 
-;; Copyright (C) 2013 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2015 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -29,6 +29,10 @@
 ;; variable `org-macro-templates'.  This variable is updated by
 ;; `org-macro-initialize-templates', which recursively calls
 ;; `org-macro--collect-macros' in order to read setup files.
+
+;; Argument in macros are separated with commas. Proper escaping rules
+;; are implemented in `org-macro-escape-arguments' and arguments can
+;; be extracted from a string with `org-macro-extract-arguments'.
 
 ;; Along with macros defined through #+MACRO: keyword, default
 ;; templates include the following hard-coded macros:
@@ -155,10 +159,14 @@ default value.  Return nil if no template was found."
         ;; Return string.
         (format "%s" (or value ""))))))
 
-(defun org-macro-replace-all (templates)
+(defun org-macro-replace-all (templates &optional finalize)
   "Replace all macros in current buffer by their expansion.
+
 TEMPLATES is an alist of templates used for expansion.  See
-`org-macro-templates' for a buffer-local default value."
+`org-macro-templates' for a buffer-local default value.
+
+If optional arg FINALIZE is non-nil, raise an error if a macro is
+found in the buffer with no definition in TEMPLATES."
   (save-excursion
     (goto-char (point-min))
     (let (record)
@@ -176,17 +184,61 @@ TEMPLATES is an alist of templates used for expansion.  See
 	      (if (member signature record)
 		  (error "Circular macro expansion: %s"
 			 (org-element-property :key object))
-		(when value
-		  (push signature record)
-		  (delete-region
-		   begin
-		   ;; Preserve white spaces after the macro.
-		   (progn (goto-char (org-element-property :end object))
-			  (skip-chars-backward " \t")
-			  (point)))
-		  ;; Leave point before replacement in case of recursive
-		  ;; expansions.
-		  (save-excursion (insert value)))))))))))
+		(cond (value
+		       (push signature record)
+		       (delete-region
+			begin
+			;; Preserve white spaces after the macro.
+			(progn (goto-char (org-element-property :end object))
+			       (skip-chars-backward " \t")
+			       (point)))
+		       ;; Leave point before replacement in case of recursive
+		       ;; expansions.
+		       (save-excursion (insert value)))
+		      (finalize
+		       (error "Undefined Org macro: %s; aborting"
+			      (org-element-property :key object))))))))))))
+
+(defun org-macro-escape-arguments (&rest args)
+  "Build macro's arguments string from ARGS.
+ARGS are strings.  Return value is a string with arguments
+properly escaped and separated with commas.  This is the opposite
+of `org-macro-extract-arguments'."
+  (let ((s ""))
+    (dolist (arg (reverse args) (substring s 1))
+      (setq s
+	    (concat
+	     ","
+	     (replace-regexp-in-string
+	      "\\(\\\\*\\),"
+	      (lambda (m)
+		(concat (make-string (1+ (* 2 (length (match-string 1 m)))) ?\\)
+			","))
+	      ;; If a non-terminal argument ends on backslashes, make
+	      ;; sure to also escape them as they will be followed by
+	      ;; a comma.
+	      (concat arg (and (not (equal s ""))
+			       (string-match "\\\\+\\'" arg)
+			       (match-string 0 arg)))
+	      nil t)
+	     s)))))
+
+(defun org-macro-extract-arguments (s)
+  "Extract macro arguments from string S.
+S is a string containing comma separated values properly escaped.
+Return a list of arguments, as strings.  This is the opposite of
+`org-macro-escape-arguments'."
+  ;; Do not use `org-split-string' since empty strings are
+  ;; meaningful here.
+  (split-string
+   (replace-regexp-in-string
+    "\\(\\\\*\\),"
+    (lambda (str)
+      (let ((len (length (match-string 1 str))))
+	(concat (make-string (/ len 2) ?\\)
+		(if (zerop (mod len 2)) "\000" ","))))
+    s nil t)
+   "\000"))
 
 
 (provide 'org-macro)
