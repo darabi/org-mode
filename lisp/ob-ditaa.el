@@ -1,6 +1,6 @@
 ;;; ob-ditaa.el --- org-babel functions for ditaa evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -90,6 +90,14 @@ This function is called by `org-babel-execute-src-block'."
 	 (java (cdr (assoc :java params)))
 	 (in-file (org-babel-temp-file "ditaa-"))
 	 (eps (cdr (assoc :eps params)))
+	 (eps-file (when eps
+		     (org-babel-process-file-name (concat in-file ".eps"))))
+	 (pdf-cmd (when (and (or (string= (file-name-extension out-file) "pdf")
+				 (cdr (assoc :pdf params))))
+		    (concat
+		     "epstopdf"
+		     " " eps-file
+		     " -o=" (org-babel-process-file-name out-file))))
 	 (cmd (concat org-babel-ditaa-java-cmd
 		      " " java " " org-ditaa-jar-option " "
 		      (shell-quote-argument
@@ -97,13 +105,9 @@ This function is called by `org-babel-execute-src-block'."
 			(if eps org-ditaa-eps-jar-path org-ditaa-jar-path)))
 		      " " cmdline
 		      " " (org-babel-process-file-name in-file)
-		      " " (org-babel-process-file-name out-file)))
-	 (pdf-cmd (when (and (or (string= (file-name-extension out-file) "pdf")
-				 (cdr (assoc :pdf params))))
-		    (concat
-		     "epstopdf"
-		     " " (org-babel-process-file-name (concat in-file ".eps"))
-		     " -o=" (org-babel-process-file-name out-file)))))
+		      " " (if pdf-cmd
+			      eps-file
+			    (org-babel-process-file-name out-file)))))
     (unless (file-exists-p org-ditaa-jar-path)
       (error "Could not find ditaa.jar at %s" org-ditaa-jar-path))
     (with-temp-file in-file (insert body))

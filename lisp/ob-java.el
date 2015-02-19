@@ -1,6 +1,6 @@
 ;;; ob-java.el --- org-babel functions for java evaluation
 
-;; Copyright (C) 2011-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -32,11 +32,23 @@
 (defvar org-babel-tangle-lang-exts)
 (add-to-list 'org-babel-tangle-lang-exts '("java" . "java"))
 
-(defvar org-babel-java-command "java"
-  "Name of the java command.")
+(defcustom org-babel-java-command "java"
+  "Name of the java command.
+May be either a command in the path, like java
+or an absolute path name, like /usr/local/bin/java
+parameters may be used, like java -verbose"
+  :group 'org-babel
+  :version "24.3"
+  :type 'string)
 
-(defvar org-babel-java-compiler "javac"
-  "Name of the java compiler.")
+(defcustom org-babel-java-compiler "javac"
+  "Name of the java compiler.
+May be either a command in the path, like javac
+or an absolute path name, like /usr/local/bin/javac
+parameters may be used, like javac -verbose"
+  :group 'org-babel
+  :version "24.3"
+  :type 'string)
 
 (defun org-babel-execute:java (body params)
   (let* ((classname (or (cdr (assoc :classname params))

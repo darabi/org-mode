@@ -1,6 +1,6 @@
 ;;; org-entities.el --- Support for special entities in Org-mode
 
-;; Copyright (C) 2010-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2015 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>,
 ;;         Ulf Stegemann <ulf at zeitform dot de>
@@ -27,9 +27,8 @@
 
 ;;; Code:
 
-(require 'org-macs)
-
-(declare-function org-table-align "org-table" ())
+(declare-function org-toggle-pretty-entities "org"       ())
+(declare-function org-table-align            "org-table" ())
 
 (eval-when-compile
   (require 'cl))
@@ -45,7 +44,26 @@ For example, this will replace \"\\nsup\" with \"[not a superset of]\"
 in backends where the corresponding character is not available."
   :group 'org-entities
   :version "24.1"
-  :type 'boolean)
+  :type 'boolean
+  :safe #'booleanp)
+
+(defun org-entities--user-safe-p (v)
+  "Return t if V is a safe value for `org-entities-user'."
+  (or (eq v nil)
+      (and (listp v)
+	   ;; The stupid `eval' trick is needed because `apply'
+	   ;; doesn't work with the special form `and'.
+	   (eval (cons #'and (mapcar (lambda (v2)
+				       (and (listp v2)
+					    (= (length v2) 7)
+					    (stringp (nth 0 v2))
+					    (stringp (nth 1 v2))
+					    (booleanp (nth 2 v2))
+					    (stringp (nth 3 v2))
+					    (stringp (nth 4 v2))
+					    (stringp (nth 5 v2))
+					    (stringp (nth 6 v2))))
+				     v))))))
 
 (defcustom org-entities-user nil
   "User-defined entities used in Org-mode to produce special characters.
@@ -78,7 +96,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
 	   (string :tag "HTML  ")
 	   (string :tag "ASCII ")
 	   (string :tag "Latin1")
-	   (string :tag "utf-8 "))))
+	   (string :tag "utf-8 ")))
+  :safe #'org-entities--user-safe-p)
 
 (defconst org-entities
   '(
@@ -330,7 +349,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
     ("infin" "\\propto" t "&infin;" "[infinity]" "[infinity]" "∞")
     ("infty" "\\infty" t "&infin;" "[infinity]" "[infinity]" "∞")
     ("prop" "\\propto" t "&prop;" "[proportional to]" "[proportional to]" "∝")
-    ("proptp" "\\propto" t "&prop;" "[proportional to]" "[proportional to]" "∝")
+    ("propto" "\\propto" t "&prop;" "[proportional to]" "[proportional to]" "∝")
     ("not" "\\textlnot{}" nil "&not;" "[angled dash]" "¬" "¬")
     ("neg" "\\neg{}" t "&not;" "[angled dash]" "¬" "¬")
     ("land" "\\land" t "&and;" "[logical and]" "[logical and]" "∧")
@@ -395,6 +414,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
     ("ang" "\\angle" t "&ang;" "[angle]" "[angle]" "∠")
     ("angle" "\\angle" t "&ang;" "[angle]" "[angle]" "∠")
     ("perp" "\\perp" t "&perp;" "[up tack]" "[up tack]" "⊥")
+    ("parallel" "\\parallel" t "&parallel;" "||" "||" "∥")
     ("sdot" "\\cdot" t "&sdot;" "[dot]" "[dot]" "⋅")
     ("cdot" "\\cdot" t "&sdot;" "[dot]" "[dot]" "⋅")
     ("lceil" "\\lceil" t "&lceil;" "[left ceiling]" "[left ceiling]" "⌈")
@@ -403,6 +423,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
     ("rfloor" "\\rfloor" t "&rfloor;" "[right floor]" "[right floor]" "⌋")
     ("lang" "\\langle" t "&lang;" "<" "<" "⟨")
     ("rang" "\\rangle" t "&rang;" ">" ">" "⟩")
+    ("langle" "\\langle" t "&lang;" "<" "<" "⟨")
+    ("rangle" "\\rangle" t "&rang;" ">" ">" "⟩")
     ("hbar" "\\hbar" t "&hbar;" "hbar" "hbar" "ℏ")
     ("mho" "\\mho" t "&mho;" "mho" "mho" "℧")
 
@@ -568,6 +590,7 @@ Kind can be any of `latex', `html', `ascii', `latin1', or `utf8'."
     (goto-char pos)
     (org-table-align)))
 
+(defvar org-pretty-entities) ;; declare defcustom from org
 (defun org-entities-help ()
   "Create a Help buffer with all available entities."
   (interactive)
@@ -598,15 +621,11 @@ Kind can be any of `latex', `html', `ascii', `latin1', or `utf8'."
 	  (princ (format "   %-8s \\%-16s %-22s %-13s\n"
 			 utf8 name latex html))))))
   (with-current-buffer "*Org Entity Help*"
-    (org-mode))
+    (org-mode)
+    (when org-pretty-entities
+      (org-toggle-pretty-entities)))
   (select-window (get-buffer-window "*Org Entity Help*")))
 
-
-(defun replace-amp ()
-  "Postprocess HTML file to unescape the ampersand."
-  (interactive)
-  (while (re-search-forward "<td>&amp;\\([^<;]+;\\)" nil t)
-    (replace-match (concat "<td>&" (match-string 1)) t t)))
 
 (provide 'org-entities)
 

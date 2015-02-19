@@ -1,6 +1,6 @@
 ;;; org-footnote.el --- Footnote support in Org and elsewhere
 ;;
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -41,13 +41,15 @@
 (declare-function org-back-over-empty-lines "org" ())
 (declare-function org-back-to-heading "org" (&optional invisible-ok))
 (declare-function org-combine-plists "org" (&rest plists))
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-property "org-element" (property element))
+(declare-function org-element-type "org-element" (element))
 (declare-function org-end-of-subtree "org"  (&optional invisible-ok to-heading))
 (declare-function org-fill-paragraph "org" (&optional justify))
 (declare-function org-icompleting-read "org" (&rest args))
 (declare-function org-id-uuid "org-id" ())
 (declare-function org-in-block-p "org" (names))
-(declare-function org-in-commented-line "org" ())
-(declare-function org-in-indented-comment-line "org" ())
+(declare-function org-at-comment-p "org" ())
 (declare-function org-in-regexp "org" (re &optional nlines visually))
 (declare-function org-in-verbatim-emphasis "org" ())
 (declare-function org-inside-LaTeX-fragment-p "org" ())
@@ -192,8 +194,7 @@ extracted will be filled again."
 (defun org-footnote-in-valid-context-p ()
   "Is point in a context where footnotes are allowed?"
   (save-match-data
-    (not (or (org-in-commented-line)
-	     (org-in-indented-comment-line)
+    (not (or (org-at-comment-p)
 	     (org-inside-LaTeX-fragment-p)
 	     ;; Avoid literal example.
 	     (org-in-verbatim-emphasis)
@@ -446,47 +447,76 @@ buffer."
       (incf cnt))
     (format fmt cnt)))
 
+(defun org-footnote--allow-reference-p ()
+  "Non-nil when a footnote reference can be inserted at point."
+  ;; XXX: This is similar to `org-footnote-in-valid-context-p' but
+  ;; more accurate and usually faster, except in some corner cases.
+  ;; It may replace it after doing proper benchmarks as it would be
+  ;; used in fontification.
+  (unless (bolp)
+    (let* ((context (org-element-context))
+	   (type (org-element-type context)))
+      (cond
+       ;; No footnote reference in attributes.
+       ((let ((post (org-element-property :post-affiliated context)))
+	  (and post (< (point) post)))
+	nil)
+       ;; Paragraphs and blank lines at top of document are fine.
+       ((memq type '(nil paragraph)))
+       ;; So are contents of verse blocks.
+       ((eq type 'verse-block)
+	(and (>= (point) (org-element-property :contents-begin context))
+	     (< (point) (org-element-property :contents-end context))))
+       ;; White spaces after an object or blank lines after an element
+       ;; are OK.
+       ((>= (point)
+	    (save-excursion (goto-char (org-element-property :end context))
+			    (skip-chars-backward " \r\t\n")
+			    (if (memq type org-element-all-objects) (point)
+			      (1+ (line-beginning-position 2))))))
+       ;; Other elements are invalid.
+       ((memq type org-element-all-elements) nil)
+       ;; Just before object is fine.
+       ((= (point) (org-element-property :begin context)))
+       ;; Within recursive object too, but not in a link.
+       ((eq type 'link) nil)
+       ((let ((cbeg (org-element-property :contents-begin context))
+	      (cend (org-element-property :contents-end context)))
+	  (and cbeg (>= (point) cbeg) (<= (point) cend))))))))
+
 (defun org-footnote-new ()
   "Insert a new footnote.
 This command prompts for a label.  If this is a label referencing an
 existing label, only insert the label.  If the footnote label is empty
 or new, let the user edit the definition of the footnote."
   (interactive)
-  (unless (org-footnote-in-valid-context-p)
-    (error "Cannot insert a footnote here"))
-  (let* ((lbls (and (not (equal org-footnote-auto-label 'random))
-		    (org-footnote-all-labels)))
-	 (propose (and (not (equal org-footnote-auto-label 'random))
-		       (org-footnote-unique-label lbls)))
+  (unless (org-footnote--allow-reference-p)
+    (user-error "Cannot insert a footnote here"))
+  (let* ((all (org-footnote-all-labels))
 	 (label
 	  (org-footnote-normalize-label
-	   (cond
-	    ((member org-footnote-auto-label '(t plain))
-	     propose)
-	    ((equal org-footnote-auto-label 'random)
-	     (require 'org-id)
-	     (substring (org-id-uuid) 0 8))
-	    (t
-	     (org-icompleting-read
-	      "Label (leave empty for anonymous): "
-	      (mapcar 'list lbls) nil nil
-	      (if (eq org-footnote-auto-label 'confirm) propose nil)))))))
-    (cond
-     ((bolp) (error "Cannot create a footnote reference at left margin"))
-     ((not label)
-      (insert "[fn:: ]")
-      (backward-char 1))
-     ((member label lbls)
-      (insert "[" label "]")
-      (message "New reference to existing note"))
-     (org-footnote-define-inline
-      (insert "[" label ": ]")
-      (backward-char 1)
-      (org-footnote-auto-adjust-maybe))
-     (t
-      (insert "[" label "]")
-      (org-footnote-create-definition label)
-      (org-footnote-auto-adjust-maybe)))))
+	   (if (eq org-footnote-auto-label 'random)
+	       (format "fn:%x" (random #x100000000))
+	     (let ((propose (org-footnote-unique-label all)))
+	       (if (memq org-footnote-auto-label '(t plain)) propose
+		 (org-icompleting-read
+		  "Label (leave empty for anonymous): "
+		  (mapcar #'list all) nil nil
+		  (and (eq org-footnote-auto-label 'confirm) propose))))))))
+    (cond ((not label)
+	   (insert "[fn:: ]")
+	   (backward-char 1))
+	  ((member label all)
+	   (insert "[" label "]")
+	   (message "New reference to existing note"))
+	  (org-footnote-define-inline
+	   (insert "[" label ": ]")
+	   (backward-char 1)
+	   (org-footnote-auto-adjust-maybe))
+	  (t
+	   (insert "[" label "]")
+	   (org-footnote-create-definition label)
+	   (org-footnote-auto-adjust-maybe)))))
 
 (defvar org-blank-before-new-entry) ; silence byte-compiler
 (defun org-footnote-create-definition (label)
@@ -574,38 +604,43 @@ When at a definition, jump to the references if they exist, offer
 to create them otherwise.
 
 When neither at definition or reference, create a new footnote,
-interactively.
+interactively if possible.
 
-With prefix arg SPECIAL, offer additional commands in a menu."
+With prefix arg SPECIAL, or when no footnote can be created,
+offer additional commands in a menu."
   (interactive "P")
-  (let (tmp c)
+  (let* ((context (and (not special) (org-element-context)))
+	 (type (org-element-type context)))
     (cond
-     (special
+     ((eq type 'footnote-reference)
+      (let ((label (org-element-property :label context)))
+	(cond
+	 ;; Anonymous footnote: move point at the beginning of its
+	 ;; definition.
+	 ((not label)
+	  (goto-char (org-element-property :contents-begin context)))
+	 ;; A definition exists: move to it.
+	 ((ignore-errors (org-footnote-goto-definition label)))
+	 ;; No definition exists: offer to create it.
+	 ((yes-or-no-p (format "No definition for %s.  Create one? " label))
+	  (org-footnote-create-definition label)))))
+     ((eq type 'footnote-definition)
+      (org-footnote-goto-previous-reference
+       (org-element-property :label context)))
+     ((or special
+	  (zerop (current-column))
+	  (not (org-footnote-in-valid-context-p)))
       (message "Footnotes: [s]ort  |  [r]enumber fn:N  |  [S]=r+s |->[n]umeric  |  [d]elete")
-      (setq c (read-char-exclusive))
-      (cond
-       ((eq c ?s) (org-footnote-normalize 'sort))
-       ((eq c ?r) (org-footnote-renumber-fn:N))
-       ((eq c ?S)
-	(org-footnote-renumber-fn:N)
-	(org-footnote-normalize 'sort))
-       ((eq c ?n) (org-footnote-normalize))
-       ((eq c ?d) (org-footnote-delete))
-       (t (error "No such footnote command %c" c))))
-     ((setq tmp (org-footnote-at-reference-p))
-      (cond
-       ;; Anonymous footnote: move point at the beginning of its
-       ;; definition.
-       ((not (car tmp))
-	(goto-char (nth 1 tmp))
-	(forward-char 5))
-       ;; A definition exists: move to it.
-       ((ignore-errors (org-footnote-goto-definition (car tmp))))
-       ;; No definition exists: offer to create it.
-       ((yes-or-no-p (format "No definition for %s.  Create one? " (car tmp)))
-	(org-footnote-create-definition (car tmp)))))
-     ((setq tmp (org-footnote-at-definition-p))
-      (org-footnote-goto-previous-reference (car tmp)))
+      (let ((c (read-char-exclusive)))
+	(cond
+	 ((eq c ?s) (org-footnote-normalize 'sort))
+	 ((eq c ?r) (org-footnote-renumber-fn:N))
+	 ((eq c ?S)
+	  (org-footnote-renumber-fn:N)
+	  (org-footnote-normalize 'sort))
+	 ((eq c ?n) (org-footnote-normalize))
+	 ((eq c ?d) (org-footnote-delete))
+	 (t (error "No such footnote command %c" c)))))
      (t (org-footnote-new)))))
 
 ;;;###autoload

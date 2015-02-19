@@ -1,6 +1,6 @@
 ;;; ob-tangle.el --- extract source code from org-mode files
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -37,10 +37,13 @@
 (declare-function org-fill-template "org" (template alist))
 (declare-function org-babel-update-block-body "org" (new-body))
 (declare-function org-up-heading-safe "org" ())
+(declare-function org-in-commented-heading-p "org" (&optional no-inheritance))
 (declare-function make-directory "files" (dir &optional parents))
+(declare-function org-before-first-heading-p "org" ())
 
 (defcustom org-babel-tangle-lang-exts
-  '(("emacs-lisp" . "el"))
+  '(("emacs-lisp" . "el")
+    ("elisp" . "el"))
   "Alist mapping languages to their file extensions.
 The key is the language name, the value is the string that should
 be inserted as the extension commonly used to identify files
@@ -85,6 +88,11 @@ information into the output using `org-fill-template'.
 %link --------- Org-mode style link to the code block
 %source-name -- name of the code block
 
+Upon insertion the formatted comment will be commented out, and
+followed by a newline.  To inhibit this post-insertion processing
+set the `org-babel-tangle-uncomment-comments' variable to a
+non-nil value.
+
 Whether or not comments are inserted during tangling is
 controlled by the :comments header argument."
   :group 'org-babel
@@ -100,11 +108,24 @@ information into the output using `org-fill-template'.
 %link --------- Org-mode style link to the code block
 %source-name -- name of the code block
 
+Upon insertion the formatted comment will be commented out, and
+followed by a newline.  To inhibit this post-insertion processing
+set the `org-babel-tangle-uncomment-comments' variable to a
+non-nil value.
+
 Whether or not comments are inserted during tangling is
 controlled by the :comments header argument."
   :group 'org-babel
   :version "24.1"
   :type 'string)
+
+(defcustom org-babel-tangle-uncomment-comments nil
+  "Inhibits automatic commenting and addition of trailing newline
+of tangle comments.  Use `org-babel-tangle-comment-format-beg'
+and `org-babel-tangle-comment-format-end' to customize the format
+of tangled comments."
+  :group 'org-babel
+  :type 'boolean)
 
 (defcustom org-babel-process-comment-text #'org-remove-indentation
   "Function called to process raw Org-mode text collected to be
@@ -229,13 +250,14 @@ used to limit the exported source code blocks by language."
 					  (concat base-name "." ext) base-name))))
 		    (when file-name
 		      ;; Possibly create the parent directories for file.
-		      (when (let ((m (funcall get-spec :mkdirp)))
-                              (and m (not (string= m "no"))))
-			(make-directory (file-name-directory file-name) 'parents))
+		      (let ((m (funcall get-spec :mkdirp))
+			    (fnd (file-name-directory file-name)))
+			(and m fnd (not (string= m "no"))
+			     (make-directory fnd 'parents)))
 		      ;; delete any old versions of file
-		      (when (and (file-exists-p file-name)
-				 (not (member file-name (mapcar #'car path-collector))))
-			(delete-file file-name))
+		      (and (file-exists-p file-name)
+			   (not (member file-name (mapcar #'car path-collector)))
+			   (delete-file file-name))
 		      ;; drop source-block to file
 		      (with-temp-buffer
 			(when (fboundp lang-f) (ignore-errors (funcall lang-f)))
@@ -338,8 +360,15 @@ that the appropriate major-mode is set.  SPEC has the form:
 	 (insert-comment (lambda (text)
 			   (when (and comments (not (string= comments "no"))
 				      (> (length text) 0))
-			     (comment-region (point) (progn (insert text) (point)))
-			     (end-of-line nil) (insert "\n")))))
+			     (if org-babel-tangle-uncomment-comments
+				 ;; just plain comments with no processing
+				 (insert text)
+			       ;; ensure comments are made to be
+			       ;; comments, and add a trailing newline
+			       (comment-region
+				(point) (progn (insert text) (point)))
+			       (end-of-line nil)
+			       (insert "\n"))))))
     (when comment (funcall insert-comment comment))
     (when link-p
       (funcall
@@ -354,16 +383,6 @@ that the appropriate major-mode is set.  SPEC has the form:
       (funcall
        insert-comment
        (org-fill-template org-babel-tangle-comment-format-end link-data)))))
-
-(defvar org-comment-string) ;; Defined in org.el
-(defun org-babel-under-commented-heading-p ()
-  "Return t if currently under a commented heading."
-  (if (let ((hd (nth 4 (org-heading-components))))
-	(and hd (string-match (concat "^" org-comment-string) hd)))
-      t
-    (save-excursion
-      (and (org-up-heading-safe)
-	   (org-babel-under-commented-heading-p)))))
 
 (defun org-babel-tangle-collect-blocks (&optional language tangle-file)
   "Collect source blocks in the current Org-mode file.
@@ -388,7 +407,7 @@ can be used to limit the collected code blocks by target file."
       (let* ((info (org-babel-get-src-block-info 'light))
 	     (src-lang (nth 0 info))
 	     (src-tfile (cdr (assoc :tangle (nth 2 info)))))
-        (unless (or (org-babel-under-commented-heading-p)
+        (unless (or (org-in-commented-heading-p)
 		    (string= (cdr (assoc :tangle (nth 2 info))) "no")
 		    (and tangle-file (not (equal tangle-file src-tfile))))
           (unless (and language (not (string= language src-lang)))

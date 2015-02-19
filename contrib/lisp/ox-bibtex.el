@@ -1,6 +1,6 @@
 ;;; ox-bibtex.el --- Export bibtex fragments
 
-;; Copyright (C) 2009-2013 Taru Karttunen
+;; Copyright (C) 2009-2014 Taru Karttunen
 
 ;; Author: Taru Karttunen <taruti@taruti.net>
 ;;      Nicolas Goaziou <n dot goaziou at gmail dot com>
@@ -36,11 +36,17 @@
 ;;
 ;; The usage is as follows:
 ;;
-;;   #+BIBLIOGRAPHY: bibfilebasename stylename optional-options
+;;   #+BIBLIOGRAPHY: bibfilename stylename optional-options
 ;;
 ;; e.g. given foo.bib and using style plain:
 ;;
 ;;   #+BIBLIOGRAPHY: foo plain option:-d
+;;
+;; "stylename" can also be "nil", in which case no style will be used.
+;;
+;; Full filepaths are also possible:
+;;
+;;   #+BIBLIOGRAPHY: /home/user/Literature/foo.bib plain option:-d
 ;;
 ;; Optional options are of the form:
 ;;
@@ -87,8 +93,6 @@
 ;; Initialization
 
 (eval-when-compile (require 'cl))
-(let ((jump-fn (car (org-remove-if-not #'fboundp '(ebib obe-goto-citation)))))
-  (org-add-link-type "cite" jump-fn))
 
 ;;; Internal Functions
 
@@ -147,6 +151,27 @@ to `org-bibtex-citation-p' predicate."
       (and (string-match "\\`\\\\cite{" value)
 	   (substring value (match-end 0) -1)))))
 
+
+;;; Follow cite: links
+
+(defun org-bibtex-file nil "Org-mode file of bibtex entries.")
+
+(defun org-bibtex-goto-citation (&optional citation)
+  "Visit a citation given its ID."
+  (interactive)
+  (let ((citation (or citation
+		      (org-icompleting-read "Citation: "
+					    (obe-citations)))))
+    (find-file (or org-bibtex-file
+		   (error "`org-bibtex-file' has not been configured")))
+    (goto-char (point-min))
+    (when (re-search-forward (format "  :CUSTOM_ID: %s" citation) nil t)
+      (outline-previous-visible-heading 1)
+      t)))
+
+(let ((jump-fn (car (org-remove-if-not #'fboundp '(ebib org-bibtex-goto-citation)))))
+  (org-add-link-type "cite" jump-fn))
+
 
 
 ;;; Filters
@@ -166,7 +191,17 @@ Return new parse tree."
 	(when (equal (org-element-property :key keyword) "BIBLIOGRAPHY")
 	  (let ((arguments (org-bibtex-get-arguments keyword))
 		(file (org-bibtex-get-file keyword))
-		temp-file)
+		temp-file
+		out-file)
+	    ;; Test if filename is given with .bib-extension and strip
+    	    ;; it off. Filenames with another extensions will be
+	    ;; untouched and will finally rise an error in bibtex2html.
+	    (setq file (if (equal (file-name-extension file) "bib")
+			   (file-name-sans-extension file) file))
+	    ;; Outpufiles of bibtex2html will be put into current working directory
+	    ;; so define a variable for this.
+	    (setq out-file (file-name-sans-extension
+			    (file-name-nondirectory file)))
 	    ;; limit is set: collect citations throughout the document
 	    ;; in TEMP-FILE and pass it to "bibtex2html" as "-citefile"
 	    ;; argument.
@@ -184,18 +219,21 @@ Return new parse tree."
 				 (append (plist-get arguments :options)
 					 (list "-citefile" temp-file))))))
 	    ;; Call "bibtex2html" on specified file.
-	    (unless (eq 0 (apply 'call-process
-				 (append '("bibtex2html" nil nil nil)
-					 '("-a" "-nodoc" "-noheader" "-nofooter")
-					 (list "--style"
-					       (org-bibtex-get-style keyword))
-					 (plist-get arguments :options)
-					 (list (concat file ".bib")))))
+	    (unless (eq 0 (apply
+			   'call-process
+			   (append '("bibtex2html" nil nil nil)
+				   '("-a" "-nodoc" "-noheader" "-nofooter")
+				   (let ((style
+					  (org-not-nil
+					   (org-bibtex-get-style keyword))))
+				     (and style (list "--style" style)))
+				   (plist-get arguments :options)
+				   (list (concat file ".bib")))))
 	      (error "Executing bibtex2html failed"))
 	    (and temp-file (delete-file temp-file))
 	    ;; Open produced HTML file, and collect Bibtex key names
 	    (with-temp-buffer
-	      (insert-file-contents (concat file ".html"))
+	      (insert-file-contents (concat out-file ".html"))
 	      ;; Update `org-bibtex-html-entries-alist'.
 	      (goto-char (point-min))
 	      (while (re-search-forward
@@ -207,18 +245,25 @@ Return new parse tree."
 	    (with-temp-buffer
 	      (cond
 	       ((org-export-derived-backend-p backend 'html)
-		(insert "<div id=\"bibliography\">\n<h2>References</h2>\n")
-		(insert-file-contents (concat file ".html"))
+		(insert (format "<div id=\"bibliography\">\n<h2>%s</h2>\n"
+				(org-export-translate "References" :html info)))
+		(insert-file-contents (concat out-file ".html"))
 		(insert "\n</div>"))
 	       ((org-export-derived-backend-p backend 'ascii)
 		;; convert HTML references to text w/pandoc
 		(unless (eq 0 (call-process "pandoc" nil nil nil
-					    (concat file ".html")
+					    (concat out-file ".html")
 					    "-o"
-					    (concat file ".txt")))
+					    (concat out-file ".txt")))
 		  (error "Executing pandoc failed"))
-		(insert "References\n==========\n\n")
-		(insert-file-contents (concat file ".txt"))
+		(insert
+		 (format
+		  "%s\n==========\n\n"
+		  (org-export-translate
+		   "References"
+		   (intern (format ":%s" (plist-get info :ascii-charset)))
+		   info)))
+		(insert-file-contents (concat out-file ".txt"))
 		(goto-char (point-min))
 		(while (re-search-forward
 			"\\[ \\[bib\\][^ ]+ \\(\\]\\||[\n\r]\\)" nil t)
@@ -238,7 +283,10 @@ Return new parse tree."
 (defun org-bibtex-merge-contiguous-citations (tree backend info)
   "Merge all contiguous citation in parse tree.
 As a side effect, this filter will also turn all \"cite\" links
-into \"\\cite{...}\" LaTeX fragments."
+into \"\\cite{...}\" LaTeX fragments and will extract options.
+Cite options are placed into square brackets at the beginning of
+the \"\\cite\" command for the LaTeX backend, and are removed for
+the HTML and ASCII backends."
   (when (org-export-derived-backend-p backend 'html 'latex 'ascii)
     (org-element-map tree '(link latex-fragment)
       (lambda (object)
@@ -246,7 +294,8 @@ into \"\\cite{...}\" LaTeX fragments."
 	  (let ((new-citation (list 'latex-fragment
 				    (list :value ""
 					  :post-blank (org-element-property
-						       :post-blank object)))))
+						       :post-blank object))))
+		option)
 	    ;; Insert NEW-CITATION right before OBJECT.
 	    (org-element-insert-before new-citation object)
 	    ;; Remove all subsequent contiguous citations from parse
@@ -261,6 +310,18 @@ into \"\\cite{...}\" LaTeX fragments."
 		  (push (org-bibtex-get-citation-key next) keys))
 		(org-element-extract-element object)
 		(setq object next))
+	      ;; Find any options in keys, e.g., "(Chapter 2)key" has
+	      ;; the option "Chapter 2".
+	      (setq keys
+		    (mapcar
+		     (lambda (k)
+		       (if (string-match "^(\\([^)]\+\\))\\(.*\\)" k)
+			   (progn
+			     (when (org-export-derived-backend-p backend 'latex)
+			       (setq option (format "[%s]" (match-string 1 k))))
+			     (match-string 2 k))
+			 k))
+		     keys))
 	      (org-element-extract-element object)
 	      ;; Eventually merge all keys within NEW-CITATION.  Also
 	      ;; ensure NEW-CITATION has the same :post-blank property
@@ -270,7 +331,8 @@ into \"\\cite{...}\" LaTeX fragments."
 	       :post-blank (org-element-property :post-blank object))
 	      (org-element-put-property
 	       new-citation
-	       :value (format "\\cite{%s}"
+	       :value (format "\\cite%s{%s}"
+			      (or option "")
 			      (mapconcat 'identity (nreverse keys) ",")))))))))
   tree)
 
@@ -291,7 +353,7 @@ Fallback to `latex' back-end for other keywords."
     (if (not (equal (org-element-property :key keyword) "BIBLIOGRAPHY"))
         ad-do-it
       (let ((file (org-bibtex-get-file keyword))
-            (style (org-bibtex-get-style keyword)))
+            (style (org-not-nil (org-bibtex-get-style keyword))))
         (setq ad-return-value
               (when file
                 (concat (and style (format "\\bibliographystyle{%s}\n" style))

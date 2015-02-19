@@ -1,6 +1,6 @@
 ;;; org-list.el --- Plain lists for Org-mode
 ;;
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;	   Bastien Guerry <bzg@gnu.org>
@@ -211,11 +211,19 @@ into
 
 (defcustom org-plain-list-ordered-item-terminator t
   "The character that makes a line with leading number an ordered list item.
-Valid values are ?. and ?\).  To get both terminators, use t."
+Valid values are ?. and ?\).  To get both terminators, use t.
+
+This variable needs to be set before org.el is loaded.  If you
+need to make a change while Emacs is running, use the customize
+interface or run the following code after updating it:
+
+  \\[org-element-update-syntax]"
   :group 'org-plain-lists
   :type '(choice (const :tag "dot like in \"2.\"" ?.)
 		 (const :tag "paren like in \"2)\"" ?\))
-		 (const :tag "both" t)))
+		 (const :tag "both" t))
+  :set (lambda (var val) (set var val)
+	 (when (featurep 'org-element) (org-element-update-syntax))))
 
 (define-obsolete-variable-alias 'org-alphabetical-lists
   'org-list-allow-alphabetical "24.4") ; Since 8.0
@@ -230,13 +238,12 @@ This variable needs to be set before org.el is loaded.  If you
 need to make a change while Emacs is running, use the customize
 interface or run the following code after updating it:
 
-  \(when (featurep 'org-element) (load \"org-element\" t t))"
+  \\[org-element-update-syntax]"
   :group 'org-plain-lists
   :version "24.1"
   :type 'boolean
-  :set (lambda (var val)
-	 (when (featurep 'org-element) (load "org-element" t t))
-	 (set var val)))
+  :set (lambda (var val) (set var val)
+	 (when (featurep 'org-element) (org-element-update-syntax))))
 
 (defcustom org-list-two-spaces-after-bullet-regexp nil
   "A regular expression matching bullets that should have 2 spaces after them.
@@ -1127,13 +1134,20 @@ This function modifies STRUCT."
 	   ;; Store overlays responsible for visibility status.  We
 	   ;; also need to store their boundaries as they will be
 	   ;; removed from buffer.
-	   (overlays (cons
-		      (mapcar (lambda (ov)
-				(list ov (overlay-start ov) (overlay-end ov)))
-			      (overlays-in beg-A end-A))
-		      (mapcar (lambda (ov)
-				(list ov (overlay-start ov) (overlay-end ov)))
-			      (overlays-in beg-B end-B)))))
+	   (overlays
+	    (cons
+	     (delq nil
+		   (mapcar (lambda (o)
+			     (and (>= (overlay-start o) beg-A)
+				  (<= (overlay-end o) end-A)
+				  (list o (overlay-start o) (overlay-end o))))
+			   (overlays-in beg-A end-A)))
+	     (delq nil
+		   (mapcar (lambda (o)
+			     (and (>= (overlay-start o) beg-B)
+				  (<= (overlay-end o) end-B)
+				  (list o (overlay-start o) (overlay-end o))))
+			   (overlays-in beg-B end-B))))))
       ;; 1. Move effectively items in buffer.
       (goto-char beg-A)
       (delete-region beg-A end-B-no-blank)
@@ -1144,42 +1158,39 @@ This function modifies STRUCT."
       ;;    as empty spaces are not moved there.  In others words,
       ;;    item BEG-A will end with whitespaces that were at the end
       ;;    of BEG-B and the same applies to BEG-B.
-      (mapc (lambda (e)
-	      (let ((pos (car e)))
-		(cond
-		 ((< pos beg-A))
-		 ((memq pos sub-A)
-		  (let ((end-e (nth 6 e)))
-		    (setcar e (+ pos (- end-B-no-blank end-A-no-blank)))
-		    (setcar (nthcdr 6 e)
-			    (+ end-e (- end-B-no-blank end-A-no-blank)))
-		    (when (= end-e end-A) (setcar (nthcdr 6 e) end-B))))
-		 ((memq pos sub-B)
-		  (let ((end-e (nth 6 e)))
-		    (setcar e (- (+ pos beg-A) beg-B))
-		    (setcar (nthcdr 6 e) (+ end-e (- beg-A beg-B)))
-		    (when (= end-e end-B)
-		      (setcar (nthcdr 6 e)
-			      (+ beg-A size-B (- end-A end-A-no-blank))))))
-		 ((< pos beg-B)
-		  (let ((end-e (nth 6 e)))
-		    (setcar e (+ pos (- size-B size-A)))
-		    (setcar (nthcdr 6 e) (+ end-e (- size-B size-A))))))))
-	    struct)
-      (setq struct (sort struct (lambda (e1 e2) (< (car e1) (car e2)))))
+      (dolist (e struct)
+	(let ((pos (car e)))
+	  (cond
+	   ((< pos beg-A))
+	   ((memq pos sub-A)
+	    (let ((end-e (nth 6 e)))
+	      (setcar e (+ pos (- end-B-no-blank end-A-no-blank)))
+	      (setcar (nthcdr 6 e)
+		      (+ end-e (- end-B-no-blank end-A-no-blank)))
+	      (when (= end-e end-A) (setcar (nthcdr 6 e) end-B))))
+	   ((memq pos sub-B)
+	    (let ((end-e (nth 6 e)))
+	      (setcar e (- (+ pos beg-A) beg-B))
+	      (setcar (nthcdr 6 e) (+ end-e (- beg-A beg-B)))
+	      (when (= end-e end-B)
+		(setcar (nthcdr 6 e)
+			(+ beg-A size-B (- end-A end-A-no-blank))))))
+	   ((< pos beg-B)
+	    (let ((end-e (nth 6 e)))
+	      (setcar e (+ pos (- size-B size-A)))
+	      (setcar (nthcdr 6 e) (+ end-e (- size-B size-A))))))))
+      (setq struct (sort struct #'car-less-than-car))
       ;; Restore visibility status, by moving overlays to their new
       ;; position.
-      (mapc (lambda (ov)
-	      (move-overlay
-	       (car ov)
-	       (+ (nth 1 ov) (- (+ beg-B (- size-B size-A)) beg-A))
-	       (+ (nth 2 ov) (- (+ beg-B (- size-B size-A)) beg-A))))
-	    (car overlays))
-      (mapc (lambda (ov)
-	      (move-overlay (car ov)
-			    (+ (nth 1 ov) (- beg-A beg-B))
-			    (+ (nth 2 ov) (- beg-A beg-B))))
-	    (cdr overlays))
+      (dolist (ov (car overlays))
+	(move-overlay
+	 (car ov)
+	 (+ (nth 1 ov) (- (+ beg-B (- size-B size-A)) beg-A))
+	 (+ (nth 2 ov) (- (+ beg-B (- size-B size-A)) beg-A))))
+      (dolist (ov (cdr overlays))
+	(move-overlay (car ov)
+		      (+ (nth 1 ov) (- beg-A beg-B))
+		      (+ (nth 2 ov) (- beg-A beg-B))))
       ;; Return structure.
       struct)))
 
@@ -1213,7 +1224,7 @@ some heuristics to guess the result."
        ;; When `org-blank-before-new-entry' says so, it is 1.
        ((eq insert-blank-p t) 1)
        ;; `plain-list-item' is 'auto.  Count blank lines separating
-       ;; neighbours items in list.
+       ;; neighbors' items in list.
        (t (let ((next-p (org-list-get-next-item item struct prevs)))
 	    (cond
 	     ;; Is there a next item?
@@ -1244,7 +1255,7 @@ some heuristics to guess the result."
 If POS is before first character after bullet of the item, the
 new item will be created before the current one.
 
-STRUCT is the list structure.  PREVS is the the alist of previous
+STRUCT is the list structure.  PREVS is the alist of previous
 items, as returned by `org-list-prevs-alist'.
 
 Insert a checkbox if CHECKBOX is non-nil, and string AFTER-BULLET
@@ -1463,8 +1474,10 @@ This function returns, destructively, the new list structure."
 			    (point-at-eol)))))
 		     (t dest)))
 	 (org-M-RET-may-split-line nil)
-	 ;; Store visibility.
-	 (visibility (overlays-in item item-end)))
+	 ;; Store inner overlays (to preserve visibility).
+	 (overlays (org-remove-if (lambda (o) (or (< (overlay-start o) item)
+					     (> (overlay-end o) item)))
+				  (overlays-in item item-end))))
     (cond
      ((eq dest 'delete) (org-list-delete-item item struct))
      ((eq dest 'kill)
@@ -1499,13 +1512,12 @@ This function returns, destructively, the new list structure."
 							   new-end
 							 (+ end shift)))))))
 			       moved-items))
-		      (lambda (e1 e2) (< (car e1) (car e2))))))
-      ;; 2. Restore visibility.
-      (mapc (lambda (ov)
-	      (move-overlay ov
-			    (+ (overlay-start ov) (- (point) item))
-			    (+ (overlay-end ov) (- (point) item))))
-	    visibility)
+		      #'car-less-than-car)))
+      ;; 2. Restore inner overlays.
+      (dolist (o overlays)
+	(move-overlay o
+		      (+ (overlay-start o) (- (point) item))
+		      (+ (overlay-end o) (- (point) item))))
       ;; 3. Eventually delete extra copy of the item and clean marker.
       (prog1 (org-list-delete-item (marker-position item) struct)
 	(move-marker item nil)))
@@ -1852,10 +1864,9 @@ Initial position of cursor is restored after the changes."
 	 (item-re (org-item-re))
 	 (shift-body-ind
 	  (function
-	   ;; Shift the indentation between END and BEG by DELTA.  If
-	   ;; MAX-IND is non-nil, ensure that no line will be indented
-	   ;; more than that number.  Start from the line before END.
-	   (lambda (end beg delta max-ind)
+	   ;; Shift the indentation between END and BEG by DELTA.
+	   ;; Start from the line before END.
+	   (lambda (end beg delta)
 	     (goto-char end)
 	     (skip-chars-backward " \r\t\n")
 	     (beginning-of-line)
@@ -1868,9 +1879,7 @@ Initial position of cursor is restored after the changes."
 		 (org-inlinetask-goto-beginning))
 		;; Shift only non-empty lines.
 		((org-looking-at-p "^[ \t]*\\S-")
-		 (let ((i (org-get-indentation)))
-		   (org-indent-line-to
-		    (if max-ind (min (+ i delta) max-ind) (+ i delta))))))
+		 (org-indent-line-to (+ (org-get-indentation) delta))))
 	       (forward-line -1)))))
          (modify-item
           (function
@@ -1925,37 +1934,53 @@ Initial position of cursor is restored after the changes."
 	    ;; belongs to: it is the last item (ITEM-UP), whose
 	    ;; ending is further than the position we're
 	    ;; interested in.
-	    (let ((item-up (assoc-default end-pos acc-end '>)))
+	    (let ((item-up (assoc-default end-pos acc-end #'>)))
 	      (push (cons end-pos item-up) end-list)))
 	  (push (cons end-pos pos) acc-end)))
       ;; 2. Slice the items into parts that should be shifted by the
       ;;    same amount of indentation.  Each slice follow the pattern
-      ;;    (END BEG DELTA MAX-IND-OR-NIL).  Slices are returned in
-      ;;    reverse order.
-      (setq all-ends (sort (append (mapcar 'car itm-shift)
-				   (org-uniquify (mapcar 'car end-list)))
-			   '<))
+      ;;    (END BEG DELTA).  Slices are returned in reverse order.
+      (setq all-ends (sort (append (mapcar #'car itm-shift)
+				   (org-uniquify (mapcar #'car end-list)))
+			   #'<)
+	    acc-end (nreverse acc-end))
       (while (cdr all-ends)
 	(let* ((up (pop all-ends))
 	       (down (car all-ends))
 	       (itemp (assq up struct))
-	       (item (if itemp up (cdr (assq up end-list))))
-	       (ind (cdr (assq item itm-shift)))
-	       ;; If we're not at an item, there's a child of the item
-	       ;; point belongs to above.  Make sure this slice isn't
-	       ;; moved within that child by specifying a maximum
-	       ;; indentation.
-	       (max-ind (and (not itemp)
-			     (+ (org-list-get-ind item struct)
-				(length (org-list-get-bullet item struct))
-				org-list-indent-offset))))
-	  (push (list down up ind max-ind) sliced-struct)))
+	       (delta
+		(if itemp (cdr (assq up itm-shift))
+		  ;; If we're not at an item, there's a child of the
+		  ;; item point belongs to above.  Make sure the less
+		  ;; indented line in this slice has the same column
+		  ;; as that child.
+		  (let* ((child (cdr (assq up acc-end)))
+			 (ind (org-list-get-ind child struct))
+			 (min-ind most-positive-fixnum))
+		    (save-excursion
+		      (goto-char up)
+		      (while (< (point) down)
+			;; Ignore empty lines.  Also ignore blocks and
+			;; drawers contents.
+			(unless (org-looking-at-p "[ \t]*$")
+			  (setq min-ind (min (org-get-indentation) min-ind))
+			  (cond
+			   ((and (looking-at "#\\+BEGIN\\(:\\|_\\S-+\\)")
+				 (re-search-forward
+				  (format "^[ \t]*#\\+END%s[ \t]*$"
+					  (match-string 1))
+				  down t)))
+			   ((and (looking-at org-drawer-regexp)
+				 (re-search-forward "^[ \t]*:END:[ \t]*$"
+						    down t)))))
+			(forward-line)))
+		    (- ind min-ind)))))
+	  (push (list down up delta) sliced-struct)))
       ;; 3. Shift each slice in buffer, provided delta isn't 0, from
       ;;    end to beginning.  Take a special action when beginning is
       ;;    at item bullet.
       (dolist (e sliced-struct)
-	(unless (and (zerop (nth 2 e)) (not (nth 3 e)))
-	  (apply shift-body-ind e))
+	(unless (zerop (nth 2 e)) (apply shift-body-ind e))
 	(let* ((beg (nth 1 e))
 	       (cell (assq beg struct)))
 	  (unless (or (not cell) (equal cell (assq beg old-struct)))
@@ -2051,16 +2076,19 @@ Possible values are: `folded', `children' or `subtree'.  See
 
 (defun org-list-item-body-column (item)
   "Return column at which body of ITEM should start."
-  (let (bpos bcol tpos tcol)
-    (save-excursion
-      (goto-char item)
-      (looking-at "[ \t]*\\(\\S-+\\)\\(.*[ \t]+::\\)?\\([ \t]+\\|$\\)")
-      (setq bpos (match-beginning 1) tpos (match-end 0)
-	    bcol (progn (goto-char bpos) (current-column))
-	    tcol (progn (goto-char tpos) (current-column)))
-      (when (> tcol (+ bcol org-description-max-indent))
-	(setq tcol (+ bcol 5))))
-    tcol))
+  (save-excursion
+    (goto-char item)
+    (looking-at "[ \t]*\\(\\S-+\\)\\(.*[ \t]+::\\)?\\([ \t]+\\|$\\)")
+    (if (match-beginning 2)
+	(let ((start (1+ (match-end 2)))
+	      (ind (org-get-indentation)))
+	  (if (> start (+ ind org-description-max-indent)) (+ ind 5) start))
+      (+ (progn (goto-char (match-end 1)) (current-column))
+	 (if (and org-list-two-spaces-after-bullet-regexp
+		  (org-string-match-p org-list-two-spaces-after-bullet-regexp
+				      (match-string 1)))
+	     2
+	   1)))))
 
 
 
@@ -2227,7 +2255,7 @@ item is invisible."
 	  t)))))
 
 (defun org-list-repair ()
-  "Fix indentation, bullets and checkboxes is the list at point."
+  "Fix indentation, bullets and checkboxes in the list at point."
   (interactive)
   (unless (org-at-item-p) (error "This is not a list"))
   (let* ((struct (org-list-struct))
@@ -3044,7 +3072,7 @@ for this list."
     (unless (org-at-item-p) (error "Not at a list item"))
     (save-excursion
       (re-search-backward "#\\+ORGLST" nil t)
-      (unless (looking-at "#\\+ORGLST:[ \t]+SEND[ \t]+\\(\\S-+\\)[ \t]+\\(\\S-+\\)")
+      (unless (looking-at "\\(?:[ \t]\\)?#\\+ORGLST:[ \t]+SEND[ \t]+\\(\\S-+\\)[ \t]+\\(\\S-+\\)")
 	(if maybe (throw 'exit nil)
 	  (error "Don't know how to transform this list"))))
     (let* ((name (match-string 1))

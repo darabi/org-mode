@@ -1,6 +1,6 @@
 ;;; org-mime.el --- org html export for text/html MIME emails
 
-;; Copyright (C) 2010-2013 Eric Schulte
+;; Copyright (C) 2010-2014 Eric Schulte
 
 ;; Author: Eric Schulte
 ;; Keywords: mime, mail, email, html
@@ -111,7 +111,7 @@
 ;; example hook, for setting a dark background in <pre style="background-color: #EEE;"> elements
 (defun org-mime-change-element-style (element style)
   "Set new default htlm style for <ELEMENT> elements in exported html."
-  (while (re-search-forward (format "<%s" element) nil t)
+  (while (re-search-forward (format "<%s\\>" element) nil t)
     (replace-match (format "<%s style=\"%s\"" element style))))
 
 (defun org-mime-change-class-style (class style)
@@ -163,10 +163,13 @@ and images in a multipart/related part."
     ('semi (concat
             "--" "<<alternative>>-{\n"
             "--" "[[text/plain]]\n" plain
-	    (when images (concat "--" "<<alternative>>-{\n"))
-            "--" "[[text/html]]\n"  html
-	    images
-	    (when images (concat "--" "}-<<alternative>>\n"))
+	    (if (and images (> (length images) 0))
+		(concat "--" "<<related>>-{\n"
+			"--" "[[text/html]]\n"  html
+			images
+			"--" "}-<<related>>\n")
+	      (concat "--" "[[text/html]]\n"  html
+		      images))
             "--" "}-<<alternative>>\n"))
     ('vm "?")))
 
@@ -269,8 +272,10 @@ export that region, otherwise export the entire body."
 (defun org-mime-send-buffer (&optional fmt)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((region-p (org-region-active-p))
-	 (subject (org-export-grab-title-from-buffer))
-         (file (buffer-file-name (current-buffer)))
+	 (file (buffer-file-name (current-buffer)))
+	 (subject (if (not file) (buffer-name (buffer-base-buffer))
+		   (file-name-sans-extension
+		    (file-name-nondirectory file))))
          (body-start (or (and region-p (region-beginning))
                          (save-excursion (goto-char (point-min)))))
          (body-end (or (and region-p (region-end)) (point-max)))
