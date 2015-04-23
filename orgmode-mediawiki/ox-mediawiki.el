@@ -344,7 +344,7 @@ a communication channel."
                    (trans "<code>[-]</code> ")
                    (off "☐ "))
                  (let ((tag (org-element-property :tag item)))
-                   (and tag (format "**%s:** "(org-export-data tag info))))
+                   (and tag (format "'''%s:''' "(org-export-data tag info))))
                  (org-trim contents)
                  )
                 "\n") "")
