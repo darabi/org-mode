@@ -1,0 +1,18 @@
+#!/bin/sh
+
+if [ -z "${REMOTE_USER_NAME}" ]; then
+  REMOTE_USER_NAME="${USER}"
+fi
+
+ARGS=$@
+
+if [ -z $ARGS ]; then
+  ARGS="screen -Rd"
+fi
+
+CMD="ssh -t -C -Y -L 3000:localhost:3000 -L 13000:localhost:13000 -L 13001:localhost:13001 -L 13002:localhost:5432 \
+ -L 14000:localhost:14000 -L 14001:localhost:14001 -o ControlPath=none -o ServerAliveInterval=60 ${REMOTE_USER_NAME}@dwim.hu $ARGS"
+
+echo Executing $CMD
+
+$CMD

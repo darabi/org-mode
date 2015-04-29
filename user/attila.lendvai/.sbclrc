@@ -1,0 +1,22 @@
+;;; -*- mode: common-lisp -*-
+
+(setf *print-right-margin* 150)
+
+;; (load (merge-pathnames "workspace/global/asdf-dev/asdf.lisp" (user-homedir-pathname)))
+
+(load (merge-pathnames "workspace/hu.dwim.environment/source/environment.lisp" (user-homedir-pathname)))
+
+;;(eval (read-from-string "(asdf:enable-deferred-warnings-check)"))
+
+;;(initialize-asdf-source-registry "/usr/share/common-lisp/source/" :insert-at :tail :inherit-configuration? t)
+
+;;(require :asdf)
+;;(trace asdf::process-source-registry-directive asdf::process-source-registry asdf::flatten-source-registry asdf::compute-source-registry asdf::register-asd-directory)
+;;(print asdf::*source-registry-exclusions*)
+
+;;; The following lines added by ql:add-to-init-file:
+#-quicklisp
+(let ((quicklisp-init (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname))))
+  (when (probe-file quicklisp-init)
+    (load quicklisp-init)))
+
