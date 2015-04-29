@@ -1,0 +1,20 @@
+# this is an old and probably obsolete notes file back from when i
+# could be bothered to try going to the hassle what an oracle install
+# is...
+
+ssh -X -o ControlPath=none -o ServerAliveInterval=60 alendvai@dwim.hu
+
+sudo apt-get install xserver-xorg x11-utils
+
+
+# http://littlebrain.org/2008/05/12/how-to-install-oracle-xe-in-ubuntu-64-bit/
+# better? http://blog.cachemiss.com/articles/Installing%20Oracle%20XE%20on%20Debian%20AMD64.pod
+
+sudo apt-get install libc6-i386
+
+
+
+(18:03:25) kami: it seems that the env var NLS_LANG in fact plays a role
+(18:04:14) attila_lendvai: kami: I wouldn't touch oracle with a pole, unless someone pays enough that the next time I can reject such an offer
+(18:04:39) kami: when I set AMERICAN_AMERICA.AL32UTF16, the strings are decoded as chinese
+(18:05:04) kami: when I set AMERICAN_AMERICA.AL32UTF8, the strings look OK
