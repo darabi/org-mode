@@ -7,7 +7,7 @@
 ;; Author: Phillip Lord <phillip.lord@newcastle.ac.uk>
 ;; Maintainer: Phillip Lord <phillip.lord@newcastle.ac.uk>
 ;; Version: 0.10
-;; Package-Requires: ((emacs "24.4")(m-buffer "0.13")(dash "2.5.0")(f "0.17.2"))
+;; Package-Requires: ((emacs "24.4")(m-buffer "0.13")(dash "2.5.0")(f "0.17.2")(s "1.9.0"))
 
 ;; The contents of this file are subject to the GPL License, Version 3.0.
 
@@ -123,7 +123,7 @@
 ;;  - default: this copies all text exactly, but does not transfer
 ;;    text-properties (which is the behaviour of indirect buffers). It is
 ;;    possible to configure the default file or mode on a per-object basis.
-;;  - block: this is designed for programmatic syntaxes where blocks of code are
+;;  - chunk: this is designed for programmatic syntaxes where chunks of code are
 ;;    demarcated by start and end tags, and everything else is commented by
 ;;    line-start comments. Comments are added or removed between the two buffers.
 
