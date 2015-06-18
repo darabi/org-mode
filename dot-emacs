@@ -57,8 +57,8 @@
 (setq x-select-enable-clipboard t)  ; makes killing/yanking interact with clipboard X11 selection
 
 ;; these will probably be already set to these values, leave them that way if so!
-(setf interprogram-cut-function 'x-select-text)
-(setf interprogram-paste-function 'x-cut-buffer-or-selection-value)
+(setq interprogram-cut-function 'x-select-text)
+(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
 
 ; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
 ; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
@@ -346,12 +346,6 @@ that information. See ``ORG-CLOCK-SUM``"
      "Calls lisp-indent-line. If point does not change (if no indentation was
 performed, then slime-complete-symbol is called"
      (interactive)
-     (save-excursion
-       (beginning-of-line)
-       (message "Testing whether we are looking at %s" outline-regexp)
-       (when (looking-at outline-regexp)
-         (outline-toggle-children)
-         (return-from ,fn-name)))
      (let ((pos (point)))
        (lisp-indent-line)
        (when (= pos (point))
