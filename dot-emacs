@@ -8,6 +8,13 @@
 (let ((default-directory (expand-file-name "~/.emacs.d/site-lisp")))
           (load (expand-file-name "subdirs.el") t t t))
 
+(defun add-to-load-path-if-exists (dirname)
+  (let ((dir (expand-file-name dirname)))
+    (when (file-exists-p dir)
+      (add-to-list 'load-path dir))))
+
+;; a user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
+(add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/"))
 
 (setf max-specpdl-size 4000)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -464,14 +471,6 @@ performed, then slime-complete-symbol is called"
 ;;; Make all yes-or-no questions as y-or-n
 (fset 'yes-or-no-p 'y-or-n-p)
 
-
-;;; dwim.hu workspace
-
-(setq dwim-workspace (expand-file-name (setenv "DWIM_WORKSPACE" "~/dwim")))
-
-(add-to-list 'load-path (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
-
-
 ;;; paredit
 
 (autoload 'paredit-mode "paredit"
@@ -504,12 +503,29 @@ performed, then slime-complete-symbol is called"
 
 (setf paredit-mode-hook nil)
 
-(setf dwim-user-init (expand-file-name (concat "hu.dwim.environment/user/" (getenv "USER") "/init.el") dwim-workspace))
+;;
+;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
+;;
 
-(if (file-exists-p dwim-user-init)
-    (progn
-      (load-file dwim-user-init)
-      (setf slime-default-lisp 'web-server)))
+(when (getenv "QUICKLISP_HOME")
+  (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el")))
+
+;; try to load the elisp files from the current quicklisp distribution
+(when (functionp 'quicklisp-slime-helper-system-directory)
+  (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
+
+;; if there are directories present in ~/dwim, they override the quicklisp ones
+(setq dwim-workspace (expand-file-name (getenv "DWIM_WORKSPACE")))
+(add-to-load-path-if-exists (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
+(add-to-load-path-if-exists (expand-file-name "hu.dwim.def/emacs/" dwim-workspace))
+(add-to-load-path-if-exists (expand-file-name "hu.dwim.logger/emacs/" dwim-workspace))
+(add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
+(add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))
+
+;; we have added the user dir to load path, so anybody who doesn't
+;; have a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
+;; receive an error here
+(require 'my-dwim-init)
 
 ;; undo the changes in dwim init files
 (show-paren-mode t)
@@ -519,8 +535,8 @@ performed, then slime-complete-symbol is called"
 
 (add-hook 'lisp-mode-hook
           '(lambda ()
-            (abbrev-mode t)
-            (paredit-mode +1)))
+             (abbrev-mode t)
+             (paredit-mode +1)))
 
 
 ;;; Easy PGA encryption
