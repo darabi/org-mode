@@ -218,7 +218,7 @@
    (plantuml . t)
    (dot . t)))
 
-(setq org-plantuml-jar-path "~/opt/plantuml/plantuml.jar")
+(setq org-plantuml-jar-path "~/.emacs.d/plantuml/plantuml.jar")
 
 (defun my-invoice-heading-hook ()
   "Is called when org-invoice is collecting data from a heading.
