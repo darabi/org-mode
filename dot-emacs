@@ -68,6 +68,9 @@
 (setq select-active-regions t) ;  active region sets primary X11 selection
 (global-set-key [mouse-2] 'mouse-yank-primary)  ; make mouse middle-click only paste from primary X11 selection, not clipboard and kill ring.
 
+;; with this, doing an M-y will also affect the X11 clipboard, making emacs act as a sort of clipboard history, at
+;; least of text you've pasted into it in the first place.
+;; (setq yank-pop-change-selection t)  ; makes rotating the kill ring change the X11 clipboard.
 
 ;; stolen from
 ;; http://wttools.sourceforge.net/emacs-stuff/emacs.html
@@ -153,6 +156,24 @@
 ;; start emacsclient server
 (server-start)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;; LaTeX and friends
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(push '("\\.tex$" . LaTeX-mode) auto-mode-alist)
+
+(add-hook 'LaTeX-mode-hook (lambda ()
+                             (local-set-key "\C-x\C-j" 'okular-jump-to-line)
+                             (setq LaTeX-command-style '(("" "%(PDF)%(latex) -synctex=1 %S%(PDFout)")))
+                             (add-to-list 'TeX-output-view-style '("^pdf$" "." "okular --unique %s.pdf"))
+                             (setq TeX-view-program-list '(("Okular" "okular --unique %s.pdf")))
+                             (setq TeX-view-program-selection '((output-pdf "Okular") (output-dvi "Okular")))
+                             (setq TeX-master 'dwim)
+                             (TeX-PDF-mode)
+                             (require 'okular-search)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; ORG-MODE
@@ -185,6 +206,8 @@
 (setq org-return-follows-link t)
 (setq org-log-done t)
 
+(require 'my-org-init "my-org-init" nil)
+
 (require 'org)
 (require 'ox-odt)
 
@@ -205,11 +228,6 @@
     ;; C-right forward-word is important for me
     (define-key org-mode-map (kbd "C-c t") 'org-set-tags)))
 
-; Do not prompt to confirm evaluation
-; This may be dangerous - make sure you understand the consequences
-; of setting this -- see the docstring for details
-(setq org-confirm-babel-evaluate nil)
-
 ;; plantuml export for org-mode
 ;; active Org-babel languages
 (org-babel-do-load-languages
@@ -220,20 +238,11 @@
 
 (setq org-plantuml-jar-path "~/.emacs.d/plantuml/plantuml.jar")
 
-(defun my-invoice-heading-hook ()
-  "Is called when org-invoice is collecting data from a heading.
-With a small modification of org-clock-sum, we add a property
-:org-clock-invoice-data to the heading text, and here we collect
-that information. See ``ORG-CLOCK-SUM``"
-  (push (cons 'timelist (get-text-property (point) :org-clock-invoice-data)) org-invoice-current-item))
-
-(add-hook 'org-invoice-heading-hook 'my-invoice-heading-hook)
-
 (setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; ENCRYPTION
+;;; ENCRYPTION
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -307,24 +316,11 @@ that information. See ``ORG-CLOCK-SUM``"
             maxwidth))
         0)))
 
-(defun my-set-x-font ()
-  (interactive)
-  (let ((maxwidth (xrandr-max-width)))
-    (message "maxwidth %s" maxwidth)
-    (case maxwidth
-        (1280 (set-default-font "Consolas-11" t))
-        (1440 (set-default-font "Inconsolata-11" t))
-        (1680 (set-default-font "Inconsolata-11" t))
-        (1920 (set-default-font "Consolas-11" t))
-        (0 (set-default-font "Inconsolata-10.5" t)))))
+(when (require 'my-x-functions "my-x-functions" nil)
+  (save-excursion
+    (my-set-x-font)))
 
-
-(save-excursion
-  (my-set-x-font))
-
-;; (set-default-font "Monospace-9.5" t)
-;; (set-default-font "lucidasanstypewriter-12.5" t)
-
+;;; Kill ring browsing
 
 ;; M-y calls browse-kill-ring
 (require 'browse-kill-ring)
@@ -428,7 +424,7 @@ performed, then slime-complete-symbol is called"
 (setq slime-tree-collapsed-severity-list '(:note))
 
 
-;; findr
+;;; findr
 
 (autoload 'findr "findr" "Find file name." t)
 
@@ -440,7 +436,7 @@ performed, then slime-complete-symbol is called"
 (autoload 'findr-query-replace "findr" "Replace text in files." t)
 (define-key global-map [(control shift q)] 'findr-query-replace)
 
-;; never split the window vertically
+;;; never split the window vertically
 (setq split-width-threshold 1000)
 
 ;;; XML handling
@@ -544,10 +540,17 @@ performed, then slime-complete-symbol is called"
 (setenv "ORACLE_HOME" "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server")
 (setq sqlplus-command "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server/bin/sqlplus")
 
+;;; system environment variables
+
+(defun prepend-to-system-path (directory)
+  (setenv "PATH" (concat directory ":" (getenv "PATH"))))
+
 (defun my-set-home-and-add-bin-to-path (env-var-name full-path)
   "Sets env var ENV-VAR-NAME and adds its bin/ subdir to PATH"
   (setenv env-var-name full-path)
   (setenv "PATH" (concat full-path "/bin:" (getenv "PATH"))))
+
+(prepend-to-system-path "~/.emacs.d/site-lisp/bin")
 
 ;; now load the machine specific emacs rc file, if any
 (let* ((sysname (system-name))

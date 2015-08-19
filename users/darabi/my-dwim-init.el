@@ -44,7 +44,7 @@
 
 ;; (add-hook 'ido-define-mode-map-hook
 ;;           (lambda ()
-;;             (flet ((redef (key function)
+;;             (cl-flet ((redef (key function)
 ;;                      (define-key ido-completion-map key function)))
 ;;               (redef (kbd "M-p") 'previous-history-element)
 ;;               (redef (kbd "<up>") 'previous-history-element)
@@ -71,7 +71,7 @@
 (when (boundp 'sgml-mode-hook)
   (add-hook 'sgml-mode-hook
             (lambda ()
-              (flet ((def (key function)
+              (cl-flet ((def (key function)
                          (define-key sgml-mode-map key function)))
                 (def (kbd "M-<right>") 'sgml-skip-tag-forward)
                 (def (kbd "M-<left>") 'sgml-skip-tag-backward)))
@@ -80,7 +80,7 @@
 (when (boundp 'nxml-mode-hook)
   (add-hook 'nxml-mode-hook
             (lambda ()
-              (flet ((def (key function)
+              (cl-flet ((def (key function)
                          (define-key nxml-mode-map key function)))
                 (def (kbd "M-<right>") 'nxml-forward-element)
                 (def (kbd "M-<left>")  'nxml-backward-element)
