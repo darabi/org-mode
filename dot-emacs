@@ -497,8 +497,9 @@ performed, then slime-complete-symbol is called"
 ;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
 ;;
 
-(when (getenv "QUICKLISP_HOME")
-  (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el")))
+(if (getenv "QUICKLISP_HOME")
+    (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
+  (load "~/quicklisp/slime-helper.el"))
 
 ;; try to load the elisp files from the current quicklisp distribution
 (when (functionp 'quicklisp-slime-helper-system-directory)
