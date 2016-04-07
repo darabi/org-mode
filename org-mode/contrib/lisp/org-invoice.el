@@ -150,6 +150,7 @@ looks like tree2, where the level is 2."
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" 'selective)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP" t)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" t)))
+    ;; (unless date (error "Cannot determine date for entry %s work-minutes %s" title work-minutes))
     (unless work
       (setq work (org-minutes-to-hh:mm-string work-minutes)))
     (when (> work-minutes 0)
@@ -274,8 +275,9 @@ looks like tree2, where the level is 2."
         (org-invoice-total-price 0))
     (insert-before-markers
      (concat "| Task / Date | Time" (and with-price "| Price") "| Activity |"))
+    (insert-before-markers "\n|-")
     (dolist (info ls)
-      (insert-before-markers "\n|-")
+      (message "org-invoice-list-to-table info: %s" info)
       (mapc 'org-invoice-info-to-table (if with-header (cdr info) (cdr (cdr info)))))
     (when with-summary
       (insert-before-markers
