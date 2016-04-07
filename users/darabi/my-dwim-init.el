@@ -21,7 +21,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(dwim-define-lisp-key (kbd "C->") 'dwim-replace-sexp-at-point-with-clipboard)
+;; (dwim-define-lisp-key (kbd "C->") 'dwim-replace-sexp-at-point-with-clipboard)
 (dwim-define-lisp-key (kbd "C-M-,") 'dwim-copy-sexp-at-point)
 (dwim-define-lisp-key (kbd "M-C-.") 'dwim-paste-clipboard-at-last-change)
 
@@ -246,8 +246,7 @@
 (dwim/add-slime-impl-image "nibbles")
 (dwim/add-slime-impl-image "qap-server")
 
-(add-to-list 'slime-lisp-implementations `(acl ("~/opt/acl/alisp-modern" "-l"
-                                                                  ,(concat dwim-workspace "/hu.dwim.environment/source/environment.lisp"))))
+(add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
 (setf slime-default-lisp 'web-server)
 
@@ -262,5 +261,7 @@
     (append arglist (if (typep args 'list)
                         args
                         (list args)))))
+
+(setq slime-compilation-slime-maybe-show-compilation-log)
 
 (provide 'my-dwim-init)
