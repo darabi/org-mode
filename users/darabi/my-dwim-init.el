@@ -236,6 +236,7 @@
 (dwim/add-slime-impl-image "hu.dwim.perec")
 (dwim/add-slime-impl-image "hu.dwim.quasi-quote")
 (dwim/add-slime-impl-image "hu.dwim.rdbms")
+(dwim/add-slime-impl-image "hu.dwim.computed-class")
 (dwim/add-slime-impl-image "hu.dwim.reader")
 (dwim/add-slime-impl-image "hu.dwim.web-server")
 (dwim/add-slime-impl-image "hu.dwim.presentation")
