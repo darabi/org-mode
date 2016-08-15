@@ -136,7 +136,7 @@
            (:newline)
            (:newline)))
         ;;
-	(when (boundp symbol)
+        (when (boundp symbol)
           (append
            (label-value-line (if (constantp symbol)
                                  "It is a constant of value"
@@ -147,7 +147,7 @@
            ;; implementations usually provide a restart.
            `(" " (:action "[makunbound]" ,(lambda () (makunbound symbol)))
              (:newline))))
-	(docstring-ispec symbol :kind 'variable)
+        (docstring-ispec symbol :kind 'variable)
         (multiple-value-bind (expansion definedp) (macroexpand symbol)
           (if definedp
               (label-value-line "It is a symbol macro with expansion"
@@ -163,7 +163,7 @@
                     `(" " (:action "[unbind]"
                                    ,(lambda () (fmakunbound symbol))))
                     `((:newline))))
-	(docstring-ispec symbol :label "Function Documentation" :kind 'function)
+        (docstring-ispec symbol :label "Function Documentation" :kind 'function)
 
         ;;
         ;; Compiler macro
@@ -225,7 +225,10 @@
                 (:defined
                  (or (sb-int:info :type :expander symbol) t))
                 (:primitive
-                 (or (sb-int:info :type :translator symbol) t)))))
+                 (or (if (swank/sbcl::sbcl-version>= 1 3 1)
+                         (car (sb-int:info :type :expander symbol))
+                         (sb-int:info :type :translator symbol))
+                     t)))))
     (when fun
       (append
        (list
@@ -236,10 +239,7 @@
        (unless (eq t fun)
          (append
           `("Type-specifier lambda-list: "
-            ,(inspector-princ
-              (if (eq :primitive kind)
-                  (arglist fun)
-                  (sb-int:info :type :lambda-list symbol)))
+            ,(inspector-princ (arglist fun))
             (:newline))
           (multiple-value-bind (expansion ok)
               (handler-case (sb-ext:typexpand-1 symbol)

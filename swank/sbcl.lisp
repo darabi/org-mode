@@ -138,13 +138,13 @@
 
   (defun sigio-handler (signal code scp)
     (declare (ignore signal code scp))
-    (mapc (lambda (handler)
-            (funcall (the function (cdr handler))))
-          *sigio-handlers*))
+    (sb-sys:with-interrupts
+      (mapc (lambda (handler)
+              (funcall (the function (cdr handler))))
+            *sigio-handlers*)))
 
   (defun set-sigio-handler ()
-    (sb-sys:enable-interrupt sb-unix:sigio (lambda (signal code scp)
-                                             (sigio-handler signal code scp))))
+    (sb-sys:enable-interrupt sb-unix:sigio #'sigio-handler))
 
   (defun enable-sigio-on-fd (fd)
     (sb-posix::fcntl fd sb-posix::f-setfl sb-posix::o-async)
@@ -317,8 +317,7 @@
                 ,@(cond ((and external-format (sb-int:featurep :sb-unicode))
                          `(:external-format ,external-format))
                         (t '()))
-                :serve-events ,(eq :fd-handler
-                                   (swank-value '*communication-style* t))
+                :serve-events ,(eq :fd-handler swank:*communication-style*)
                   ;; SBCL < 1.0.42.43 doesn't support :SERVE-EVENTS
                   ;; argument.
                 :allow-other-keys t)))
@@ -418,16 +417,13 @@
     (loop for p in (remove-if-not #'sbcl-package-p (list-all-packages))
           collect (cons (package-name p) readtable))))
 
-;;; Utilities
+;;; Packages
 
-(defun swank-value (name &optional errorp)
-  ;; Easy way to refer to symbol values in SWANK, which doesn't yet exist when
-  ;; this is file is loaded.
-  (let ((symbol (find-symbol (string name) :swank)))
-    (if (and symbol (or errorp (boundp symbol)))
-        (symbol-value symbol)
-        (when errorp
-          (error "~S does not exist in SWANK." name)))))
+#+#.(swank/backend:with-symbol 'package-local-nicknames 'sb-ext)
+(defimplementation package-local-nicknames (package)
+  (sb-ext:package-local-nicknames package))
+
+;;; Utilities
 
 #+#.(swank/backend:with-symbol 'function-lambda-list 'sb-introspect)
 (defimplementation arglist (fname)
@@ -576,9 +572,10 @@ information."
                               (source-path-string-position
                                source-path *buffer-substring*))))
         ((compiling-from-file-p file)
-         (make-location (list :file (namestring file))
-                        (list :position (1+ (source-path-file-position
-                                             source-path file)))))
+         (let ((position (source-path-file-position source-path file)))
+           (make-location (list :file (namestring file))
+                          (list :position (and position
+                                               (1+ position))))))
         ((compiling-from-generated-code-p file source)
          (make-location (list :source-form source)
                         (list :position 1)))
@@ -629,6 +626,13 @@ compiler state."
        (error                     #'handle-notification-condition)
        (warning                   #'handle-notification-condition))
     (funcall function)))
+
+;;; HACK: SBCL 1.2.12 shipped with a bug where
+;;; SB-EXT:RESTRICT-COMPILER-POLICY would signal an error when there
+;;; were no policy restrictions in place. This workaround ensures the
+;;; existence of at least one dummy restriction.
+(handler-case (sb-ext:restrict-compiler-policy)
+  (error () (sb-ext:restrict-compiler-policy 'debug)))
 
 (defun compiler-policy (qualities)
   "Return compiler policy qualities present in the QUALITIES alist.
@@ -747,31 +751,20 @@ QUALITIES is an alist with (quality . value)"
     :transform :deftransform
     :optimizer :defoptimizer
     :vop :define-vop
-    :source-transform :define-source-transform)
+    :source-transform :define-source-transform
+    :ir1-convert :def-ir1-translator
+    :declaration declaim
+    :alien-type :define-alien-type)
   "Map SB-INTROSPECT definition type names to Slime-friendly forms")
 
-(defun definition-specifier (type name)
+(defun definition-specifier (type)
   "Return a pretty specifier for NAME representing a definition of type TYPE."
-  (if (and (symbolp name)
-           (eq type :function)
-           (sb-int:info :function :ir1-convert name))
-      :def-ir1-translator
-      (getf *definition-types* type)))
+  (getf *definition-types* type))
 
 (defun make-dspec (type name source-location)
-  (let ((spec (definition-specifier type name))
-        (desc (sb-introspect::definition-source-description source-location)))
-    (if (eq :define-vop spec)
-        ;; The first part of the VOP description is the name of the template
-        ;; -- which is actually good information and often long. So elide the
-        ;; original name in favor of making the interesting bit more visible.
-        ;;
-        ;; The second part of the VOP description is the associated
-        ;; compiler note, or NIL -- which is quite uninteresting and
-        ;; confuses the eye when reading the actual name which usually
-        ;; has a worthwhile postfix. So drop the note.
-        (list spec (car desc))
-        (list* spec name desc))))
+  (list* (definition-specifier type)
+         name
+         (sb-introspect::definition-source-description source-location)))
 
 (defimplementation find-definitions (name)
   (loop for type in *definition-types* by #'cddr
@@ -840,35 +833,74 @@ QUALITIES is an alist with (quality . value)"
             (pathname :file-without-position)
             (t :invalid)))))
 
+#+#.(swank/backend:with-symbol 'definition-source-form-number 'sb-introspect)
+(defun form-number-position (definition-source stream)
+  (let* ((tlf-number (car (sb-introspect:definition-source-form-path definition-source)))
+         (form-number (sb-introspect:definition-source-form-number definition-source)))
+    (multiple-value-bind (tlf pos-map) (read-source-form tlf-number stream)
+      (let* ((path-table (sb-di::form-number-translations tlf 0))
+             (path (cond ((<= (length path-table) form-number)
+                          (warn "inconsistent form-number-translations")
+                          (list 0))
+                         (t
+                          (reverse (cdr (aref path-table form-number)))))))
+        (source-path-source-position path tlf pos-map)))))
+
+#+#.(swank/backend:with-symbol 'definition-source-form-number 'sb-introspect)
+(defun file-form-number-position (definition-source)
+  (let* ((code-date (sb-introspect:definition-source-file-write-date definition-source))
+         (filename (sb-introspect:definition-source-pathname definition-source))
+         (*readtable* (guess-readtable-for-filename filename))
+         (source-code (get-source-code filename code-date)))
+    (with-debootstrapping
+      (with-input-from-string (s source-code)
+        (form-number-position definition-source s)))))
+
+#+#.(swank/backend:with-symbol 'definition-source-form-number 'sb-introspect)
+(defun string-form-number-position (definition-source string)
+  (with-input-from-string (s string)
+    (form-number-position definition-source s)))
+
 (defun definition-source-buffer-location (definition-source)
   (with-definition-source (form-path character-offset plist) definition-source
     (destructuring-bind (&key emacs-buffer emacs-position emacs-directory
                               emacs-string &allow-other-keys)
         plist
-      (let ((*readtable* (guess-readtable-for-filename emacs-directory)))
-        (multiple-value-bind (start end)
-            (if form-path
-                (with-debootstrapping
-                  (source-path-string-position form-path
-                                               emacs-string))
-                (values character-offset
-                        most-positive-fixnum))
-          (make-location
-           `(:buffer ,emacs-buffer)
-           `(:offset ,emacs-position ,start)
-           `(:snippet
-             ,(subseq emacs-string
-                      start
-                      (min end (+ start *source-snippet-size*))))))))))
+      (let ((*readtable* (guess-readtable-for-filename emacs-directory))
+            start
+            end)
+        (with-debootstrapping
+          (or
+           (and form-path
+                (or
+                 #+#.(swank/backend:with-symbol 'definition-source-form-number 'sb-introspect)
+                 (setf (values start end)
+                       (and (sb-introspect:definition-source-form-number definition-source)
+                            (string-form-number-position definition-source emacs-string)))
+                 (setf (values start end)
+                       (source-path-string-position form-path emacs-string))))
+           (setf start character-offset
+                 end most-positive-fixnum)))
+        (make-location
+         `(:buffer ,emacs-buffer)
+         `(:offset ,emacs-position ,start)
+         `(:snippet
+           ,(subseq emacs-string
+                    start
+                    (min end (+ start *source-snippet-size*)))))))))
 
 (defun definition-source-file-location (definition-source)
   (with-definition-source (pathname form-path character-offset plist
-                                    file-write-date) definition-source
+                           file-write-date) definition-source
     (let* ((namestring (namestring (translate-logical-pathname pathname)))
-           (pos (if form-path
-                    (or (source-file-position namestring file-write-date
-                                              form-path)
-                        character-offset)
+           (pos (or (and form-path
+                         (or
+                          #+#.(swank/backend:with-symbol 'definition-source-form-number 'sb-introspect)
+                          (and (sb-introspect:definition-source-form-number definition-source)
+                               (ignore-errors (file-form-number-position definition-source)))
+                          (ignore-errors
+                           (source-file-position namestring file-write-date
+                                                 form-path))))
                     character-offset))
            (snippet (source-hint-snippet namestring file-write-date pos)))
       (make-location `(:file ,namestring)
@@ -1216,7 +1248,7 @@ stack."
 (defun lisp-source-location (code-location)
   (let ((source (prin1-to-string
                  (sb-debug::code-location-source-form code-location 100)))
-        (condition (swank-value '*swank-debugger-condition*)))
+        (condition *swank-debugger-condition*))
     (if (and (typep condition 'sb-impl::step-form-condition)
              (search "SB-IMPL::WITH-STEPPING-ENABLED" source
                      :test #'char-equal)
@@ -1947,3 +1979,11 @@ stack."
            (values-list retlist))
       (when after
         (funcall after (if completed retlist :exited-non-locally))))))
+
+#+#.(swank/backend:with-symbol 'comma-expr 'sb-impl)
+(progn
+  (defmethod sexp-in-bounds-p ((s sb-impl::comma) i)
+    (= i 1))
+
+  (defmethod sexp-ref ((s sb-impl::comma) i)
+    (sb-impl::comma-expr s)))

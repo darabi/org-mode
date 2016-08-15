@@ -1,9 +1,9 @@
-;;; slime.el ---Superior Lisp Interaction Mode for Emacs-*-lexical-binding:t-*-
+;;; slime.el --- Superior Lisp Interaction Mode for Emacs -*-lexical-binding:t-*-
 
 ;; URL: https://github.com/slime/slime
 ;; Package-Requires: ((cl-lib "0.5"))
 ;; Keywords: languages, lisp, slime
-;; Version: 2.13
+;; Version: 2.15
 
 ;;;; License and Commentary
 
@@ -222,10 +222,10 @@ The default is nil, as this feature can be a security risk."
 (defvar slime-connect-port-history (list (prin1-to-string slime-port)))
 
 (defvar slime-net-valid-coding-systems
-  '((utf-8-unix       t   "utf-8-unix")
-    (iso-latin-1-unix nil "iso-latin-1-unix")
+  '((iso-latin-1-unix nil "iso-latin-1-unix")
     (iso-8859-1-unix  nil "iso-latin-1-unix")
     (binary           nil "iso-latin-1-unix")
+    (utf-8-unix       t   "utf-8-unix")
     (emacs-mule-unix  t   "emacs-mule-unix")
     (euc-jp-unix      t   "euc-jp-unix"))
   "A list of valid coding systems.
@@ -275,12 +275,24 @@ argument."
                    (and tags-table-list
                         (slime-etags-definitions name))))))
 
-(defcustom slime-complete-symbol-function 'slime-simple-complete-symbol
-  "*Function to perform symbol completion."
+;; FIXME: remove one day
+(defcustom slime-complete-symbol-function 'nil
+  "Obsolete. Use `slime-completion-at-point-functions' instead."
   :group 'slime-mode
-  :type '(choice (const :tag "Simple" slime-simple-complete-symbol)
-                 (const :tag "Compound" slime-complete-symbol*)
+  :type '(choice (const :tag "Compound" slime-complete-symbol*)
                  (const :tag "Fuzzy" slime-fuzzy-complete-symbol)))
+
+(make-obsolete-variable 'slime-complete-symbol-function
+                        'slime-completion-at-point-functions
+                        "2015-10-18")
+
+(defcustom slime-completion-at-point-functions
+  '(slime-filename-completion
+    slime-simple-completion-at-point)
+  "List of functions to perform completion.
+Works like `completion-at-point-functions'.
+`slime--completion-at-point' uses this variable."
+  :group 'slime-mode)
 
 ;;;;; slime-mode-faces
 
@@ -325,18 +337,8 @@ argument."
   "Face for notes from the compiler."
   :group 'slime-mode-faces)
 
-(defun slime-face-inheritance-possible-p ()
-  "Return true if the :inherit face attribute is supported."
-  (assq :inherit custom-face-attributes))
-
 (defface slime-highlight-face
-  (if (slime-face-inheritance-possible-p)
-      '((t (:inherit highlight :underline nil)))
-    '((((class color) (background light))
-       (:background "darkseagreen2"))
-      (((class color) (background dark))
-       (:background "darkolivegreen"))
-      (t (:inverse-video t))))
+    '((t (:inherit highlight :underline nil)))
   "Face for compiler notes while selected."
   :group 'slime-mode-faces)
 
@@ -364,19 +366,16 @@ PROPERTIES specifies any default face properties."
        :group 'slime-debugger)))
 
 (define-sldb-faces
-  (topline        "the top line describing the error"
-                  '(:foreground "darkred" :bold t))
+  (topline        "the top line describing the error")
   (condition      "the condition class"
-                  '(:bold t))
+                  '(:inherit font-lock-warning-face))
   (section        "the labels of major sections in the debugger buffer"
-                  '(:foreground "darkblue" :bold t))
+                  '(:inherit header-line))
   (frame-label    "backtrace frame numbers"
-                  '(:foreground "#888"))
+                  '(:inherit shadow))
   (restart-type   "restart names."
-                  (if (slime-face-inheritance-possible-p)
-                      '(:inherit font-lock-keyword-face)))
-  (restart        "restart descriptions"
-                  '(:foreground "darkmagenta"))
+                  '(:inherit font-lock-keyword-face))
+  (restart        "restart descriptions")
   (restart-number "restart numbers (correspond to keystrokes to invoke)"
                   '(:bold t))
   (frame-line     "function names and arguments in the backtrace")
@@ -387,10 +386,11 @@ PROPERTIES specifies any default face properties."
    "frames which are surely not restartable")
   (detailed-frame-line
    "function names and arguments in a detailed (expanded) frame")
-  (local-name     "local variable names")
+  (local-name     "local variable names"
+                  '(:inherit font-lock-variable-name-face))
   (local-value    "local variable values")
   (catch-tag      "catch tags"
-                  '(:foreground "yellow4")))
+                  '(:inherit highlight)))
 
 
 ;;;; Minor modes
@@ -405,6 +405,12 @@ more easily. See `slime-init-keymaps'.")
 (defvar slime-buffer-connection)
 (defvar slime-dispatching-connection)
 (defvar slime-current-thread)
+
+(defun slime--on ()
+  (slime-setup-completion))
+
+(defun slime--off ()
+  (remove-hook 'completion-at-point-functions #'slime--completion-at-point t))
 
 (define-minor-mode slime-mode
   "\\<slime-mode-map>\
@@ -440,17 +446,13 @@ Evaluation commands:
 
 Full set of commands:
 \\{slime-mode-map}"
-  nil
-  nil
-  slime-mode-indirect-map
-  (slime-setup-command-hooks))
-
+  :keymap slime-mode-indirect-map
+  :lighter (:eval (slime-modeline-string))
+  (cond (slime-mode (slime--on))
+        (t (slime--off))))
 
 
 ;;;;;; Modeline
-
-(add-to-list 'minor-mode-alist
-             `(slime-mode (:eval (slime-modeline-string))))
 
 (defun slime-modeline-string ()
   "Return the string to display in the modeline.
@@ -543,7 +545,6 @@ edit s-exprs, e.g. for source buffers and the REPL.")
 
 (defvar slime-editing-keys
   `(;; Arglist display & completion
-    ("\M-\t"      slime-complete-symbol)
     (" "          slime-space)
     ;; Evaluating
     ;;("\C-x\M-e" slime-eval-last-expression-display-output :inferior t)
@@ -556,7 +557,7 @@ edit s-exprs, e.g. for source buffers and the REPL.")
     (,(kbd "C-M-.")   slime-next-location)
     (,(kbd "C-M-,")   slime-previous-location)
     ;; Obsolete, redundant bindings
-    ("\C-c\C-i" slime-complete-symbol)
+    ("\C-c\C-i" completion-at-point)
     ;;("\M-*" pop-tag-mark) ; almost to clever
     ))
 
@@ -640,29 +641,6 @@ If BOTHP is true also add bindings with control modifier."
   slime-editing-map)
 
 
-;;;; Setup initial `slime-mode' hooks
-
-(make-variable-buffer-local
- (defvar slime-pre-command-actions nil
-   "List of functions to execute before the next Emacs command.
-This list of flushed between commands."))
-
-(defun slime-pre-command-hook ()
-  "Execute all functions in `slime-pre-command-actions', then NIL it."
-  (dolist (undo-fn slime-pre-command-actions)
-    (funcall undo-fn))
-  (setq slime-pre-command-actions nil))
-
-(defun slime-post-command-hook ()
-  (when (null pre-command-hook) ; sometimes this is lost
-    (add-hook 'pre-command-hook 'slime-pre-command-hook)))
-
-(defun slime-setup-command-hooks ()
-  "Setup a buffer-local `pre-command-hook' to call `slime-pre-command-hook'."
-  (add-hook 'pre-command-hook 'slime-pre-command-hook 'append 'local)
-  (add-hook 'post-command-hook 'slime-post-command-hook 'append 'local))
-
-
 ;;;; Framework'ey bits
 ;;;
 ;;; This section contains some standard SLIME idioms: basic macros,
@@ -681,13 +659,13 @@ The list of patterns is searched for a HEAD `eq' to the car of
 VALUE. If one is found, the BODY is executed with ARGS bound to the
 corresponding values in the CDR of VALUE."
   (let ((operator (cl-gensym "op-"))
-	(operands (cl-gensym "rand-"))
-	(tmp (cl-gensym "tmp-")))
+        (operands (cl-gensym "rand-"))
+        (tmp (cl-gensym "tmp-")))
     `(let* ((,tmp ,value)
-	    (,operator (car ,tmp))
-	    (,operands (cdr ,tmp)))
+            (,operator (car ,tmp))
+            (,operands (cdr ,tmp)))
        (cl-case ,operator
-	 ,@(mapcar (lambda (clause)
+         ,@(mapcar (lambda (clause)
                      (if (eq (car clause) t)
                          `(t ,@(cdr clause))
                        (cl-destructuring-bind ((op &rest rands) &rest body)
@@ -696,16 +674,16 @@ corresponding values in the CDR of VALUE."
                                  . ,(or body
                                         '((ignore)) ; suppress some warnings
                                         ))))))
-		   patterns)
-	 ,@(if (eq (caar (last patterns)) t)
-	       '()
-	     `((t (error "slime-dcase failed: %S" ,tmp))))))))
+                   patterns)
+         ,@(if (eq (caar (last patterns)) t)
+               '()
+             `((t (error "slime-dcase failed: %S" ,tmp))))))))
 
 (defmacro slime-define-keys (keymap &rest key-command)
   "Define keys in KEYMAP. Each KEY-COMMAND is a list of (KEY COMMAND)."
   (declare (indent 1))
   `(progn . ,(mapcar (lambda (k-c) `(define-key ,keymap . ,k-c))
-		     key-command)))
+                     key-command)))
 
 (cl-defmacro with-struct ((conc-name &rest slots) struct &body body)
   "Like with-slots but works only for structs.
@@ -779,7 +757,7 @@ It should be used for \"background\" messages such as argument lists."
     (completing-read prompt (slime-bogus-completion-alist
                              (slime-eval
                               `(swank:list-all-package-names t)))
-		     nil t initial-value)))
+                     nil t initial-value)))
 
 ;; Interface
 (defun slime-read-symbol-name (prompt &optional query)
@@ -799,7 +777,7 @@ positions before and after executing BODY."
   (let ((start (cl-gensym)))
     `(let ((,start (point)))
        (prog1 (progn ,@body)
-	 (add-text-properties ,start (point) ,props)))))
+         (add-text-properties ,start (point) ,props)))))
 
 (defun slime-add-face (face string)
   (declare (indent 1))
@@ -1383,9 +1361,9 @@ Return nil if the file doesn't exist or is empty; otherwise the
 first line of the file."
   (condition-case _err
       (with-temp-buffer
-	(insert-file-contents "~/.slime-secret")
-	(goto-char (point-min))
-	(buffer-substring (point-min) (line-end-position)))
+        (insert-file-contents "~/.slime-secret")
+        (goto-char (point-min))
+        (buffer-substring (point-min) (line-end-position)))
     (file-error nil)))
 
 ;;; Interface
@@ -1710,7 +1688,7 @@ This doesn't mean it will connect right after Slime is loaded."
 (defun slime-next-connection ()
   "Change current slime connection, cycling through all connections."
   (interactive)
-  (slime-cycle-connections-within slime-net-processes))
+  (slime-cycle-connections-within (reverse slime-net-processes)))
 
 (define-obsolete-function-alias 'slime-cycle-connections
   'slime-next-connection "2.13")
@@ -1719,7 +1697,7 @@ This doesn't mean it will connect right after Slime is loaded."
   "Change current slime connection, cycling through all connections.
 Goes in reverse order, relative to `slime-next-connection'."
   (interactive)
-  (slime-cycle-connections-within (reverse slime-net-processes)))
+  (slime-cycle-connections-within slime-net-processes))
 
 (cl-defmacro slime-with-connection-buffer ((&optional process) &rest body)
   "Execute BODY in the process-buffer of PROCESS.
@@ -2079,7 +2057,7 @@ or nil if nothing suitable can be found.")
   (when (null package) (setq package (slime-current-package)))
   (let* ((tag (cl-gensym (format "slime-result-%d-"
                                  (1+ (slime-continuation-counter)))))
-	 (slime-stack-eval-tags (cons tag slime-stack-eval-tags)))
+         (slime-stack-eval-tags (cons tag slime-stack-eval-tags)))
     (apply
      #'funcall
      (catch tag
@@ -2383,8 +2361,8 @@ Debugged requests are ignored."
 (defun slime-pprint-event (event buffer)
   "Pretty print EVENT in BUFFER with limited depth and width."
   (let ((print-length 20)
-	(print-level 6)
-	(pp-escape-newlines t))
+        (print-level 6)
+        (pp-escape-newlines t))
     (pp event buffer)))
 
 (defun slime-events-buffer ()
@@ -3522,158 +3500,54 @@ more than one space."
 
 ;;;; Completion
 
-;; XXX those long names are ugly to read; long names an indicator for
-;; bad factoring?
+;; FIXME: use this in Emacs 24
+;;(define-obsolete-function-alias slime-complete-symbol completion-at-point)
 
-(defvar slime-completions-buffer-name "*Completions*")
+(defalias 'slime-complete-symbol #'completion-at-point)
+(make-obsolete 'slime-complete-symbol #'completion-at-point "2015-10-17")
 
-;; FIXME: can probably use quit-window instead
-(make-variable-buffer-local
- (defvar slime-complete-saved-window-configuration nil
-   "Window configuration before we show the *Completions* buffer.
-This is buffer local in the buffer where the completion is
-performed."))
-
-(make-variable-buffer-local
- (defvar slime-completions-window nil
-   "The window displaying *Completions* after saving window configuration.
-If this window is no longer active or displaying the completions
-buffer then we can ignore `slime-complete-saved-window-configuration'."))
-
-(defun slime-complete-maybe-save-window-configuration ()
-  "Maybe save the current window configuration.
-Return true if the configuration was saved."
-  (unless (or slime-complete-saved-window-configuration
-              (get-buffer-window slime-completions-buffer-name))
-    (setq slime-complete-saved-window-configuration
-          (current-window-configuration))
-    t))
-
-(defun slime-complete-delay-restoration ()
-  (add-hook 'pre-command-hook
-            'slime-complete-maybe-restore-window-configuration
-            'append
-            'local))
-
-(defun slime-complete-forget-window-configuration ()
-  (setq slime-complete-saved-window-configuration nil)
-  (setq slime-completions-window nil))
-
-(defun slime-complete-restore-window-configuration ()
-  "Restore the window config if available."
-  (remove-hook 'pre-command-hook
-               'slime-complete-maybe-restore-window-configuration)
-  (when (and slime-complete-saved-window-configuration
-             (slime-completion-window-active-p))
-    (save-excursion (set-window-configuration
-                     slime-complete-saved-window-configuration))
-    (setq slime-complete-saved-window-configuration nil)
-    (when (buffer-live-p slime-completions-buffer-name)
-      (kill-buffer slime-completions-buffer-name))))
-
-(defun slime-complete-maybe-restore-window-configuration ()
-  "Restore the window configuration, if the following command
-terminates a current completion."
-  (remove-hook 'pre-command-hook
-               'slime-complete-maybe-restore-window-configuration)
-  (condition-case err
-      (cond ((cl-find last-command-event "()\"'`,# \r\n:")
-             (slime-complete-restore-window-configuration))
-            ((not (slime-completion-window-active-p))
-             (slime-complete-forget-window-configuration))
-            (t
-             (slime-complete-delay-restoration)))
-    (error
-     ;; Because this is called on the pre-command-hook, we mustn't let
-     ;; errors propagate.
-     (message "Error in slime-complete-restore-window-configuration: %S"
-              err))))
-
-(defun slime-completion-window-active-p ()
-  "Is the completion window currently active?"
-  (and (window-live-p slime-completions-window)
-       (equal (buffer-name (window-buffer slime-completions-window))
-              slime-completions-buffer-name)))
-
-(defun slime-display-completion-list (completions base)
-  (let ((savedp (slime-complete-maybe-save-window-configuration)))
-    (with-output-to-temp-buffer slime-completions-buffer-name
-      (display-completion-list completions)
-      (let ((offset (- (point) 1 (length base))))
-        (with-current-buffer standard-output
-          (setq completion-base-position offset)
-          (set-syntax-table lisp-mode-syntax-table))))
-    (when savedp
-      (setq slime-completions-window
-            (get-buffer-window slime-completions-buffer-name)))))
-
-(defun slime-display-or-scroll-completions (completions base)
-  (cond ((and (eq last-command this-command)
-              (slime-completion-window-active-p))
-         (slime-scroll-completions))
+;; This is the function that we add to
+;; `completion-at-point-functions'.  For backward-compatibilty we look
+;; at `slime-complete-symbol-function' first.  The indirection through
+;; `slime-completion-at-point-functions' is used so that users don't
+;; have to set `completion-at-point-functions' in every slime-like
+;; buffer.
+(defun slime--completion-at-point ()
+  (cond (slime-complete-symbol-function
+         slime-complete-symbol-function)
         (t
-         (slime-display-completion-list completions base)))
-  (slime-complete-delay-restoration))
+         (run-hook-with-args-until-success
+          'slime-completion-at-point-functions))))
 
-(defun slime-scroll-completions ()
-  (let ((window slime-completions-window))
-    (with-current-buffer (window-buffer window)
-      (if (pos-visible-in-window-p (point-max) window)
-          (set-window-start window (point-min))
-        (save-selected-window
-          (select-window window)
-          (scroll-up))))))
+(defun slime-setup-completion ()
+  (add-hook 'completion-at-point-functions #'slime--completion-at-point nil t))
 
-(defun slime-complete-symbol ()
+(defun slime-simple-completion-at-point ()
   "Complete the symbol at point.
+Perform completion similar to `elisp-completion-at-point'."
+  (let* ((end (point))
+         (beg (slime-symbol-start-pos)))
+    (list beg end (completion-table-dynamic #'slime-simple-completions))))
 
-Completion is performed by `slime-complete-symbol-function'."
-  (interactive)
-  (funcall slime-complete-symbol-function))
-
-(defun slime-simple-complete-symbol ()
-  "Complete the symbol at point.
-Perform completion more similar to Emacs' complete-symbol."
-  (or (slime-maybe-complete-as-filename)
-      (let* ((end (point))
-             (beg (slime-symbol-start-pos))
-             (prefix (buffer-substring-no-properties beg end))
-             (result (slime-simple-completions prefix)))
-        (cl-destructuring-bind (completions partial) result
-          (if (null completions)
-              (progn (slime-minibuffer-respecting-message
-                      "Can't find completion for \"%s\"" prefix)
-                     (ding)
-                     (slime-complete-restore-window-configuration))
-            (insert-and-inherit (substring partial (length prefix)))
-            (cond ((slime-length= completions 1)
-                   (slime-minibuffer-respecting-message "Sole completion")
-                   (slime-complete-restore-window-configuration))
-                  ;; Incomplete
-                  (t
-                   (when (member partial completions)
-                     (slime-minibuffer-respecting-message
-                      "Complete but not unique"))
-                   (slime-display-or-scroll-completions completions
-                                                        partial))))))))
-
-(defun slime-maybe-complete-as-filename ()
+(defun slime-filename-completion ()
   "If point is at a string starting with \", complete it as filename.
 Return nil if point is not at filename."
   (when (save-excursion (re-search-backward "\"[^ \t\n]+\\="
-                                            (max (point-min)
-                                                 (- (point) 1000)) t))
+                                            (max (point-min) (- (point) 1000))
+                                            t))
     (let ((comint-completion-addsuffix '("/" . "\"")))
-      (comint-replace-by-expanded-filename)
-      t)))
+      (comint-filename-completion))))
 
-(defun slime-minibuffer-respecting-message (format &rest format-args)
-  "Display TEXT as a message, without hiding any minibuffer contents."
-  (let ((text (format " [%s]" (apply #'format format format-args))))
-    (if (minibuffer-window-active-p (minibuffer-window))
-        (minibuffer-message text)
-      (message "%s" text))))
+;; FIXME: for backward compatibility.  Remove it one day
+;; together with slime-complete-symbol-function.
+(defun slime-simple-complete-symbol ()
+  (let ((completion-at-point-functions '(slime-maybe-complete-as-filename
+                                         slime-simple-completion-at-point)))
+    (completion-at-point)))
 
+;; NOTE: the original idea was to bind this to TAB but that no longer
+;; works as `completion-at-point' sets a transient keymap that
+;; overrides TAB.  So this is rather useless now.
 (defun slime-indent-and-complete-symbol ()
   "Indent the current line and perform symbol completion.
 First indent the line. If indenting doesn't move point, complete
@@ -3685,17 +3559,21 @@ for the most recently enclosed macro or function."
       (lisp-indent-line))
     (when (= pos (point))
       (cond ((save-excursion (re-search-backward "[^() \n\t\r]+\\=" nil t))
-             (slime-complete-symbol))
+             (completion-at-point))
             ((memq (char-before) '(?\t ?\ ))
              (slime-echo-arglist))))))
+
+(make-obsolete 'slime-indent-and-complete-symbol
+               "Set tab-always-indent to 'complete."
+               "2015-10-18")
 
 (defvar slime-minibuffer-map
   (let ((map (make-sparse-keymap))
         (parent (copy-keymap minibuffer-local-map)))
     (set-keymap-parent parent slime-editing-map)
     (set-keymap-parent map parent)
-    (define-key map "\t" 'slime-complete-symbol)
-    (define-key map "\M-\t" 'slime-complete-symbol)
+    (define-key map "\t" #'completion-at-point)
+    (define-key map "\M-\t" #'completion-at-point)
     map)
   "Minibuffer keymap used for reading CL expressions.")
 
@@ -3708,7 +3586,8 @@ for the most recently enclosed macro or function."
           (lambda ()
             (setq slime-buffer-package package)
             (setq slime-buffer-connection connection)
-            (set-syntax-table lisp-mode-syntax-table)))
+            (set-syntax-table lisp-mode-syntax-table)
+            (slime-setup-completion)))
         minibuffer-setup-hook))
 
 (defun slime-read-from-minibuffer (prompt &optional initial-value history keymap)
@@ -3720,7 +3599,7 @@ reading input.  The result is a string (\"\" if no input was given)."
   (let ((minibuffer-message-timeout 0)
         (minibuffer-setup-hook (slime-minibuffer-setup-hook)))
     (read-from-minibuffer prompt initial-value (or keymap slime-minibuffer-map)
-			  nil (or history 'slime-minibuffer-history))))
+                          nil (or history 'slime-minibuffer-history))))
 
 (defun slime-bogus-completion-alist (list)
   "Make an alist out of list.
@@ -3730,9 +3609,12 @@ alist but ignores CDRs."
   (mapcar (lambda (x) (cons x nil)) list))
 
 (defun slime-simple-completions (prefix)
-  (let ((slime-current-thread t))
-    (slime-eval
-     `(swank:simple-completions ,prefix ',(slime-current-package)))))
+  (cl-destructuring-bind (completions _partial)
+      (let ((slime-current-thread t))
+        (slime-eval
+         `(swank:simple-completions ,(substring-no-properties prefix)
+                                    ',(slime-current-package))))
+    completions))
 
 
 ;;;; Edit definition
@@ -3964,6 +3846,18 @@ The result is a (possibly empty) list of definitions."
 
 ;;;; Eval for Lisp
 
+(defun slime-lisp-readable-p (x)
+  (or (stringp x)
+      (memq x '(nil t))
+      (integerp x)
+      (keywordp x)
+      (and (consp x)
+           (let ((l x))
+             (while (consp l)
+               (slime-lisp-readable-p (car x))
+               (setq l (cdr l)))
+             (slime-lisp-readable-p l)))))
+
 (defun slime-eval-for-lisp (thread tag form-string)
   (let ((ok nil)
         (value nil)
@@ -3974,36 +3868,24 @@ The result is a (possibly empty) list of definitions."
             (progn
               (slime-check-eval-in-emacs-enabled)
               (setq value (eval (read form-string)))
-              (slime-check-eval-in-emacs-result value)
               (setq ok t))
           ((debug error)
            (setq error err)))
-      (let ((result (cond (ok `(:ok ,value))
+      (let ((result (cond ((and ok
+                                (not (slime-lisp-readable-p value)))
+                           `(:unreadable ,(slime-prin1-to-string value)))
+                          (ok `(:ok ,value))
                           (error `(:error ,(symbol-name (car error))
-                                          . ,(mapcar #'prin1-to-string
+                                          . ,(mapcar #'slime-prin1-to-string
                                                      (cdr error))))
                           (t `(:abort)))))
         (slime-dispatch-event `(:emacs-return ,thread ,tag ,result) c)))))
 
-(defun slime-check-eval-in-emacs-result (x)
-  "Raise an error if X can't be marshaled."
-  (or (stringp x)
-      (memq x '(nil t))
-      (integerp x)
-      (keywordp x)
-      (and (consp x)
-           (let ((l x))
-             (while (consp l)
-               (slime-check-eval-in-emacs-result (car x))
-               (setq l (cdr l)))
-             (slime-check-eval-in-emacs-result l)))
-      (error "Non-serializable return value: %S" x)))
-
 (defun slime-check-eval-in-emacs-enabled ()
   "Raise an error if `slime-enable-evaluate-in-emacs' isn't true."
   (unless slime-enable-evaluate-in-emacs
-    (error (concat "slime-eval-in-emacs disabled for security."
-                   "Set slime-enable-evaluate-in-emacs true to enable it."))))
+    (error (concat "slime-eval-in-emacs disabled for security. "
+                   "Set `slime-enable-evaluate-in-emacs' true to enable it."))))
 
 
 ;;;; `ED'
@@ -4200,7 +4082,7 @@ in Lisp when committed with \\[slime-edit-value-commit]."
   (interactive
    (list (slime-read-from-minibuffer (format "Edit value (evaluated in %s): "
                                              (slime-current-package))
-				     (slime-sexp-at-point))))
+                                     (slime-sexp-at-point))))
   (slime-eval-async `(swank:value-for-editing ,form-string)
     (lexical-let ((form-string form-string)
                   (package (slime-current-package)))
@@ -4292,8 +4174,8 @@ in Lisp when committed with \\[slime-edit-value-commit]."
 (defun slime-load-file (filename)
   "Load the Lisp file FILENAME."
   (interactive (list
-		(read-file-name "Load file: " nil nil
-				nil (if (buffer-file-name)
+                (read-file-name "Load file: " nil nil
+                                nil (if (buffer-file-name)
                                         (file-name-nondirectory
                                          (buffer-file-name))))))
   (let ((lisp-filename (slime-to-lisp-filename (expand-file-name filename))))
@@ -4564,6 +4446,8 @@ The most important commands:
   ("v" 'slime-show-xref)
   ("n" 'slime-xref-next-line)
   ("p" 'slime-xref-prev-line)
+  ("." 'slime-xref-next-line)
+  ("," 'slime-xref-prev-line)
   ("\C-c\C-c" 'slime-recompile-xref)
   ("\C-c\C-k" 'slime-recompile-all-xrefs)
   ("\M-," 'slime-xref-retract)
@@ -5044,11 +4928,13 @@ argument is given, with CL:MACROEXPAND."
        'swank:swank-expand
      'swank:swank-expand-1)))
 
-(defun slime-format-string-expand ()
+(defun slime-format-string-expand (&optional string)
   "Expand the format-string at point and display it."
-  (interactive)
-  (slime-eval-macroexpand 'swank:swank-format-string-expand
-                          (slime-string-at-point-or-error)))
+  (interactive (list (or (and (not current-prefix-arg)
+                              (slime-string-at-point))
+                         (slime-read-from-minibuffer "Expand format: "
+                                                     (slime-string-at-point)))))
+  (slime-eval-macroexpand 'swank:swank-format-string-expand string))
 
 
 ;;;; Subprocess control
@@ -5132,7 +5018,7 @@ argument is given, with CL:MACROEXPAND."
   "Return STRING propertised with face sldb-NAME-face."
   (declare (indent 1))
   (let ((facename (intern (format "sldb-%s-face" (symbol-name name))))
-	(var (cl-gensym "string")))
+        (var (cl-gensym "string")))
     `(let ((,var ,string))
        (slime-add-face ',facename ,var)
        ,var)))
@@ -5320,7 +5206,7 @@ CONTS is a list of pending Emacs continuations."
       (insert "\n" (sldb-in-face section "Backtrace:") "\n")
       (setq sldb-backtrace-start-marker (point-marker))
       (save-excursion
-        (if frames 
+        (if frames
             (sldb-insert-frames (sldb-prune-boring-frames frames) t)
           (insert "[No backtrace]")))
       (run-hooks 'sldb-hook)
@@ -5540,12 +5426,12 @@ Called on the `point-entered' text-property hook."
 (defun sldb-frame-number-at-point ()
   (let ((frame (get-text-property (point) 'frame)))
     (cond (frame (car frame))
-	  (t (error "No frame at point")))))
+          (t (error "No frame at point")))))
 
 (defun sldb-var-number-at-point ()
   (let ((var (get-text-property (point) 'var)))
     (cond (var var)
-	  (t (error "No variable at point")))))
+          (t (error "No variable at point")))))
 
 (defun sldb-previous-frame-number ()
   (save-excursion
@@ -5650,7 +5536,7 @@ This is 0 if START and END at the same line."
     (save-excursion
       (goto-char pos)
       (let ((fn (get-text-property (point) 'sldb-default-action)))
-	(if fn (funcall fn))))))
+        (if fn (funcall fn))))))
 
 (defun sldb-cycle ()
   "Cycle between restart list and backtrace."
@@ -5757,7 +5643,7 @@ Minimize point motion."
 (defun slime-highlight-sexp (&optional start end)
   "Highlight the first sexp after point."
   (let ((start (or start (point)))
-	(end (or end (save-excursion (ignore-errors (forward-sexp)) (point)))))
+        (end (or end (save-excursion (ignore-errors (forward-sexp)) (point)))))
     (slime-flash-region start end)))
 
 (defun slime-highlight-line (&optional timeout)
@@ -5776,7 +5662,7 @@ The details include local variable bindings and CATCH-tags."
   (let ((inhibit-read-only t)
         (inhibit-point-motion-hooks t))
     (if (or on (not (sldb-frame-details-visible-p)))
-	(sldb-show-frame-details)
+        (sldb-show-frame-details)
       (sldb-hide-frame-details))))
 
 (defun sldb-show-frame-details ()
@@ -5902,7 +5788,7 @@ VAR should be a plist with the keys :name, :id, and :value."
 (defun sldb-inspect-var ()
   (let ((frame (sldb-frame-number-at-point))
         (var (sldb-var-number-at-point)))
-    (slime-eval-async `(swank:inspect-frame-var ,frame ,var) 
+    (slime-eval-async `(swank:inspect-frame-var ,frame ,var)
                       (slime-make-inspector-opener))))
 
 (defun sldb-inspect-condition ()
@@ -6027,7 +5913,7 @@ truly screwed up."
       (dolist (cmd commands)
         ;; First wait until gdb was initialized, then wait until current
         ;; command was processed.
-        (while (not (looking-back comint-prompt-regexp))
+        (while (not (looking-back comint-prompt-regexp nil))
           (sit-for 0.01))
         ;; We do not use `gud-call' because we want the initial commands
         ;; to be displayed by the user so he knows what he's got.
@@ -6305,19 +6191,12 @@ was called originally."
 (slime-define-keys slime-connection-list-mode-map
   ("d"         'slime-connection-list-make-default)
   ("g"         'slime-update-connection-list)
-  ("k"         'slime-disconnect-connection-at-point)
-  ;; you don't want to press these accidentally...
-  ((kbd "C-c C-q") 'slime-quit-connection-at-point)
-  ((kbd "C-c C-r") 'slime-restart-connection-at-point))
+  ((kbd "C-k") 'slime-quit-connection-at-point)
+  ("R"         'slime-restart-connection-at-point))
 
 (defun slime-connection-at-point ()
   (or (get-text-property (point) 'slime-connection)
       (error "No connection at point")))
-
-(defun slime-disconnect-connection-at-point (connection)
-  (interactive (list (slime-connection-at-point)))
-  (slime-net-close connection)
-  (slime-update-connection-list))
 
 (defun slime-quit-connection-at-point (connection)
   (interactive (list (slime-connection-at-point)))
@@ -6399,17 +6278,12 @@ was called originally."
   :group 'slime-inspector)
 
 (defface slime-inspector-value-face
-  (if (slime-face-inheritance-possible-p)
-      '((t (:inherit font-lock-builtin-face)))
-    '((((background light)) (:foreground "MediumBlue" :bold t))
-      (((background dark)) (:foreground "LightGray" :bold t))))
+    '((t (:inherit font-lock-builtin-face)))
   "Face for things which can themselves be inspected."
   :group 'slime-inspector)
 
 (defface slime-inspector-action-face
-  (if (slime-face-inheritance-possible-p)
-      '((t (:inherit font-lock-warning-face)))
-    '((t (:foreground "OrangeRed"))))
+    '((t (:inherit font-lock-warning-face)))
   "Face for labels of inspector actions."
   :group 'slime-inspector)
 
@@ -6424,7 +6298,7 @@ was called originally."
   "Eval an expression and inspect the result."
   (interactive
    (list (slime-read-from-minibuffer "Inspect value (evaluated): "
-				     (slime-sexp-at-point))))
+                                     (slime-sexp-at-point))))
   (slime-eval-async `(swank:init-inspector ,string) 'slime-open-inspector))
 
 (define-derived-mode slime-inspector-mode fundamental-mode
@@ -6613,10 +6487,10 @@ that value.
   (interactive)
   (let ((result (slime-eval `(swank:inspector-next))))
     (cond (result
-	   (push (slime-inspector-position) slime-inspector-mark-stack)
-	   (slime-open-inspector result))
-	  (t (message "No next object")
-	     (ding)))))
+           (push (slime-inspector-position) slime-inspector-mark-stack)
+           (slime-open-inspector result))
+          (t (message "No next object")
+             (ding)))))
 
 (defun slime-inspector-quit ()
   "Quit the inspector and kill the buffer."
@@ -6786,9 +6660,10 @@ If ARG is negative, move forwards."
 (slime-define-keys slime-inspector-mode-map
   ([return] 'slime-inspector-operate-on-point)
   ("\C-m"   'slime-inspector-operate-on-point)
-  ([down-mouse-1] 'slime-inspector-operate-on-click)
-  ([down-mouse-6] 'slime-inspector-pop)
-  ([down-mouse-7] 'slime-inspector-next)
+  ([mouse-1] 'slime-inspector-operate-on-click)
+  ([mouse-2] 'slime-inspector-operate-on-click)
+  ([mouse-6] 'slime-inspector-pop)
+  ([mouse-7] 'slime-inspector-next)
   ("l" 'slime-inspector-pop)
   ("n" 'slime-inspector-next)
   (" " 'slime-inspector-next)
@@ -7100,7 +6975,7 @@ is setup, unless the user already set one explicitly."
     `("SLIME"
       [ "Edit Definition..."       slime-edit-definition ,C ]
       [ "Return From Definition"   slime-pop-find-definition-stack ,C ]
-      [ "Complete Symbol"          slime-complete-symbol ,C ]
+      [ "Complete Symbol"          completion-at-point ,C ]
       "--"
       ("Evaluation"
        [ "Eval Defun"              slime-eval-defun ,C ]
@@ -7341,9 +7216,9 @@ keys."
   (let ((alist '()))
     (dolist (e list)
       (let* ((k (funcall key e))
-	     (probe (cl-assoc k alist :test test)))
-	(if probe
-	    (push e (cdr probe))
+             (probe (cl-assoc k alist :test test)))
+        (if probe
+            (push e (cdr probe))
           (push (cons k (list e)) alist))))
     ;; Put them back in order.
     (cl-loop for (key . value) in (reverse alist)
@@ -7371,7 +7246,7 @@ keys."
   (let ((start (cl-position-if-not (lambda (x)
                                      (memq x '(?\t ?\n ?\s ?\r)))
                                    str))
-        
+
         (end (cl-position-if-not (lambda (x)
                                    (memq x '(?\t ?\n ?\s ?\r)))
                                  str
@@ -7402,7 +7277,7 @@ keys."
 (defun slime-cl-symbol-name (symbol)
   (let ((n (if (stringp symbol) symbol (symbol-name symbol))))
     (if (string-match ":\\([^:]*\\)$" n)
-	(let ((symbol-part (match-string 1 n)))
+        (let ((symbol-part (match-string 1 n)))
           (if (string-match "^|\\(.*\\)|$" symbol-part)
               (match-string 1 symbol-part)
             symbol-part))
@@ -7411,7 +7286,7 @@ keys."
 (defun slime-cl-symbol-package (symbol &optional default)
   (let ((n (if (stringp symbol) symbol (symbol-name symbol))))
     (if (string-match "^\\([^:]*\\):" n)
-	(match-string 1 n)
+        (match-string 1 n)
       default)))
 
 (defun slime-qualify-cl-symbol-name (symbol-or-name)
@@ -7595,9 +7470,10 @@ The returned bounds are either nil or non-empty."
 (defun slime-string-at-point ()
   "Returns the string at point as a string, otherwise nil."
   (let ((sexp (slime-sexp-at-point)))
-    (if (eql (char-syntax (aref sexp 0)) ?\")
+    (if (and sexp
+             (eql (char-syntax (aref sexp 0)) ?\"))
         sexp
-      nil)))
+        nil)))
 
 (defun slime-string-at-point-or-error ()
   "Return the sexp at point as a string, othwise signal an error."
