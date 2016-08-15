@@ -162,11 +162,11 @@
   (si:getpid))
 
 (defimplementation set-default-directory (directory)
-  (core:chdir (namestring directory))  ; adapts *DEFAULT-PATHNAME-DEFAULTS*.
+  (ext:chdir (namestring directory))  ; adapts *DEFAULT-PATHNAME-DEFAULTS*.
   (default-directory))
 
 (defimplementation default-directory ()
-  (namestring (core:getcwd)))
+  (namestring (ext:getcwd)))
 
 (defimplementation quit-lisp ()
   (core:quit))
@@ -231,8 +231,8 @@
      :original-condition condition
      :message (princ-to-string condition)
      :severity (etypecase condition
-                 (c:compiler-fatal-error :error)
-                 (c:compiler-error       :error)
+                 (cmp:compiler-fatal-error :error)
+                 (cmp:compiler-error       :error)
                  (error                  :error)
                  (style-warning          :style-warning)
                  (warning                :warning))
@@ -240,8 +240,8 @@
 
 #-clasp-bytecmp
 (defun condition-location (condition)
-  (let ((file     (c:compiler-message-file condition))
-        (position (c:compiler-message-file-position condition)))
+  (let ((file     (cmp:compiler-message-file condition))
+        (position (cmp:compiler-message-file-position condition)))
     (if (and position (not (minusp position)))
         (if *buffer-name*
             (make-buffer-location *buffer-name*
@@ -325,7 +325,8 @@
     (function (ext:compiled-function-name f))))
 
 ;; FIXME
-;; (defimplementation macroexpand-all (form))
+(defimplementation macroexpand-all (form)
+  (macroexpand form))
 
 (defimplementation describe-symbol-for-emacs (symbol)
   (let ((result '()))
@@ -434,7 +435,7 @@
          (*backtrace* (loop for ihs from 0 below *ihs-top*
                             collect (list (si::ihs-fun ihs)
                                           (si::ihs-env ihs)
-                                          nil))))
+                                          ihs))))
     (declare (special *ihs-current*))
 #+frs    (loop for f from *frs-base* until *frs-top*
           do (let ((i (- (si::frs-ihs f) *ihs-base* 1)))
@@ -449,13 +450,10 @@
     (let ((*ihs-base* *ihs-top*))
       (funcall debugger-loop-fn))))
 
-
-
 (defimplementation compute-backtrace (start end)
-  (when (numberp end)
-    (setf end (min end (length *backtrace*))))
-  (loop for f in (subseq *backtrace* start end)
-        collect f))
+  (subseq *backtrace* start
+          (and (numberp end)
+               (min end (length *backtrace*)))))
 
 (defun frame-name (frame)
   (let ((x (first frame)))
@@ -485,7 +483,11 @@
     (values fun position)))
 
 (defimplementation print-frame (frame stream)
-  (format stream "~A" (first frame)))
+  (format stream "(~s~{ ~s~})" (function-name (first frame))
+          #+#.(swank/backend:with-symbol 'ihs-arguments 'core)
+          (coerce (core:ihs-arguments (third frame)) 'list)
+          #-#.(swank/backend:with-symbol 'ihs-arguments 'core)
+          nil))
 
 (defimplementation frame-source-location (frame-number)
   (nth-value 1 (frame-function (elt *backtrace* frame-number))))
@@ -511,7 +513,7 @@
   (let ((env (cadr (elt *backtrace* frame-number))))
     (block gotit
       (loop for x = env then (core:get-parent-environment x)
-         with id = 0
+         with id = -1
          until (null x)
          do (loop for name across (core:environment-debug-names x)
                for value across (core:environment-debug-values x)
@@ -639,7 +641,7 @@
   `(satisfies c-function-p))
 
 (defun assert-source-directory ()
-  (unless (probe-file #P"SRC:")
+  (unless (probe-file #P"SYS:")
     (error "CLASP's source directory ~A does not exist. ~
             You can specify a different location via the environment ~
             variable `CLASPSRCDIR'."

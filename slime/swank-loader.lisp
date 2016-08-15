@@ -21,6 +21,7 @@
   (:use :cl)
   (:export :init
            :dump-image
+           :list-fasls
            :*source-directory*
            :*fasl-directory*))
 
@@ -59,8 +60,9 @@
 
 (defparameter *architecture-features*
   '(:powerpc :ppc :x86 :x86-64 :x86_64 :amd64 :i686 :i586 :i486 :pc386 :iapx386
-    :sparc64 :sparc :hppa64 :hppa :arm :armv5l :armv6l :armv7l
+    :sparc64 :sparc :hppa64 :hppa :arm :armv5l :armv6l :armv7l :arm64
     :pentium3 :pentium4
+    :mips :mipsel
     :java-1.4 :java-1.5 :java-1.6 :java-1.7))
 
 (defun q (s) (read-from-string s))
@@ -246,7 +248,8 @@ If LOAD is true, load the fasl file."
           names))
 
 (defvar *swank-files*
-  `((swank backend) ,@*sysdep-files* (swank match) (swank rpc)
+  `(packages
+    (swank backend) ,@*sysdep-files* (swank match) (swank rpc)
     swank))
 
 (defvar *contribs*
@@ -272,8 +275,9 @@ If LOAD is true, load the fasl file."
 
 (defun load-swank (&key (src-dir *source-directory*)
                      (fasl-dir *fasl-directory*)
-                     quiet)
-  (compile-files (src-files *swank-files* src-dir) fasl-dir t quiet)
+                        quiet)
+  (with-compilation-unit ()
+    (compile-files (src-files *swank-files* src-dir) fasl-dir t quiet))
   (funcall (q "swank::before-init")
            (slime-version-string)
            (list (contrib-dir fasl-dir)
@@ -354,3 +358,19 @@ global variabes in SWANK."
 (defun dump-image (filename)
   (init :setup nil)
   (funcall (q "swank/backend:save-image") filename))
+
+(defun list-fasls (&key (include-contribs t) (compile t)
+                        (quiet (not *compile-verbose*)))
+  "List up SWANK's fasls along with their dependencies."
+  (flet ((collect-fasls (files fasl-dir)
+           (when compile
+             (compile-files files fasl-dir nil quiet))
+           (loop for src in files
+                 when (probe-file (binary-pathname src fasl-dir))
+                   collect it)))
+    (append (collect-fasls (src-files *swank-files* *source-directory*)
+                           *fasl-directory*)
+            (when include-contribs
+              (collect-fasls (src-files *contribs*
+                                        (contrib-dir *source-directory*))
+                             (contrib-dir *fasl-directory*))))))
