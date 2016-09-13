@@ -249,6 +249,8 @@
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
+(add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl-1.3.8")))
+
 (setf slime-default-lisp 'web-server)
 
 ;; (setf slime-default-lisp 'rodin)
