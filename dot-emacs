@@ -565,3 +565,10 @@ performed, then slime-complete-symbol is called"
 
 ;;; dockerfile-mode
 (add-to-list 'auto-mode-alist '("Dockerfile" . dockerfile-mode))
+
+;;; Set the PATH which is visible in emacs to the one defined in the shell startup files
+;;
+;; This is only relevant in graphical desktops, but can be re-executed to
+;; pick up possible changes (e.g. cim, nvm changes of the default commands)
+(when window-system
+  (exec-path-from-shell-initialize))
