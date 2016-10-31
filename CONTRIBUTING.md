@@ -1,47 +1,22 @@
-How to contribute
-=================
+Reporting issues and suggesting features
+========================================
 
-Contributions to Magit are highly welcome.  Here are a few guidelines
-that will help your patches hit upstream as soon as possible.
+To report bugs and suggest new feature use the [issue tracker][issues].
 
-Branching scheme
-----------------
+Code contributions
+==================
 
-Magit uses three main branches for its lifecyle: `maint`, `master` and
-`next`.
+If you have some code which you would like to be merged, then open a
+[pull request][pulls].  Please create atomic commits with descriptive
+commit messages.
 
-* `maint` contains the set of patches that will definitely make it
-  into the next minor release.
-* `master` contains the set of patches that will highly likely make it
-  into the next major release.
-* `next` contains patches that necessitate some additional
-  checks/improvements before they're integrated into a release.
+Donations
+=========
 
-Making changes
---------------
+Please also consider to contribute by making a
+[monetary donation][donations].
 
-A good practice is to create a topic branch off Magit, from the branch
-you target for *final* inclusion.  This should *always* be either
-`maint` or `master`.
 
-If you branch off `next`, you'll only put more overhead on the
-maintainer's shoulders, and the integration will suffer from
-additional delays.
-
-Please make sure your commits are well-organized and "atomic" (hitting
-a single well-defined target each).
-
-Please also make sure you check that byte-compilation completes
-without errors or warnings, and that tests run without failures.
-
-Bonus points if you add tests to cover the feature you're hacking.
-
-Submitting changes
-------------------
-
-The preferred way of submitting your changes is to open a pull request
-on the central Magit Github repository
-(https://github.com/magit/magit).
-
-Alternately, you can send your patches to the Magit mailing list
-(magit@googlegroups.com), using `git send-email`.
+[donations]: https://magit.vc/donations.html
+[issues]:    https://github.com/magit/magit/issues
+[pulls]:     https://github.com/magit/magit/pulls

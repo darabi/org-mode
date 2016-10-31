@@ -1,103 +1,103 @@
-It's Magit!  An Emacs mode for Git [![Build Status](https://travis-ci.org/magit/magit.png?branch=maint,master,next)](https://travis-ci.org/magit/magit)
-==================================
+<p align="center"><img src="https://magit.vc/img/magit.png"/></p>
+<h1 align="center">It's Magit!</h1>
+<h2 align="center">A Git Porcelain inside Emacs</h2>
+<p align="center">
+  <a href="https://magit.vc"><b>homepage</b></a> |
+  <a href="https://magit.vc/manual"><b>manual</b></a> |
+  <a href="https://magit.vc/manual/magit/FAQ.html"><b>faq</b></a> |
+  <a href="https://github.com/magit/magit/wiki"><b>wiki</b></a> |
+  <a href="https://groups.google.com/forum/?fromgroups#!forum/magit"><b>mailing list</b></a> |
+  <a href="https://emacs.stackexchange.com/questions/tagged/magit"><b>forum</b></a> |
+  <a href="https://gitter.im/magit/magit"><b>chat</b></a> |
+  <a href="https://twitter.com/magit_emacs"><b>news</b></a>
+</p>
+***
 
-Magit is an interface to [Git][git] for [Emacs][emacs].
+<p align="justify">
+  Magit is an interface to the version control system
+  <a href="https://git-scm.com">Git</a>, implemented as an
+  <a href="https://www.gnu.org/software/emacs">Emacs</a> package.
+  Magit aspires to be a complete Git porcelain.  While we cannot
+  (yet) claim that Magit wraps and improves upon each and every Git
+  command, it is complete enough to allow even experienced Git users
+  to perform almost all of their daily version control tasks directly
+  from within Emacs.  While many fine Git clients exist, only Magit
+  and Git itself deserve to be called porcelains.
+  <a href="https://magit.vc/about">(more)</a>
+</p>
+***
 
-Unlike Emacs's native [version control support][vc] which strives to
-provide a unified interface to various version control systems, Magit
-only supports Git and can therefor take full advantage of its native
-features.
+<p align="center">
+  <br>
+  <img width="16" height="16" src="https://assets-cdn.github.com/images/icons/emoji/unicode/2764.png">
+  <b>
+    Please consider supporting development by
+    <a href="https://magit.vc/donations/">making a donation</a>.
+  </b>
+  <img width="16" height="16" src="https://assets-cdn.github.com/images/icons/emoji/unicode/2764.png">
+  <br>
+  <br>
+</p>
+***
 
-Magit supports GNU Emacs 22.1 or later; 24.1 or later is recommended.
+Support
+=======
 
-Getting Started
-===============
+When something doesn't work as expected then please first see the
+[FAQ][faq].  Then also try the list of [open issues][issues] and use
+the search box at the top of that page to find older related issues.
+You should also consult the [manual][manual] and ask a general-purpose
+search engine.
 
-To get started with Magit, run <kbd>M-x magit-status</kbd>.  If you
-are inside a Git repository this opens a buffer that summarizes its
-status.  Otherwise you are first prompted for a repository.  Read the
-short help for `magit-mode` (<kbd>C-h m</kbd> in the status buffer),
-make some changes to your files, stage (<kbd>s</kbd>), and commit
-(<kbd>c</kbd>) them.
+If that doesn't answer your question, then ask for help on the
+**[Emacs Stackexchange site][forum]**, the [mailing list][list], or
+the [Gitter chat][chat].
 
-For more details consult the Magit user manual.  You can read it
-[on the web][manual] or in Emacs with <kbd>C-u C-h i magit.info</kbd>.
+**Please do NOT use the GitHub issue tracker for support requests.**
+**We only use it for feature requests and bug reports.**
 
-Magit also has a [website][website].
-
-Installation
+Contributing
 ============
 
-Emacs >=24.1 includes a facility that lets you easily download and
-install packages.  Using `package.el` is the easiest and recommended
-way to install Magit and its dependencies.  If you don't want use it
-see the extended installation instructions in INSTALL.md
-([weblink][installing]).
+To report bugs and suggest new feature use the
+[issue tracker][issues].  If you have some code which you would like
+to be merged, then open a [pull request][pulls]. Please also see
+[CONTRIBUTING.md][contrib].
 
-The stable Magit version is available from the [Marmalade][marmalade]
-package repository.  If you want to install the development version
-(the `master` branch) use the [Melpa][melpa] repository instead.
-Please note that *all* packages on Melpa are built from the upstream
-`master` branch.  If you generally want stable versions but the latest
-Magit use Marmalade and install Magit from Git.
+Acknowledgments
+===============
 
-First tell `package.el` to use one of the package repository:
+Magit was started by [Marius Vollmer][marius], and is now maintained
+by [Jonas Bernoulli][jonas], [Kyle Meyer][kyle], and
+[Noam Postavsky][noam].  Other former maintainers are
+[Nicolas Dudebout][nicolas], [Peter J. Weisberg][peter],
+[Phil Jackson][phil], [Rémi Vanicat][remi], and [Yann Hodique][yann].
+Many more people have [contributed code][authors] and suggested
+features.
 
-```lisp
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.milkbox.net/packages/") t)
-```
+Thanks to all of you, may (the history of) the source be with you!
 
-**or**
+***
+[![Build Status](https://travis-ci.org/magit/magit.svg?branch=master)](https://travis-ci.org/magit/magit)
 
-```lisp
-(add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/") t)
-```
+[contrib]: https://github.com/magit/magit/blob/master/CONTRIBUTING.md
+[issues]:  https://github.com/magit/magit/issues
+[pulls]:   https://github.com/magit/magit/pulls
 
-For details please see the website of the package repository of your
-choosing.
+[authors]: https://magit.vc/stats/authors.html
+[faq]:     https://magit.vc/manual/magit/FAQ.html
+[manual]:  https://magit.vc/manual
 
-Then install Magit (and its run-time dependencies):
+[chat]:    https://gitter.im/magit/magit
+[forum]:   https://emacs.stackexchange.com/questions/tagged/magit
+[list]:    https://groups.google.com/forum/?fromgroups#!forum/magit
 
-<kbd>M-x install-package RET magit RET</kbd>
-
-Development
-===========
-
-Magit's canonical source repository is
-[hosted on Github][development].
-
-Magit was started by Marius Vollmer and is now collectively maintained
-by the [Magit Owners Team][owners].  [Many more people][contributors]
-have contributed.
-
-To report bugs and make feature requests please use the
-[issue tracker][issues] and Github [pull requests][pulls].  You may
-also use Magit's [Google group][group].  Before making a pull request
-please read CONTRIBUTING.md ([weblink][contributing]).
-
-
-[contributing]: https://github.com/magit/magit/blob/maint/CONTRIBUTING.md
-[contributors]: https://github.com/magit/magit/contributors
-[development]: http://github.com/magit/magit
-[download]: https://github.com/downloads/magit/magit/magit-1.2.0.tar.gz
-[group]: https://groups.google.com/forum/?fromgroups#!forum/magit
-[installing]: https://github.com/magit/magit/blob/maint/INSTALL.md
-[issues]: https://github.com/magit/magit/issues
-[manual]: http://magit.github.com/magit/magit.html
-[owners]: https://github.com/magit?tab=members
-[pulls]: https://github.com/magit/magit/pulls
-[screencast]: http://vimeo.com/2871241
-[website]: http://magit.github.com/magit
-
-[cl-lib]: http://elpa.gnu.org/packages/cl-lib.html
-[el-x]: https://github.com/sigma/el-x
-[emacs]: http://www.gnu.org/software/emacs
-[ert]: https://github.com/ohler/ert
-[git-wip]: https://github.com/bartman/git-wip
-[git]: http://git-scm.com
-[marmalade]: http://marmalade-repo.org
-[melpa]: http://melpa.milkbox.net
-[mocker]: https://github.com/sigma/mocker.el
-[vc]: http://www.gnu.org/software/emacs/manual/html_node/emacs/Version-Control.html
+[jonas]:   https://emacsair.me
+[kyle]:    https://github.com/kyleam
+[marius]:  https://github.com/mvollmer
+[nicolas]: http://dudebout.com
+[noam]:    https://github.com/npostavs
+[peter]:   https://github.com/pjweisberg
+[phil]:    https://github.com/philjackson
+[remi]:    https://github.com/vanicat
+[yann]:    http://www.hodique.info
