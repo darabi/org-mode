@@ -19,11 +19,11 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "2.10.0"))
+    ;; Package-Requires: ((dash "2.12.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "2.10.0") (dash-functional "1.2.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.12.0") (dash-functional "1.2.0") (emacs "24"))
 
 ## Syntax highlighting of dash functions
 
@@ -238,8 +238,11 @@ Functions pretending lists are trees.
 ### Threading macros
 
 * [->](#--x-optional-form-rest-more) `(x &optional form &rest more)`
-* [->>](#--x-form-rest-more) `(x form &rest more)`
+* [->>](#--x-optional-form-rest-more) `(x &optional form &rest more)`
 * [-->](#---x-form-rest-more) `(x form &rest more)`
+* [-some->](#-some--x-optional-form-rest-more) `(x &optional form &rest more)`
+* [-some->>](#-some--x-optional-form-rest-more) `(x &optional form &rest more)`
+* [-some-->](#-some---x-optional-form-rest-more) `(x &optional form &rest more)`
 
 ### Binding
 
@@ -397,6 +400,7 @@ See also: [`-splice`](#-splice-pred-fun-list), [`-insert-at`](#-insert-at-n-x-li
 ```el
 (-splice-list 'keywordp '(a b c) '(1 :foo 2)) ;; => '(1 a b c 2)
 (-splice-list 'keywordp nil '(1 :foo 2)) ;; => '(1 2)
+(--splice-list (keywordp it) '(a b c) '(1 :foo 2)) ;; => '(1 a b c 2)
 ```
 
 #### -mapcat `(fn list)`
@@ -594,6 +598,14 @@ Return a new list with the concatenation of the elements in the supplied `lists`
 
 Take a nested list `l` and return its contents as a single, flat list.
 
+Note that because `nil` represents a list of zero elements (an
+empty list), any mention of nil in `l` will disappear after
+flattening.  If you need to preserve nils, consider [`-flatten-n`](#-flatten-n-num-list)
+or map them to some unique symbol and then map them back.
+
+Conses of two atoms are considered "terminals", that is, they
+aren't flattened further.
+
 See also: [`-flatten-n`](#-flatten-n-num-list)
 
 ```el
@@ -733,6 +745,8 @@ item, etc. If `list` contains no items, return `initial-value` and
 In the anaphoric form `--reduce-from`, the accumulated value is
 exposed as `acc`.
 
+See also: [`-reduce`](#-reduce-fn-list), [`-reduce-r`](#-reduce-r-fn-list)
+
 ```el
 (-reduce-from '- 10 '(1 2 3)) ;; => 4
 (-reduce-from (lambda (memo item) (concat "(" memo " - " (int-to-string item) ")")) "10" '(1 2 3)) ;; => "(((10 - 1) - 2) - 3)"
@@ -747,6 +761,8 @@ returned and `fn` is not called.
 
 Note: this function works the same as [`-reduce-from`](#-reduce-from-fn-initial-value-list) but the
 operation associates from right instead of from left.
+
+See also: [`-reduce-r`](#-reduce-r-fn-list), [`-reduce`](#-reduce-fn-list)
 
 ```el
 (-reduce-r-from '- 10 '(1 2 3)) ;; => -8
@@ -764,6 +780,8 @@ reduce return the result of calling `fn` with no arguments. If
 
 In the anaphoric form `--reduce`, the accumulated value is
 exposed as `acc`.
+
+See also: [`-reduce-from`](#-reduce-from-fn-initial-value-list), [`-reduce-r`](#-reduce-r-fn-list)
 
 ```el
 (-reduce '- '(1 2 3 4)) ;; => -8
@@ -784,6 +802,8 @@ accumulated value.
 
 Note: this function works the same as [`-reduce`](#-reduce-fn-list) but the operation
 associates from right instead of from left.
+
+See also: [`-reduce-r-from`](#-reduce-r-from-fn-initial-value-list), [`-reduce`](#-reduce-fn-list)
 
 ```el
 (-reduce-r '- '(1 2 3 4)) ;; => -2
@@ -1741,7 +1761,7 @@ second item in second form, etc.
 (-> '(2 3 5) (append '(8 13)) (-slice 1 -1)) ;; => '(3 5 8)
 ```
 
-#### ->> `(x form &rest more)`
+#### ->> `(x &optional form &rest more)`
 
 Thread the expr through the forms. Insert `x` as the last item
 in the first form, making a list of it if it is not a list
@@ -1765,6 +1785,39 @@ in second form, etc.
 (--> "def" (concat "abc" it "ghi")) ;; => "abcdefghi"
 (--> "def" (concat "abc" it "ghi") (upcase it)) ;; => "ABCDEFGHI"
 (--> "def" (concat "abc" it "ghi") upcase) ;; => "ABCDEFGHI"
+```
+
+#### -some-> `(x &optional form &rest more)`
+
+When expr is non-nil, thread it through the first form (via [`->`](#--x-optional-form-rest-more)),
+and when that result is non-nil, through the next form, etc.
+
+```el
+(-some-> '(2 3 5)) ;; => '(2 3 5)
+(-some-> 5 square) ;; => 25
+(-some-> 5 even? square) ;; => nil
+```
+
+#### -some->> `(x &optional form &rest more)`
+
+When expr is non-nil, thread it through the first form (via [`->>`](#--x-optional-form-rest-more)),
+and when that result is non-nil, through the next form, etc.
+
+```el
+(-some->> '(1 2 3) (-map 'square)) ;; => '(1 4 9)
+(-some->> '(1 3 5) (-last 'even?) (+ 100)) ;; => nil
+(-some->> '(2 4 6) (-last 'even?) (+ 100)) ;; => 106
+```
+
+#### -some--> `(x &optional form &rest more)`
+
+When expr in non-nil, thread it through the first form (via [`-->`](#---x-form-rest-more)),
+and when that result is non-nil, through the next form, etc.
+
+```el
+(-some--> "def" (concat "abc" it "ghi")) ;; => "abcdefghi"
+(-some--> nil (concat "abc" it "ghi")) ;; => nil
+(-some--> '(1 3 5) (-filter 'even? it) (append it it) (-map 'square it)) ;; => nil
 ```
 
 
@@ -1792,7 +1845,9 @@ If all `vals` evaluate to true, bind them to their corresponding
 `vars` and execute body. `vars-vals` should be a list of (`var` `val`)
 pairs.
 
-Note: binding is done according to [`-let*`](#-let-varlist-rest-body).
+Note: binding is done according to [`-let*`](#-let-varlist-rest-body).  `vals` are evaluated
+sequentially, and evaluation stops after the first nil `val` is
+encountered.
 
 ```el
 (-when-let* ((x 5) (y 3) (z (+ y 4))) (+ x y z)) ;; => 15
@@ -1817,7 +1872,9 @@ If all `vals` evaluate to true, bind them to their corresponding
 `vars` and do `then`, otherwise do `else`. `vars-vals` should be a list
 of (`var` `val`) pairs.
 
-Note: binding is done according to [`-let*`](#-let-varlist-rest-body).
+Note: binding is done according to [`-let*`](#-let-varlist-rest-body).  `vals` are evaluated
+sequentially, and evaluation stops after the first nil `val` is
+encountered.
 
 ```el
 (-if-let* ((x 5) (y 3) (z 7)) (+ x y z) "foo") ;; => 15
@@ -1887,10 +1944,10 @@ Vectors:
                      If the `pattern` is longer than `source`, an `error` is
                      thrown.
 
-    [a1 a2 a3 ... &rest rest] ) - as above, but bind the rest of
-                                  the sequence to `rest`.  This is
-                                  conceptually the same as improper list
-                                  matching (a1 a2 ... aN . rest)
+    [a1 a2 a3 ... &rest rest] - as above, but bind the rest of
+                                the sequence to `rest`.  This is
+                                conceptually the same as improper list
+                                matching (a1 a2 ... aN . rest)
 
 Key/value stores:
 
@@ -2320,6 +2377,18 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
 
+### From 2.11 to 2.12
+
+- Add GNU ELPA support. (Phillip Lord)
+- Add `-some->`, `-some->>`, and `-some-->` macros. (Cam Saul)
+- `-is-suffix?` no longer destroys input list.
+- Faster hashtable implementation for `-union`.
+- Improvements to docstrings and examples
+
+### From 2.10 to 2.11
+
+- Lots of clean up wrt byte compilation, debug macros and tests
+
 ### From 2.9 to 2.10
 
 - Add `-let` destructuring to `-if-let` and `-when-let` (Fredrik Bergroth)
@@ -2436,6 +2505,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Mark Oteiza](https://github.com/holomorph) contributed the script to create an info manual.
  - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
  - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
+ - [Cam Saül](https://github.com/cammsaul) contributed `-some->`, `-some->>`, and `-some-->`.
 
 Thanks!
 

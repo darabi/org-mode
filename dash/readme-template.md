@@ -19,11 +19,11 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "2.10.0"))
+    ;; Package-Requires: ((dash "2.12.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "2.10.0") (dash-functional "1.2.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.12.0") (dash-functional "1.2.0") (emacs "24"))
 
 ## Syntax highlighting of dash functions
 
@@ -90,6 +90,18 @@ Oh, and don't edit `README.md` directly, it is auto-generated.
 Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
+
+### From 2.11 to 2.12
+
+- Add GNU ELPA support. (Phillip Lord)
+- Add `-some->`, `-some->>`, and `-some-->` macros. (Cam Saul)
+- `-is-suffix?` no longer destroys input list.
+- Faster hashtable implementation for `-union`.
+- Improvements to docstrings and examples
+
+### From 2.10 to 2.11
+
+- Lots of clean up wrt byte compilation, debug macros and tests
 
 ### From 2.9 to 2.10
 
@@ -207,6 +219,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Mark Oteiza](https://github.com/holomorph) contributed the script to create an info manual.
  - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
  - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
+ - [Cam Saül](https://github.com/cammsaul) contributed `-some->`, `-some->>`, and `-some-->`.
 
 Thanks!
 
