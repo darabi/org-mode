@@ -77,6 +77,11 @@
   (with-default-directory
    (should (equal (f-expand "foo" "/other") "/other/foo"))))
 
+(ert-deftest f-expand-test/skip-handlers ()
+  ;; If handlers are used, Tramp will try to connect but fail with an
+  ;; exception, hence this will fail.
+  (f-expand "foo:" "/"))
+
 
 ;;;; f-filename
 
@@ -158,6 +163,10 @@
 (ert-deftest f-common-parent/single-file ()
   (should (equal (f-common-parent '("foo/bar/baz")) "foo/bar/"))
   (should (equal (f-common-parent '("baz")) "./")))
+
+(ert-deftest f-common-parent/same-path ()
+  (should (equal (f-common-parent '("foo/bar/baz" "foo/bar/baz")) "foo/bar/baz/"))
+  (should (equal (f-common-parent '("foo" "foo")) "foo/")))
 
 (ert-deftest f-common-parent/empty-list ()
   (should (equal (f-common-parent nil) nil)))

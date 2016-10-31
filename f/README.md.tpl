@@ -8,7 +8,7 @@ with files and directories in Emacs.
 
 ## Installation
 
-It's available on [Melpa](http://melpa.milkbox.net/):
+It's available on [Melpa](https://melpa.org/):
 
     M-x package-install f
 
@@ -28,7 +28,7 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-no-ext](#f-no-ext-path) `(path)`
 * [f-swap-ext](#f-swap-ext) `(path ext)`
 * [f-base](#f-base-path) `(path)`
-* [f-relative](#f-relative-path-optional-file) `(path &optional file)`
+* [f-relative](#f-relative-path-optional-dir) `(path &optional dir)`
 * [f-short](#f-short-path) `(path)`
 * [f-long](#f-long-path) `(path)`
 * [f-canonical](#f-canonical-path) `(path)`
@@ -43,6 +43,8 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-write-bytes](#f-write-bytes-data-path) `(data path)`
 * [f-read-text](#f-read-text-path-optional-coding) `(path &optional coding)`
 * [f-write-text](#f-write-text-text-coding-path)`(text coding path)`
+* [f-append-text](#f-append-text-text-coding-path)`(text coding path)`
+* [f-append-bytes](#f-append-data-path)`(text coding path)`
 
 ### Destructive
 
@@ -51,6 +53,7 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-symlink](#f-symlink-source-path) `(source path)`
 * [f-move](#f-move-from-to) `(from to)`
 * [f-copy](#f-copy-from-to) `(from to)`
+* [f-copy-contenst](#f-copy-contents-from-to) `(from to)`
 * [f-touch](#f-touch-path) `(path)`
 
 ### Predicates
@@ -71,10 +74,12 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-child-of?](#f-child-of-path-a-path-b) `(path-a path-b)`
 * [f-ancestor-of?](#f-ancestor-of-path-a-path-b) `(path-a path-b)`
 * [f-descendant-of?](#f-descendant-of-path-a-path-b) `(path-a path-b)`
+* [f-hidden?](#f-hidden-path) `(path)`
 
 ### Stats
 
 * [f-size](#f-size-path) `(path)`
+* [f-depth](#f-depth-path) `(path)`
 
 ### Misc
 
@@ -85,7 +90,6 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-directories](#f-directories-path-optional-fn-recursive) `(path &optional fn recursive)`
 * [f-files](#f-files-path-optional-fn-recursive) `(path &optional fn recursive)`
 * [f-root](#f-root-) `()`
-* [f-up](#f-up-fn-optional-dir) `(fn &optional dir)`
 * [f-traverse-upwards](#f-traverse-upwards-fn-optional-path) `(fn &optional path)`
 * [f-with-sandbox](#f-with-sandbox-path-or-paths-rest-body) `(path-or-paths &rest body)`
 
@@ -305,6 +309,25 @@ Alias: `f-write`
 (f-write "Hello world" 'utf-8 "path/to/file.txt")
 ```
 
+### f-append-text `(text coding path)`
+
+{{f-append-text}}
+
+Alias: `f-append`
+
+```lisp
+(f-append-text "Hello world" 'utf-8 "path/to/file.txt")
+(f-append "Hello world" 'utf-8 "path/to/file.txt")
+```
+
+### f-append-bytes `(data path)`
+
+{{f-append-bytes}}
+
+```lisp
+(f-append-bytes "path/to/file" (unibyte-string 72 101 108 108 111 32 119 111 114 108 100))
+```
+
 ### f-mkdir `(&rest dirs)`
 
 {{f-mkdir}}
@@ -350,6 +373,14 @@ Alias: `f-write`
 (f-copy "path/to/dir" "other/dir")
 ```
 
+### f-copy-contents `(from to)`
+
+{{f-copy-contents}}
+
+```lisp
+(f-copy-contents "path/to/dir" "path/to/other/dir")
+```
+
 ### f-touch `(path)`
 
 {{f-touch}}
@@ -372,7 +403,7 @@ Alias: `f-write`
 
 {{f-directory?}}
 
-Alias: `f-dir?`
+Aliases: `f-directory-p f-dir? f-dir-p`
 
 ```lisp
 (f-directory? "path/to/file.txt") ;; => nil
@@ -383,6 +414,8 @@ Alias: `f-dir?`
 
 {{f-file?}}
 
+Alias: `f-file-p`
+
 ```lisp
 (f-file? "path/to/file.txt") ;; => t
 (f-file? "path/to/dir") ;; => nil
@@ -391,6 +424,8 @@ Alias: `f-dir?`
 ### f-symlink? `(path)`
 
 {{f-symlink?}}
+
+Alias: `f-symlink-p`
 
 ```lisp
 (f-symlink? "path/to/file.txt") ;; => nil
@@ -402,6 +437,8 @@ Alias: `f-dir?`
 
 {{f-readable?}}
 
+Alias: `f-readable-p`
+
 ```lisp
 (f-readable? "path/to/file.txt")
 (f-readable? "path/to/dir")
@@ -410,6 +447,8 @@ Alias: `f-dir?`
 ### f-writable? `(path)`
 
 {{f-writable?}}
+
+Alias: `f-writable-p`
 
 ```lisp
 (f-writable? "path/to/file.txt")
@@ -420,6 +459,8 @@ Alias: `f-dir?`
 
 {{f-executable?}}
 
+Alias: `f-executable-p`
+
 ```lisp
 (f-executable? "path/to/file.txt")
 (f-executable? "path/to/dir")
@@ -428,6 +469,8 @@ Alias: `f-dir?`
 ### f-absolute? `(path)`
 
 {{f-absolute?}}
+
+Alias: `f-absolute-p`
 
 ```lisp
 (f-absolute? "path/to/dir") ;; => nil
@@ -438,6 +481,8 @@ Alias: `f-dir?`
 
 {{f-relative?}}
 
+Alias: `f-relative-p`
+
 ```lisp
 (f-relative? "path/to/dir") ;; => t
 (f-relative? "/full/path/to/dir") ;; => nil
@@ -447,6 +492,8 @@ Alias: `f-dir?`
 
 {{f-root?}}
 
+Alias: `f-root-p`
+
 ```lisp
 (f-root? "/") ;; => t
 (f-root? "/not/root") ;; => nil
@@ -455,6 +502,8 @@ Alias: `f-dir?`
 ### f-ext? `(path ext)`
 
 {{f-ext?}}
+
+Alias: `f-ext-p`
 
 ```lisp
 (f-ext? "path/to/file.el" "el") ;; => t
@@ -467,7 +516,7 @@ Alias: `f-dir?`
 
 {{f-same?}}
 
-Alias: `f-equal?`
+Aliases: `f-same-p f-equal? f-equal-p`
 
 ```lisp
 (f-same? "foo.txt" "foo.txt") ;; => t
@@ -477,6 +526,8 @@ Alias: `f-equal?`
 ### f-parent-of? `(path-a path-b)`
 
 {{f-parent-of?}}
+
+Alias: `f-parent-of-p`
 
 ```lisp
 (f-parent-of? "/path/to" "/path/to/dir") ;; => t
@@ -488,6 +539,8 @@ Alias: `f-equal?`
 
 {{f-child-of?}}
 
+Alias: `f-child-of-p`
+
 ```lisp
 (f-child-of? "/path/to" "/path/to/dir") ;; => nil
 (f-child-of? "/path/to/dir" "/path/to") ;; => t
@@ -497,6 +550,8 @@ Alias: `f-equal?`
 ### f-ancestor-of? `(path-a path-b)`
 
 {{f-ancestor-of?}}
+
+Alias: `f-ancestor-of-p`
 
 ```lisp
 (f-ancestor-of? "/path/to" "/path/to/dir") ;; => t
@@ -509,12 +564,25 @@ Alias: `f-equal?`
 
 {{f-descendant-of?}}
 
+Alias: `f-descendant-of-p`
+
 ```lisp
 (f-descendant-of? "/path/to/dir" "/path/to") ;; => t
 (f-descendant-of? "/path/to/dir" "/path") ;; => t
 (f-descendant-of? "/path/to" "/path/to/dir") ;; => nil
 (f-descendant-of? "/path/to" "/path/to") ;; => nil
 ```
+
+### f-hidden? `(path)`
+
+{{f-hidden?}}
+
+```lisp
+(f-hidden? "/path/to/foo") ;; => nil
+(f-hidden? "/path/to/.foo") ;; => t
+```
+
+Alias: `f-hidden-p`
 
 ### f-size `(path)`
 
@@ -523,6 +591,16 @@ Alias: `f-equal?`
 ```lisp
 (f-size "path/to/file.txt")
 (f-size "path/to/dir")
+```
+
+### f-depth `(path)`
+
+{{f-depth}}
+
+```lisp
+(f-depth "/") ;; 0
+(f-depth "/var/") ;; 1
+(f-depth "/usr/local/bin") ;; 3
 ```
 
 ### f-this-file `()`
@@ -593,21 +671,6 @@ See: `file-expand-wildcards`
 (f-root) ;; => "/"
 ```
 
-### f-up `(fn &optional dir)`
-
-{{f-up}}
-
-Deprecated in favor of: [f-traverse-upwards](#f-traverse-upwards-fn-optional-path)
-
-```lisp
-(f-up
- (lambda (path)
-   (f-exists? (f-expand ".git" path)))
- start-path)
-
-(f--up (f-exists? (f-expand ".git" it)) start-path) ;; same as above
-```
-
 ### f-traverse-upwards `(fn &optional path)`
 
 {{f-traverse-upwards}}
@@ -634,120 +697,6 @@ Deprecated in favor of: [f-traverse-upwards](#f-traverse-upwards-fn-optional-pat
 (f-with-sandbox foo-path
   (f-touch (f-expand "bar" bar-path))) ;; "Destructive operation outside sandbox"
 ```
-
-## Changelog
-
-### v0.17.0
-
-* Add `f-common-parent` (by @Fuco1)
-
-### v0.16.0
-
-* Add `f-with-sandbox`
-
-### v0.15.0
-
-* Add `f-split`
-
-### v0.14.0
-
-* Add `f-traverse-upwards` and its anaphoric version `f--traverse-upwards`
-* Deprecate `f-up` and its anaphoric version `f--up`
-
-### v0.13.0
-
-* Add `f-uniquify` and `f-uniquify-alist` (by @Fuco1)
-
-### v0.12.0
-
-* `f-parent` returns nil if argument is root
-
-### v0.11.0
-
-* Add `f-descendant-of?`
-* Add `f-ancestor-of?`
-* Add `f-parent-of?`
-* Add `f-child-of?`
-* Remove deprecation for `f-read` and `f-write` and make them aliases
-  to `f-read-text` and `f-write-text` respectively
-* Add anaphoric function `f--entries` for `f-entries`
-* Add anaphoric function `f--files` for `f-files`
-* Add anaphoric function `f--directories` of `f-directories`
-* Add `f-up` and anaphoric version `f--up`
-
-### v0.10.0
-
-* Add `f-root`
-* Fix `f-root?` bug for weird syntax
-
-### v0.9.0
-
-* Make `s-long`
-* Make `s-short` default and `f-abbrev` the alias
-* Add `f-full`
-* Do not append path separator if file in `f-slash`
-* Fixed bug in `f-path-separator`
-
-### v0.8.0
-
-* Moved `f-this-file` to misc section
-* Add `f-slash`
-* Add `f-path-separator`
-
-### v0.7.1
-
-* Fix coding bug in `f-read-text`
-
-### v0.7.0
-
-* Add `f-touch`
-
-### v0.6.1
-
-* Fix `f-write-text` for unibyte strings
-
-### v0.6.0
-
-* Add `f-write-text` and `f-write-bytes` and deprecate `f-write`
-* Add `f-read-text` and `f-read-bytes` and deprecate `f-read`
-* Add `f-this-file`
-* Add `f-canonical`
-* Fix `f-same?` for symlinks
-
-### v0.5.0
-
-* Add `f-same?` (alias `f-equal?`)
-
-### v0.4.1
-
-* Bump `s` and `dash` versions
-
-### v0.4.0
-
-* Add `f-copy`
-
-### v0.3.0
-
-* Add `f-ext?`
-
-### v0.2.1
-
-* Fix `f-filename` when ending with slash
-
-### v0.2.0
-
-* Add `f-root?`
-* Fix `f-dirname` when ending with slash
-
-### v0.1.0
-
-* Add `f-abbrev` (alias `f-short`)
-
-### v0.0.2
-
-* `f-join` platform independent
-
-### v0.0.1
 
 ## Example
 
