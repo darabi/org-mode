@@ -8,7 +8,7 @@ with files and directories in Emacs.
 
 ## Installation
 
-It's available on [Melpa](http://melpa.milkbox.net/):
+It's available on [Melpa](https://melpa.org/):
 
     M-x package-install f
 
@@ -26,9 +26,9 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-common-parent](#f-common-parent-paths) `(paths)`
 * [f-ext](#f-ext-path) `(path)`
 * [f-no-ext](#f-no-ext-path) `(path)`
-* [f-swap-ext](#f-swap-ext) `(path ext)`
+* [f-swap-ext](#f-swap-ext-path-ext) `(path ext)`
 * [f-base](#f-base-path) `(path)`
-* [f-relative](#f-relative-path-optional-file) `(path &optional file)`
+* [f-relative](#f-relative-path-optional-dir) `(path &optional dir)`
 * [f-short](#f-short-path) `(path)`
 * [f-long](#f-long-path) `(path)`
 * [f-canonical](#f-canonical-path) `(path)`
@@ -43,6 +43,8 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-write-bytes](#f-write-bytes-data-path) `(data path)`
 * [f-read-text](#f-read-text-path-optional-coding) `(path &optional coding)`
 * [f-write-text](#f-write-text-text-coding-path)`(text coding path)`
+* [f-append-text](#f-append-text-text-coding-path)`(text coding path)`
+* [f-append-bytes](#f-append-data-path)`(text coding path)`
 
 ### Destructive
 
@@ -51,6 +53,7 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-symlink](#f-symlink-source-path) `(source path)`
 * [f-move](#f-move-from-to) `(from to)`
 * [f-copy](#f-copy-from-to) `(from to)`
+* [f-copy-contenst](#f-copy-contents-from-to) `(from to)`
 * [f-touch](#f-touch-path) `(path)`
 
 ### Predicates
@@ -71,10 +74,12 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-child-of?](#f-child-of-path-a-path-b) `(path-a path-b)`
 * [f-ancestor-of?](#f-ancestor-of-path-a-path-b) `(path-a path-b)`
 * [f-descendant-of?](#f-descendant-of-path-a-path-b) `(path-a path-b)`
+* [f-hidden?](#f-hidden-path) `(path)`
 
 ### Stats
 
 * [f-size](#f-size-path) `(path)`
+* [f-depth](#f-depth-path) `(path)`
 
 ### Misc
 
@@ -85,7 +90,6 @@ Or you can just dump `f.el` in your load path somewhere.
 * [f-directories](#f-directories-path-optional-fn-recursive) `(path &optional fn recursive)`
 * [f-files](#f-files-path-optional-fn-recursive) `(path &optional fn recursive)`
 * [f-root](#f-root-) `()`
-* [f-up](#f-up-fn-optional-dir) `(fn &optional dir)`
 * [f-traverse-upwards](#f-traverse-upwards-fn-optional-path) `(fn &optional path)`
 * [f-with-sandbox](#f-with-sandbox-path-or-paths-rest-body) `(path-or-paths &rest body)`
 
@@ -113,7 +117,7 @@ Split PATH and return list containing parts.
 
 ### f-expand `(path &optional dir)`
 
-Expand PATH relative to DIR (or `default-directory').
+Expand PATH relative to DIR (or ‘default-directory’).
 
 ```lisp
 (f-expand "name") ;; => "/default/directory/name"
@@ -154,6 +158,9 @@ Return the deepest common parent directory of PATHS.
 ### f-ext `(path)`
 
 Return the file extension of PATH.
+
+The extension, in a file name, is the part that follows the last
+’.’, excluding version numbers and backup suffixes.
 
 ```lisp
 (f-ext "path/to/file.ext") ;; => "ext"
@@ -199,7 +206,7 @@ Return PATH relative to DIR.
 
 ### f-short `(path)`
 
-Return abbrev of PATH. See `abbreviate-file-name'.
+Return abbrev of PATH.  See ‘abbreviate-file-name’.
 
 Alias: `f-abbrev`
 
@@ -230,7 +237,7 @@ Return the canonical name of PATH.
 
 Append slash to PATH unless one already.
 
-Some functions, such as `call-process' requires there to be an
+Some functions, such as ‘call-process’ requires there to be an
 ending slash.
 
 ```lisp
@@ -251,7 +258,7 @@ Return absolute path to PATH, with ending slash.
 
 ### f-uniquify `(paths)`
 
-Return unique suffixes of PATHS.
+Return unique suffixes of FILES.
 
 This function expects no duplicate paths.
 
@@ -264,7 +271,7 @@ This function expects no duplicate paths.
 
 ### f-uniquify-alist `(paths)`
 
-Return alist mapping PATHS to unique suffixes of PATHS.
+Return alist mapping FILES to unique suffixes of FILES.
 
 This function expects no duplicate paths.
 
@@ -299,7 +306,7 @@ DATA is a unibyte string.  PATH is a file name to write to.
 
 Read text with PATH, using CODING.
 
-CODING defaults to `utf-8'.
+CODING defaults to ‘utf-8’.
 
 Return the decoded text as multibyte string.
 
@@ -322,6 +329,29 @@ Alias: `f-write`
 ```lisp
 (f-write-text "Hello world" 'utf-8 "path/to/file.txt")
 (f-write "Hello world" 'utf-8 "path/to/file.txt")
+```
+
+### f-append-text `(text coding path)`
+
+Append TEXT with CODING to PATH.
+
+If PATH does not exist, it is created.
+
+Alias: `f-append`
+
+```lisp
+(f-append-text "Hello world" 'utf-8 "path/to/file.txt")
+(f-append "Hello world" 'utf-8 "path/to/file.txt")
+```
+
+### f-append-bytes `(data path)`
+
+Append binary DATA to PATH.
+
+If PATH does not exist, it is created.
+
+```lisp
+(f-append-bytes "path/to/file" (unibyte-string 72 101 108 108 111 32 119 111 114 108 100))
 ```
 
 ### f-mkdir `(&rest dirs)`
@@ -347,7 +377,7 @@ If FORCE is t, a directory will be deleted recursively.
 
 ### f-symlink `(source path)`
 
-Create a symlink to `source` from `path`.
+Create a symlink to SOURCE from PATH.
 
 ```lisp
 (f-symlink "path/to/source" "path/to/link")
@@ -369,6 +399,14 @@ Copy file or directory FROM to TO.
 ```lisp
 (f-copy "path/to/file.txt" "new-file.txt")
 (f-copy "path/to/dir" "other/dir")
+```
+
+### f-copy-contents `(from to)`
+
+Copy contents in directory FROM, to directory TO.
+
+```lisp
+(f-copy-contents "path/to/dir" "path/to/other/dir")
 ```
 
 ### f-touch `(path)`
@@ -393,7 +431,7 @@ Return t if PATH exists, false otherwise.
 
 Return t if PATH is directory, false otherwise.
 
-Alias: `f-dir?`
+Aliases: `f-directory-p f-dir? f-dir-p`
 
 ```lisp
 (f-directory? "path/to/file.txt") ;; => nil
@@ -404,6 +442,8 @@ Alias: `f-dir?`
 
 Return t if PATH is file, false otherwise.
 
+Alias: `f-file-p`
+
 ```lisp
 (f-file? "path/to/file.txt") ;; => t
 (f-file? "path/to/dir") ;; => nil
@@ -412,6 +452,8 @@ Return t if PATH is file, false otherwise.
 ### f-symlink? `(path)`
 
 Return t if PATH is symlink, false otherwise.
+
+Alias: `f-symlink-p`
 
 ```lisp
 (f-symlink? "path/to/file.txt") ;; => nil
@@ -423,6 +465,8 @@ Return t if PATH is symlink, false otherwise.
 
 Return t if PATH is readable, false otherwise.
 
+Alias: `f-readable-p`
+
 ```lisp
 (f-readable? "path/to/file.txt")
 (f-readable? "path/to/dir")
@@ -431,6 +475,8 @@ Return t if PATH is readable, false otherwise.
 ### f-writable? `(path)`
 
 Return t if PATH is writable, false otherwise.
+
+Alias: `f-writable-p`
 
 ```lisp
 (f-writable? "path/to/file.txt")
@@ -441,6 +487,8 @@ Return t if PATH is writable, false otherwise.
 
 Return t if PATH is executable, false otherwise.
 
+Alias: `f-executable-p`
+
 ```lisp
 (f-executable? "path/to/file.txt")
 (f-executable? "path/to/dir")
@@ -449,6 +497,8 @@ Return t if PATH is executable, false otherwise.
 ### f-absolute? `(path)`
 
 Return t if PATH is absolute, false otherwise.
+
+Alias: `f-absolute-p`
 
 ```lisp
 (f-absolute? "path/to/dir") ;; => nil
@@ -459,6 +509,8 @@ Return t if PATH is absolute, false otherwise.
 
 Return t if PATH is relative, false otherwise.
 
+Alias: `f-relative-p`
+
 ```lisp
 (f-relative? "path/to/dir") ;; => t
 (f-relative? "/full/path/to/dir") ;; => nil
@@ -467,6 +519,8 @@ Return t if PATH is relative, false otherwise.
 ### f-root? `(path)`
 
 Return t if PATH is root directory, false otherwise.
+
+Alias: `f-root-p`
 
 ```lisp
 (f-root? "/") ;; => t
@@ -480,6 +534,11 @@ Return t if extension of PATH is EXT, false otherwise.
 If EXT is nil or omitted, return t if PATH has any extension,
 false otherwise.
 
+The extension, in a file name, is the part that follows the last
+’.’, excluding version numbers and backup suffixes.
+
+Alias: `f-ext-p`
+
 ```lisp
 (f-ext? "path/to/file.el" "el") ;; => t
 (f-ext? "path/to/file.el" "txt") ;; => nil
@@ -489,9 +548,9 @@ false otherwise.
 
 ### f-same? `(path-a path-b)`
 
-Return t if PATH-A and PATH-b are references to same file.
+Return t if PATH-A and PATH-B are references to same file.
 
-Alias: `f-equal?`
+Aliases: `f-same-p f-equal? f-equal-p`
 
 ```lisp
 (f-same? "foo.txt" "foo.txt") ;; => t
@@ -501,6 +560,8 @@ Alias: `f-equal?`
 ### f-parent-of? `(path-a path-b)`
 
 Return t if PATH-A is parent of PATH-B.
+
+Alias: `f-parent-of-p`
 
 ```lisp
 (f-parent-of? "/path/to" "/path/to/dir") ;; => t
@@ -512,6 +573,8 @@ Return t if PATH-A is parent of PATH-B.
 
 Return t if PATH-A is child of PATH-B.
 
+Alias: `f-child-of-p`
+
 ```lisp
 (f-child-of? "/path/to" "/path/to/dir") ;; => nil
 (f-child-of? "/path/to/dir" "/path/to") ;; => t
@@ -521,6 +584,8 @@ Return t if PATH-A is child of PATH-B.
 ### f-ancestor-of? `(path-a path-b)`
 
 Return t if PATH-A is ancestor of PATH-B.
+
+Alias: `f-ancestor-of-p`
 
 ```lisp
 (f-ancestor-of? "/path/to" "/path/to/dir") ;; => t
@@ -533,6 +598,8 @@ Return t if PATH-A is ancestor of PATH-B.
 
 Return t if PATH-A is desendant of PATH-B.
 
+Alias: `f-descendant-of-p`
+
 ```lisp
 (f-descendant-of? "/path/to/dir" "/path/to") ;; => t
 (f-descendant-of? "/path/to/dir" "/path") ;; => t
@@ -540,16 +607,41 @@ Return t if PATH-A is desendant of PATH-B.
 (f-descendant-of? "/path/to" "/path/to") ;; => nil
 ```
 
+### f-hidden? `(path)`
+
+Return t if PATH is hidden, nil otherwise.
+
+```lisp
+(f-hidden? "/path/to/foo") ;; => nil
+(f-hidden? "/path/to/.foo") ;; => t
+```
+
+Alias: `f-hidden-p`
+
 ### f-size `(path)`
 
 Return size of PATH.
 
-If PATH is a file, return size of that file. If PATH is
+If PATH is a file, return size of that file.  If PATH is
 directory, return sum of all files in PATH.
 
 ```lisp
 (f-size "path/to/file.txt")
 (f-size "path/to/dir")
+```
+
+### f-depth `(path)`
+
+Return the depth of PATH.
+
+At first, PATH is expanded with ‘f-expand’.  Then the full path is used to
+detect the depth.
+’/’ will be zero depth,  ’/usr’ will be one depth.  And so on.
+
+```lisp
+(f-depth "/") ;; 0
+(f-depth "/var/") ;; 1
+(f-depth "/usr/local/bin") ;; 3
 ```
 
 ### f-this-file `()`
@@ -583,7 +675,7 @@ See: `file-expand-wildcards`
 
 Find all files and directories in PATH.
 
-FN - called for each found file and directory. If FN returns a thruthy
+FN - called for each found file and directory.  If FN returns a thruthy
 value, file or directory will be included.
 RECURSIVE - Search for files and directories recursive.
 
@@ -596,7 +688,7 @@ RECURSIVE - Search for files and directories recursive.
 
 ### f-directories `(path &optional fn recursive)`
 
-Find all directories in PATH. See `f-entries`.
+Find all directories in PATH.  See ‘f-entries‘.
 
 ```lisp
 (f-directories "path/to/dir")
@@ -607,7 +699,7 @@ Find all directories in PATH. See `f-entries`.
 
 ### f-files `(path &optional fn recursive)`
 
-Find all files in PATH. See `f-entries`.
+Find all files in PATH.  See ‘f-entries‘.
 
 ```lisp
 (f-files "path/to/dir")
@@ -624,27 +716,12 @@ Return absolute root.
 (f-root) ;; => "/"
 ```
 
-### f-up `(fn &optional dir)`
-
-Traverse up as long as FN returns nil, starting at DIR.
-
-Deprecated in favor of: [f-traverse-upwards](#f-traverse-upwards-fn-optional-path)
-
-```lisp
-(f-up
- (lambda (path)
-   (f-exists? (f-expand ".git" path)))
- start-path)
-
-(f--up (f-exists? (f-expand ".git" it)) start-path) ;; same as above
-```
-
 ### f-traverse-upwards `(fn &optional path)`
 
-Traverse up as long as FN returns nil, starting at PATH.
+Traverse up as long as FN return nil, starting at PATH.
 
 If FN returns a non-nil value, the path sent as argument to FN is
-returned. If no function callback return a non-nil value, nil is
+returned.  If no function callback return a non-nil value, nil is
 returned.
 
 ```lisp
@@ -669,120 +746,6 @@ Only allow PATH-OR-PATHS and decendants to be modified in BODY.
 (f-with-sandbox foo-path
   (f-touch (f-expand "bar" bar-path))) ;; "Destructive operation outside sandbox"
 ```
-
-## Changelog
-
-### v0.17.0
-
-* Add `f-common-parent` (by @Fuco1)
-
-### v0.16.0
-
-* Add `f-with-sandbox`
-
-### v0.15.0
-
-* Add `f-split`
-
-### v0.14.0
-
-* Add `f-traverse-upwards` and its anaphoric version `f--traverse-upwards`
-* Deprecate `f-up` and its anaphoric version `f--up`
-
-### v0.13.0
-
-* Add `f-uniquify` and `f-uniquify-alist` (by @Fuco1)
-
-### v0.12.0
-
-* `f-parent` returns nil if argument is root
-
-### v0.11.0
-
-* Add `f-descendant-of?`
-* Add `f-ancestor-of?`
-* Add `f-parent-of?`
-* Add `f-child-of?`
-* Remove deprecation for `f-read` and `f-write` and make them aliases
-  to `f-read-text` and `f-write-text` respectively
-* Add anaphoric function `f--entries` for `f-entries`
-* Add anaphoric function `f--files` for `f-files`
-* Add anaphoric function `f--directories` of `f-directories`
-* Add `f-up` and anaphoric version `f--up`
-
-### v0.10.0
-
-* Add `f-root`
-* Fix `f-root?` bug for weird syntax
-
-### v0.9.0
-
-* Make `s-long`
-* Make `s-short` default and `f-abbrev` the alias
-* Add `f-full`
-* Do not append path separator if file in `f-slash`
-* Fixed bug in `f-path-separator`
-
-### v0.8.0
-
-* Moved `f-this-file` to misc section
-* Add `f-slash`
-* Add `f-path-separator`
-
-### v0.7.1
-
-* Fix coding bug in `f-read-text`
-
-### v0.7.0
-
-* Add `f-touch`
-
-### v0.6.1
-
-* Fix `f-write-text` for unibyte strings
-
-### v0.6.0
-
-* Add `f-write-text` and `f-write-bytes` and deprecate `f-write`
-* Add `f-read-text` and `f-read-bytes` and deprecate `f-read`
-* Add `f-this-file`
-* Add `f-canonical`
-* Fix `f-same?` for symlinks
-
-### v0.5.0
-
-* Add `f-same?` (alias `f-equal?`)
-
-### v0.4.1
-
-* Bump `s` and `dash` versions
-
-### v0.4.0
-
-* Add `f-copy`
-
-### v0.3.0
-
-* Add `f-ext?`
-
-### v0.2.1
-
-* Fix `f-filename` when ending with slash
-
-### v0.2.0
-
-* Add `f-root?`
-* Fix `f-dirname` when ending with slash
-
-### v0.1.0
-
-* Add `f-abbrev` (alias `f-short`)
-
-### v0.0.2
-
-* `f-join` platform independent
-
-### v0.0.1
 
 ## Example
 
