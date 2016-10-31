@@ -570,5 +570,7 @@ performed, then slime-complete-symbol is called"
 ;;
 ;; This is only relevant in graphical desktops, but can be re-executed to
 ;; pick up possible changes (e.g. cim, nvm changes of the default commands)
+
 (when window-system
+  (require 'exec-path-from-shell)
   (exec-path-from-shell-initialize))
