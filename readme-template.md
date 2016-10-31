@@ -4,7 +4,7 @@ A modern list api for Emacs. No 'cl required.
 
 ## Installation
 
-It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](http://melpa.milkbox.net/):
+It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](https://melpa.org/):
 
     M-x package-install dash
 
@@ -19,11 +19,18 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "2.12.0"))
+    ;; Package-Requires: ((dash "2.13.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "2.12.0") (dash-functional "1.2.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.13.0") (dash-functional "1.2.0") (emacs "24"))
+
+## Upcoming breaking change!
+
+- For backward compatibility reasons `-zip` return a cons-cell instead of a list
+  with two elements when called on two lists. This is a clunky API, and in an
+  upcoming 3.0 release of Dash it will always return a list. If you rely on the
+  cons-cell return value, use `-zip-pair` instead.
 
 ## Syntax highlighting of dash functions
 
@@ -90,6 +97,24 @@ Oh, and don't edit `README.md` directly, it is auto-generated.
 Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
+
+### From 2.12 to 2.13
+
+- `-let` now supports `&alist` in destructuring.
+- Various performance improvements.
+- `-zip` will change in future so it always returns lists. Added
+  `-zip-pair` for users who explicitly want the old behavior.
+- Added lexical binding pragma to dash.el, fixes
+  [#130](https://github.com/magnars/dash.el/issues/130) in Emacs 24+.
+- Added `-select-column` and `-select-columns`.
+- Fixed an issue with `-map-last` and `--remove-last` where they
+  modified their inputs
+  ([#158](https://github.com/magnars/dash.el/issues/158)).
+- Added `-each-indexed` and `--each-indexed`.
+- Added `-take-last` and `-drop-last`.
+- Added `-doto` macro.
+- `-cut <>` is now treated as a function, consistent with SRFI 26
+  ([#185](https://github.com/magnars/dash.el/issues/185))
 
 ### From 2.11 to 2.12
 
@@ -219,13 +244,13 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Mark Oteiza](https://github.com/holomorph) contributed the script to create an info manual.
  - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
  - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
- - [Cam Saül](https://github.com/cammsaul) contributed `-some->`, `-some->>`, and `-some-->`.
+ - [Cam Saül](https://github.com/camsaul) contributed `-some->`, `-some->>`, and `-some-->`.
 
 Thanks!
 
 ## License
 
-Copyright (C) 2012-2014 Magnar Sveen
+Copyright (C) 2012-2016 Free Software Foundation, Inc.
 
 Authors: Magnar Sveen <magnars@gmail.com>
 Keywords: lists
