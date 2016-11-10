@@ -379,6 +379,12 @@ performed, then slime-complete-symbol is called"
 (define-key 'help-command (kbd "C-k") 'find-function-on-key)
 (define-key 'help-command (kbd "C-v") 'find-variable)
 
+;; elisp-slime-nav gives you M-. M-, navigation in elisp sources
+;; plus slime-describe-symbol C-c C-d C-d
+;; cf. https://github.com/purcell/elisp-slime-nav
+(require 'elisp-slime-nav)
+(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+  (add-hook hook 'elisp-slime-nav-mode))
 
 ;; some customising
 ;; from http://boinkor.net/archives/2006/11/three_useful_emacs_hacks_for_l.html
