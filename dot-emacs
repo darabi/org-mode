@@ -318,8 +318,9 @@
 
 (when (require 'my-x-functions "my-x-functions" nil)
   (save-excursion
-    (my-set-x-font)))
-
+    (unless (eq (window-system) 'w32)
+      (my-set-x-font))))
+  
 ;;; Kill ring browsing
 
 ;; M-y calls browse-kill-ring
@@ -497,13 +498,13 @@ performed, then slime-complete-symbol is called"
 ;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
 ;;
 
-(if (getenv "QUICKLISP_HOME")
-    (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
-  (load "~/quicklisp/slime-helper.el"))
+;; (if (getenv "QUICKLISP_HOME")
+;;     (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
+;;   (when quicklisp-slime-helper-dist (load "~/quicklisp/slime-helper.el")))
 
-;; try to load the elisp files from the current quicklisp distribution
-(when (functionp 'quicklisp-slime-helper-system-directory)
-  (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
+;; ;; try to load the elisp files from the current quicklisp distribution
+;; (when (functionp 'quicklisp-slime-helper-system-directory)
+;;   (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
 
 ;; if there are directories present in ~/dwim, they override the quicklisp ones
 (setq dwim-workspace (expand-file-name (getenv "DWIM_WORKSPACE")))
@@ -516,7 +517,8 @@ performed, then slime-complete-symbol is called"
 ;; we have added the user dir to load path, so anybody who doesn't
 ;; have a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
 ;; receive an error here
-(require 'my-dwim-init)
+(message "vor my-dwim-init")
+;; (require 'my-dwim-init)
 
 ;; undo the changes in dwim init files
 (show-paren-mode t)
@@ -571,6 +573,6 @@ performed, then slime-complete-symbol is called"
 ;; This is only relevant in graphical desktops, but can be re-executed to
 ;; pick up possible changes (e.g. cim, nvm changes of the default commands)
 
-(when window-system
+(when (and window-system (not (eq (window-system) 'w32)))
   (require 'exec-path-from-shell)
   (exec-path-from-shell-initialize))
