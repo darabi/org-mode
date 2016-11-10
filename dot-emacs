@@ -320,7 +320,7 @@
   (save-excursion
     (unless (eq (window-system) 'w32)
       (my-set-x-font))))
-  
+
 ;;; Kill ring browsing
 
 ;; M-y calls browse-kill-ring
@@ -351,18 +351,18 @@ performed, then slime-complete-symbol is called"
 (define-lisp-mode-tab-fn dar-lisp-mode-tab lisp-complete-symbol)
 
 (add-hook 'lisp-mode-hook
-          '(lambda ()
-             (define-key lisp-mode-map [tab] 'dar-lisp-mode-tab)
-             (define-key lisp-mode-map [?\C-c ?\C-r] 'eval-region)
-             (define-key lisp-mode-map [?\C-c ?c] 'comment-region)
-             (define-key lisp-mode-map [?\C-c ?c] 'comment-region)))
+          (lambda ()
+            (define-key lisp-mode-map [tab] 'dar-lisp-mode-tab)
+            (define-key lisp-mode-map [?\C-c ?\C-r] 'eval-region)
+            (define-key lisp-mode-map [?\C-c ?c] 'comment-region)
+            (define-key lisp-mode-map [?\C-c ?c] 'comment-region)))
 
 (add-hook 'emacs-lisp-mode-hook
-          '(lambda ()
-             (define-key emacs-lisp-mode-map [tab] 'dar-lisp-mode-tab)
-             (define-key emacs-lisp-mode-map [?\C-c ?\C-r] 'eval-region)
-             (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)
-             (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)))
+          (lambda ()
+            (define-key emacs-lisp-mode-map [tab] 'dar-lisp-mode-tab)
+            (define-key emacs-lisp-mode-map [?\C-c ?\C-r] 'eval-region)
+            (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)
+            (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)))
 
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
