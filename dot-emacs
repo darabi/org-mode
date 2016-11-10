@@ -498,13 +498,15 @@ performed, then slime-complete-symbol is called"
 ;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
 ;;
 
-;; (if (getenv "QUICKLISP_HOME")
-;;     (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
-;;   (when quicklisp-slime-helper-dist (load "~/quicklisp/slime-helper.el")))
+(if (getenv "QUICKLISP_HOME")
+    (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
+    (let ((default-slime-helper "~/quicklisp/slime-helper.el"))
+      (when (and quicklisp-slime-helper-dist (file-exists-p default-slime-helper)
+                 (load default-slime-helper)))))
 
 ;; ;; try to load the elisp files from the current quicklisp distribution
-;; (when (functionp 'quicklisp-slime-helper-system-directory)
-;;   (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
+(when (functionp 'quicklisp-slime-helper-system-directory)
+  (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
 
 ;; if there are directories present in ~/dwim, they override the quicklisp ones
 (setq dwim-workspace (expand-file-name (getenv "DWIM_WORKSPACE")))
@@ -518,7 +520,7 @@ performed, then slime-complete-symbol is called"
 ;; have a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
 ;; receive an error here
 (message "vor my-dwim-init")
-;; (require 'my-dwim-init)
+(require 'my-dwim-init)
 
 ;; undo the changes in dwim init files
 (show-paren-mode t)
