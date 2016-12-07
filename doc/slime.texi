@@ -12,8 +12,8 @@
 @end direntry
 @c %**end of header
 
-@set EDITION 2.15
-@set SLIMEVER 2.15
+@set EDITION 2.18
+@set SLIMEVER 2.18
 @set UPDATED @today{}
 @set TITLE SLIME User Manual
 @settitle @value{TITLE}, version @value{EDITION}
@@ -233,6 +233,7 @@ Contributed Packages
 * SLIME Trace Dialog::
 * slime-sprof::
 * slime-fancy::
+* Quicklisp::
 
 REPL: the ``top level''
 
@@ -378,15 +379,6 @@ git clone https://github.com/slime/slime.git
 
 You might substitute @code{https} for @code{http} if you're having
 problems with that protocol.
-
-If you want to find out what's new since the version you're currently
-running, you can diff the local @file{ChangeLog} against the
-repository version:
-
-@example
-git fetch origin
-git diff HEAD origin/master ChangeLog
-@end example
 
 If you want to hack on @SLIME{}, use Github's @emph{fork} functionality
 and submit a @emph{pull request}. Be sure to first read the
@@ -1124,18 +1116,24 @@ Recompile all definitions.
 @cindex Macros
 
 @table @kbd
-@kbditem{C-c C-m, slime-macroexpand-1}
-Macroexpand the expression at point once.  If invoked with a prefix
-argument, use macroexpand instead of macroexpand-1.
+@kbditem{C-c C-m, slime-expand-1}
+Macroexpand (or compiler-macroexpand) the expression starting at point
+once.  If invoked with a prefix argument use macroexpand instead or
+macroexpand-1 (or compiler-macroexpand instead of
+compiler-macroexpand-1).
+
+@cmditem{slime-macroexpand-1}
+Macroexpand the expression starting at point once.  If invoked with a
+prefix argument, use macroexpand instead of macroexpand-1.
 
 @kbditem{C-c M-m, slime-macroexpand-all}
-Fully macroexpand the expression at point.
+Fully macroexpand the expression starting at point.
 
 @cmditem{slime-compiler-macroexpand-1}
-Display the compiler-macro expansion of sexp at point.
+Display the compiler-macro expansion of sexp starting at point.
 
 @cmditem{slime-compiler-macroexpand}
-Repeatedy expand compiler macros of sexp at point.
+Repeatedy expand compiler macros of sexp starting at point.
 
 @end table
 
@@ -1636,11 +1634,11 @@ The commands available in the connection-list buffer are:
 @kbditem{RET, slime-goto-connection}
 Pop to the @acronym{REPL} buffer of the connection at point.
 
-@kbditem{d, slime-connection-list-make-default}
+@kbditem{d, slime-connection-list/make-default}
 Make the connection at point the ``default'' connection. It will then
 be used for commands in @code{slime-mode} source buffers.
 
-@kbditem{g, slime-update-connection-list}
+@kbditem{g, slime-connection-list/update}
 Update the connection list in the buffer.
 
 @kbditem{q, slime-temp-buffer-quit}
@@ -2153,6 +2151,7 @@ particular packages do.
 * slime-sprof::
 * SLIME Enhanced M-.::
 * slime-fancy::
+* Quicklisp::
 @end menu
 
 @node Loading Contribs
@@ -3187,6 +3186,21 @@ declared with @code{flet} and @code{labels}, via
 @code{slime-fancy} is a meta package which loads a combination of the
 most popular packages.
 
+@node Quicklisp
+@section Quicklisp
+The package @code{slime-quicklisp} adds support for loading Quicklisp
+systems in the REPL buffer.  In order for this to work, Quicklisp
+should have already been loaded in the Lisp implementation.  Refer
+to @url{https://www.quicklisp.org/} for Quicklisp installation
+details.
+
+The package installs the following REPL shortcuts (@pxref{Shortcuts}):
+
+@table @kbd
+@item quicklisp-quickload (aka ql)
+Load a Quicklisp system.
+@end table
+
 @c -----------------------
 @node Credits
 @chapter Credits
@@ -3356,8 +3370,10 @@ keybinding (if there is one) refer to the function description.
 @c @fcnindex{slime-complete-form}
 @fcnindex{slime-complete-symbol}
 @fcnindex{slime-connect}
-@fcnindex{slime-connection-list-make-default}
+@fcnindex{slime-connection-list/make-default}
 @c @fcnindex{slime-connection-list-mode}
+@c @fcnindex{slime-connection-list/quit-inferior-lisp}
+@c @fcnindex{slime-connection-list/restart-inferior-lisp}
 @c @fcnindex{slime-copy-presentation-at-point}
 @fcnindex{slime-describe-function}
 @fcnindex{slime-describe-symbol}
@@ -3431,8 +3447,7 @@ keybinding (if there is one) refer to the function description.
 @fcnindex{slime-profile-reset}
 @fcnindex{slime-profiled-functions}
 @fcnindex{slime-quit}
-@c @fcnindex{slime-quit-connection-at-point}
-@c @fcnindex{slime-quit-lisp}
+@c @fcnindex{slime-quit-inferior-lisp}
 @c @fcnindex{slime-re-evaluate-defvar}
 @c @fcnindex{slime-recompile-bytecode}
 @c @fcnindex{slime-register-lisp-implementation}
@@ -3471,7 +3486,6 @@ keybinding (if there is one) refer to the function description.
 @fcnindex{slime-repl-set-package}
 @c @fcnindex{slime-repl-shortcut-help}
 @c @fcnindex{slime-reset}
-@c @fcnindex{slime-restart-connection-at-point}
 @c @fcnindex{slime-restart-inferior-lisp}
 @c @fcnindex{slime-restart-inferior-lisp-aux}
 @fcnindex{slime-scratch}
@@ -3497,7 +3511,7 @@ keybinding (if there is one) refer to the function description.
 @fcnindex{slime-undefine-function}
 @fcnindex{slime-unprofile-all}
 @fcnindex{slime-untrace-all}
-@fcnindex{slime-update-connection-list}
+@fcnindex{slime-connection-list/update}
 @c @fcnindex{slime-update-indentation}                  ???
 @fcnindex{slime-who-binds}
 @fcnindex{slime-who-calls}

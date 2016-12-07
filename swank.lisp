@@ -282,7 +282,6 @@ to T unless you want to debug swank internals.")
     package))
 
 (defvar *log-events* nil)
-(defvar *log-output* nil) ; should be nil for image dumpers
 
 (defun init-log-output ()
   (unless *log-output*
@@ -2843,12 +2842,12 @@ If non-nil, called with two arguments SPEC and TRACED-P." )
 (defslimefun swank-toggle-trace (spec-string)
   (let* ((spec (from-string spec-string))
          (retval (cond ((consp spec) ; handle complicated cases in the backend
-           (toggle-trace spec))
-          ((tracedp spec)
-	   (eval `(untrace ,spec))
-	   (format nil "~S is now untraced." spec))
-	  (t
-           (eval `(trace ,spec))
+                        (toggle-trace spec))
+                       ((tracedp spec)
+                        (eval `(untrace ,spec))
+                        (format nil "~S is now untraced." spec))
+                       (t
+                        (eval `(trace ,spec))
                         (format nil "~S is now traced." spec))))
          (traced-p (let* ((tosearch "is now traced.")
                           (start (- (length retval)
@@ -2994,6 +2993,7 @@ DSPEC is a string and LOCATION a source location. NAME is a string."
   (define-xref-action :calls-who    #'calls-who)
   (define-xref-action :references   #'who-references)
   (define-xref-action :binds        #'who-binds)
+  (define-xref-action :sets         #'who-sets)
   (define-xref-action :macroexpands #'who-macroexpands)
   (define-xref-action :specializes  #'who-specializes)
   (define-xref-action :callers      #'list-callers)

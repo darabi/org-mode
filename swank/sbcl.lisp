@@ -41,7 +41,16 @@
     (with-symbol 'who-calls 'sb-introspect))
   ;; ... for restart-frame support (1.0.2)
   (defun sbcl-with-restart-frame ()
-    (with-symbol 'frame-has-debug-tag-p 'sb-debug)))
+    (with-symbol 'frame-has-debug-tag-p 'sb-debug))
+  ;; ... for :setf :inverse info (1.1.17)
+  (defun sbcl-with-setf-inverse-meta-info ()
+    (boolean-to-feature-expression
+     ;; going through FIND-SYMBOL since META-INFO was renamed from
+     ;; TYPE-INFO in 1.2.10.
+     (let ((sym (find-symbol "META-INFO" "SB-C")))
+       (and sym
+            (fboundp sym)
+            (funcall sym :setf :inverse ()))))))
 
 ;;; swank-mop
 
@@ -343,7 +352,10 @@
     (symbol (member feature list :test #'eq))
     (cons (flet ((subfeature-in-list-p (subfeature)
                    (feature-in-list-p subfeature list)))
-            (ecase (first feature)
+            ;; Don't use ECASE since SBCL also has :host-feature,
+            ;; don't need to handle it or anything else appearing in
+            ;; the future or in erronous code.
+            (case (first feature)
               (:or  (some  #'subfeature-in-list-p (rest feature)))
               (:and (every #'subfeature-in-list-p (rest feature)))
               (:not (destructuring-bind (e) (cdr feature)
@@ -711,8 +723,9 @@ QUALITIES is an alist with (quality . value)"
                  (with-compilation-unit
                      (:source-plist (list :emacs-buffer buffer
                                           :emacs-filename filename
-                                          :emacs-string string
-                                          :emacs-position position)
+                                          :emacs-package (package-name *package*)
+                                          :emacs-position position
+                                          :emacs-string string)
                       :source-namestring filename
                       :allow-other-keys t)
                    (compile-file *buffer-tmpfile* :external-format :utf-8)))))
@@ -956,6 +969,12 @@ QUALITIES is an alist with (quality . value)"
                                :function
                                (or name (function-name function))))
 
+(defun setf-expander (symbol)
+  (or
+   #+#.(swank/sbcl::sbcl-with-setf-inverse-meta-info)
+   (sb-int:info :setf :inverse symbol)
+   (sb-int:info :setf :expander symbol)))
+
 (defimplementation describe-symbol-for-emacs (symbol)
   "Return a plist describing SYMBOL.
 Return NIL if the symbol is unbound."
@@ -980,9 +999,8 @@ Return NIL if the symbol is unbound."
                (t :function))
          (doc 'function)))
       (maybe-push
-       :setf (if (or (sb-int:info :setf :inverse symbol)
-                     (sb-int:info :setf :expander symbol))
-                 (doc 'setf)))
+       :setf (and (setf-expander symbol) 
+                  (doc 'setf)))
       (maybe-push
        :type (if (sb-int:info :type :kind symbol)
                  (doc 'type)))
@@ -995,8 +1013,7 @@ Return NIL if the symbol is unbound."
     (:function
      (describe (symbol-function symbol)))
     (:setf
-     (describe (or (sb-int:info :setf :inverse symbol)
-                   (sb-int:info :setf :expander symbol))))
+     (describe (setf-expander symbol)))
     (:class
      (describe (find-class symbol)))
     (:type
@@ -1070,8 +1087,29 @@ Return a list of the form (NAME LOCATION)."
 
 ;;; macroexpansion
 
-(defimplementation macroexpand-all (form)
-  (sb-cltl2:macroexpand-all form))
+(defimplementation macroexpand-all (form &optional env)
+  (sb-cltl2:macroexpand-all form env))
+
+(defimplementation collect-macro-forms (form &optional environment)
+  (let ((macro-forms '())
+        (compiler-macro-forms '())
+        (function-quoted-forms '()))
+    (sb-walker:walk-form
+     form environment
+     (lambda (form context environment)
+       (declare (ignore context))
+       (when (and (consp form)
+                  (symbolp (car form)))
+         (cond ((eq (car form) 'function)
+                (push (cadr form) function-quoted-forms))
+               ((member form function-quoted-forms)
+                nil)
+               ((macro-function (car form) environment)
+                (push form macro-forms))
+               ((not (eq form (compiler-macroexpand-1 form environment)))
+                (push form compiler-macro-forms))))
+       form))
+    (values macro-forms compiler-macro-forms)))
 
 
 ;;; Debugging
@@ -1213,7 +1251,11 @@ stack."
 
 (defun code-location-source-location (code-location)
   (let* ((dsource (sb-di:code-location-debug-source code-location))
-         (plist (sb-c::debug-source-plist dsource)))
+         (plist (sb-c::debug-source-plist dsource))
+         (package (getf plist :emacs-package))
+         (*package* (or (and package
+                             (find-package package))
+                        *package*)))
     (if (getf plist :emacs-buffer)
         (emacs-buffer-source-location code-location plist)
         #+#.(swank/backend:with-symbol 'debug-source-from 'sb-di)
@@ -1248,7 +1290,7 @@ stack."
 (defun lisp-source-location (code-location)
   (let ((source (prin1-to-string
                  (sb-debug::code-location-source-form code-location 100)))
-        (condition *swank-debugger-condition*))
+        (condition swank:*swank-debugger-condition*))
     (if (and (typep condition 'sb-impl::step-form-condition)
              (search "SB-IMPL::WITH-STEPPING-ENABLED" source
                      :test #'char-equal)
@@ -1284,13 +1326,10 @@ stack."
                          `(:snippet ,snippet)))))))
 
 (defun code-location-debug-source-name (code-location)
-  (namestring (truename (#+#.(swank/backend:with-symbol
-                              'debug-source-name 'sb-di)
-                             sb-c::debug-source-name
-                             #-#.(swank/backend:with-symbol
-                                  'debug-source-name 'sb-di)
-                             sb-c::debug-source-namestring
-                         (sb-di::code-location-debug-source code-location)))))
+  (namestring (truename (#.(swank/backend:choose-symbol
+                            'sb-c 'debug-source-name
+                            'sb-c 'debug-source-namestring)
+                           (sb-di::code-location-debug-source code-location)))))
 
 (defun code-location-debug-source-created (code-location)
   (sb-c::debug-source-created
@@ -1556,7 +1595,10 @@ stack."
     (:debug-info (sb-kernel:%code-debug-info o)))
    `("Constants:" (:newline))
    (loop for i from sb-vm:code-constants-offset
-         below (sb-kernel:get-header-data o)
+         below
+         (#.(swank/backend:choose-symbol 'sb-kernel 'code-header-words
+                                         'sb-kernel 'get-header-data)
+            o)
          append (label-value-line i (sb-kernel:code-header-ref o i)))
    `("Code:" (:newline)
              , (with-output-to-string (s)

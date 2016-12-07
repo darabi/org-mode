@@ -133,36 +133,36 @@ operating system, and hardware architecture."
   "Returns true if NEW-FILE is newer than OLD-FILE."
   (> (file-write-date new-file) (file-write-date old-file)))
 
+(defun string-starts-with (string prefix)
+  (string-equal string prefix :end1 (min (length string) (length prefix))))
+
 (defun slime-version-string ()
   "Return a string identifying the SLIME version.
 Return nil if nothing appropriate is available."
-  (with-open-file (s (merge-pathnames "ChangeLog" *source-directory*)
+  (with-open-file (s (merge-pathnames "slime.el" *source-directory*)
                      :if-does-not-exist nil)
-    (and s (symbol-name (read s)))))
+    (loop with prefix = ";; Version: "
+          for line = (read-line s nil :eof)
+          until (eq line :eof)
+          when (string-starts-with line prefix)
+            return (subseq line (length prefix)))))
 
 (defun default-fasl-dir ()
-  (or
-   ;; If ASDF is available then store Slime's fasl's where ASDF stores them.
-   (let ((translate-fn (and (find-package :asdf)
-                            (find-symbol "COMPILE-FILE-PATHNAME*" :asdf))))
-     (when translate-fn
-       (make-pathname
-        :name nil :type nil
-        :defaults (funcall translate-fn
-                           (make-pathname :name "foo"
-                                          :defaults *source-directory*)))))
-   (merge-pathnames
-    (make-pathname
-     :directory `(:relative ".slime" "fasl"
-                            ,@(if (slime-version-string) (list (slime-version-string)))
-                            ,(unique-dir-name)))
-    (user-homedir-pathname))))
+  (merge-pathnames
+   (make-pathname
+    :directory `(:relative ".slime" "fasl"
+                 ,@(if (slime-version-string) (list (slime-version-string)))
+                 ,(unique-dir-name)))
+   (user-homedir-pathname)))
 
 (defvar *fasl-directory* (default-fasl-dir)
   "The directory where fasl files should be placed.")
 
 (defun binary-pathname (src-pathname binary-dir)
   "Return the pathname where SRC-PATHNAME's binary should be compiled."
+  (declare (ignore binary-dir))
+  (asdf:apply-output-translations src-pathname)
+  #+nil
   (let ((cfp (compile-file-pathname src-pathname)))
     (merge-pathnames (make-pathname :name (pathname-name cfp)
                                     :type (pathname-type cfp))
@@ -172,12 +172,8 @@ Return nil if nothing appropriate is available."
   (fresh-line *error-output*)
   (pprint-logical-block (*error-output* () :per-line-prefix ";; ")
     (format *error-output*
-            "~%Error while ~A ~A:~%  ~A~%Aborting.~%"
-            context pathname condition))
-  (when (equal (directory-namestring pathname)
-               (directory-namestring *fasl-directory*))
-    (ignore-errors (delete-file pathname)))
-  (abort))
+            "~%Error ~A ~A:~%  ~A~%"
+            context pathname condition)))
 
 (defun compile-files (files fasl-dir load quiet)
   "Compile each file in FILES if the source is newer than its
@@ -187,32 +183,30 @@ If LOAD is true, load the fasl file."
         (state :unknown))
     (dolist (src files)
       (let ((dest (binary-pathname src fasl-dir)))
-        (handler-case
-            (progn
-              (when (or needs-recompile
-                        (not (probe-file dest))
-                        (file-newer-p src dest))
-                (ensure-directories-exist dest)
-                ;; need to recompile SRC, so we'll need to recompile
-                ;; everything after this too.
-                (setq needs-recompile t)
-                (setq state :compile)
-                (or (compile-file src :output-file dest :print nil
+        (handler-bind
+            ((error (lambda (c)
+                      (ecase state
+                        (:compile (handle-swank-load-error c "compiling" src))
+                        (:load    (handle-swank-load-error c "loading" dest))
+                        (:unknown (handle-swank-load-error c "???ing" src))))))
+          (when (or needs-recompile
+                    (not (probe-file dest))
+                    (file-newer-p src dest))
+            (ensure-directories-exist dest)
+            ;; need to recompile SRC, so we'll need to recompile
+            ;; everything after this too.
+            (setf needs-recompile t
+                  state :compile)
+            (or (compile-file src :output-file dest :print nil
                                   :verbose (not quiet))
-                    ;; An implementation may not necessarily signal a
-                    ;; condition itself when COMPILE-FILE fails (e.g. ECL)
-                    (error "COMPILE-FILE returned NIL.")))
-              (when load
-                (setq state :load)
-                (load dest :verbose (not quiet))))
-          ;; Fail as early as possible
-          (serious-condition (c)
-            (ecase state
-              (:compile (handle-swank-load-error c "compiling" src))
-              (:load    (handle-swank-load-error c "loading" dest))
-              (:unknown (handle-swank-load-error c "???ing" src)))))))))
+                ;; An implementation may not necessarily signal a
+                ;; condition itself when COMPILE-FILE fails (e.g. ECL)
+                (error "COMPILE-FILE returned NIL.")))
+          (when load
+            (setf state :load)
+            (load dest :verbose (not quiet))))))))
 
-#+(or cormanlisp)
+#+cormanlisp
 (defun compile-files (files fasl-dir load quiet)
   "Corman Lisp has trouble with compiled files."
   (declare (ignore fasl-dir))
@@ -262,7 +256,9 @@ If LOAD is true, load the fasl file."
     swank-hyperdoc
     #+sbcl swank-sbcl-exts
     swank-mrepl
-    swank-trace-dialog)
+    swank-trace-dialog
+    swank-macrostep
+    swank-quicklisp)
   "List of names for contrib modules.")
 
 (defun append-dir (absolute name)
@@ -313,9 +309,6 @@ If LOAD is true, load the fasl file."
          (contrib-dir *source-directory*))
     (eval `(pushnew 'compile-contribs ,(q "swank::*after-init-hook*"))))
   (funcall (q "swank::init")))
-
-(defun string-starts-with (string prefix)
-  (string-equal string prefix :end1 (min (length string) (length prefix))))
 
 (defun list-swank-packages ()
   (remove-if-not (lambda (package)
