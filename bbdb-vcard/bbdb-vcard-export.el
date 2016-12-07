@@ -1,5 +1,5 @@
 ;;; bbdb-vcard-export.el -- export BBDB as vCard files
-;; 
+;;
 ;; Copyright (c) 2002 Jim Hourihan
 ;; Copyright (c) 2005 Alex Schroeder
 ;;
@@ -43,7 +43,6 @@
 ;;; Code:
 
 (require 'bbdb)
-(require 'vcard)
 
 ; XEmacs prior to 21.5 is not dumped with replace-regexp-in-string.  In those
 ; cases it can be found in the xemacs-base package.
@@ -51,41 +50,16 @@
   (if (and (not (fboundp 'replace-regexp-in-string)) (featurep 'xemacs))
       (require 'easy-mmode)))
 
-(defvar bbdb-vcard-translation-table
-  '(("Mobile" . "cell")
-    ("Work" . "work")
-    ("Fax" . "fax")
-    ("Home" . "home")
-    ("Voice" . "voice")
-    ;; and the other way round
-    ("cell" . "Mobile")
-    ("work" . "Work")
-    ("fax" . "Fax")
-    ("home" . "Home")
-    ("voice" . "Voice")
-    ("pref" . "Home")
-    ("CELL" . "Mobile")
-    ("WORK" . "Work")
-    ("FAX" . "Fax")
-    ("HOME" . "Home")
-    ("VOICE" . "Voice")
-    ("PREF" . "Home"))
+(defvar bbdb-translation-table
+  '(("Mobile" . "Cell"))
   "Translations of text items, typically for labels.")
 
-(defun bbdb-vcard-translate (str)
-  "Translate STR into some other string based on `bbdb-vcard-translation-table'."
-  (let ((translation (assoc str bbdb-vcard-translation-table)))
+(defun bbdb-translate (str)
+  "Translate STR into some other string based on `bbdb-translation-table'."
+  (let ((translation (assoc str bbdb-translation-table)))
     (if translation
-	(cdr translation)
-      (if (symbolp str)
-          (symbol-name str)
-          str))))
-
-(defvar bbdb-vcard-export-name-function 'bbdb-vcard-export-vcard-name-from-record
-  "Function which is called with the bbdb record as the single argument
-and returns the name of the vCard file to which the record should be
-exported. Set this var to your own function if the firstname_lastname.vcf
-scheme doesn't fit.")
+        (cdr translation)
+      str)))
 
 ;; 2.3 Predefined VALUE Type Usage
 
@@ -99,23 +73,23 @@ scheme doesn't fit.")
 
 (defun bbdb-vcard-export-escape (str)
   "Return a copy of STR with ; , and newlines escaped."
-  (setq str (bbdb-vcard-translate str)
-	str (or str ""); get rid of nil values
-	str (replace-regexp-in-string "\\(;\\|,\\|\\\\\\)" "\\\\\\1" str)
-	str (replace-regexp-in-string "\n" "\\\\n" str)))
+  (setq str (bbdb-translate str)
+        str (or str ""); get rid of nil values
+        str (replace-regexp-in-string "\\(;\\|,\\|\\\\\\)" "\\\\\\1" str)
+        str (replace-regexp-in-string "\n" "\\\\n" str)))
 
 ;; (insert (bbdb-vcard-export-escape "this is, not \\ or \n true"))
 
 (defun bbdb-vcard-export-several (list)
   "Return a comma-separated list of escaped unique elements in LIST."
   (let ((hash (make-hash-table :test 'equal))
-	result)
+        result)
     (dolist (item list)
       (puthash (bbdb-vcard-export-escape item) t hash))
     (maphash (lambda (key val)
-	       (setq result (cons key result)))
-	     hash)
-    (bbdb-join result ",")))
+               (setq result (cons key result)))
+             hash)
+    (mapconcat 'identity result ",")))
 
 ;; The component values MUST be specified in
 ;; their corresponding position. The structured type value corresponds,
@@ -133,63 +107,47 @@ scheme doesn't fit.")
 (defun bbdb-vcard-export-address-string (address)
   "Return the address string"
   (let ((streets (bbdb-address-streets address))
-	(city (bbdb-address-city address))
-	(state (bbdb-address-state address))
-	(country (bbdb-address-country address))
-	(zip (bbdb-address-zip address)))
-    (with-temp-buffer
-      (bbdb-vcard-insert-attribute
-       (concat "ADR;TYPE=" (bbdb-vcard-export-escape (bbdb-address-location address)))
-       ";;" ;; no post office box, no extended address
-       (bbdb-vcard-export-several streets) ";"
-       (bbdb-vcard-export-escape city) ";"
-       (bbdb-vcard-export-escape state) ";"
-       (bbdb-vcard-export-escape zip) ";"
-       (bbdb-vcard-export-escape country))
-      (buffer-string))))
-
-(defun bbdb-vcard-insert-attribute (attr &rest args)
-  (let ((quoted nil))
-    (insert attr)
-    (if (some 'mm-multibyte-string-p args)
-        ;; FIXME: do not hard-code the charset
-        (insert ";charset=iso-8859-15;encoding=quoted-printable:")
-        (insert ":"))
-    (dolist (arg args)
-      (if (mm-multibyte-string-p arg)
-        (insert (vcard-region-encode-quoted-printable arg))
-        (insert arg)))))
+        (city (bbdb-address-city address))
+        (state (bbdb-address-state address))
+        (country (bbdb-address-country address))
+        (zip (bbdb-address-postcode address)))
+    (concat
+     "adr;type=" (bbdb-vcard-export-escape (bbdb-address-label address)) ":"
+     ";;" ;; no post office box, no extended address
+     (bbdb-vcard-export-several streets) ";"
+     (bbdb-vcard-export-escape city) ";"
+     (bbdb-vcard-export-escape state) ";"
+     (bbdb-vcard-export-escape zip) ";"
+     (bbdb-vcard-export-escape country))))
 
 (defun bbdb-vcard-export-record-insert-vcard (record)
   "Insert a vcard formatted version of RECORD into the current buffer"
   (let ((name (bbdb-record-name record))
-	(first-name (bbdb-record-firstname record))
-	(last-name (bbdb-record-lastname record))
-	(aka (bbdb-record-aka record))
-	(company (bbdb-record-company record))
-	(notes (bbdb-record-notes record))
-	(phones (bbdb-record-phones record))
-	(addresses (bbdb-record-addresses record))
-	(net (bbdb-record-net record))
-	(categories (bbdb-record-getprop
-		     record
-		     bbdb-define-all-aliases-field)))
-    (insert "BEGIN:VCARD\n"
-	    "VERSION:2.1\n")
+        (first-name (bbdb-record-firstname record))
+        (last-name (bbdb-record-lastname record))
+        (aka (bbdb-record-aka record))
+        (company (car (bbdb-record-organization record)))
+        (notes (bbdb-record-note record 'note))
+        (phones (bbdb-record-phone record))
+        (addresses (bbdb-record-address record))
+        (net (bbdb-record-mail record))
+        (categories (bbdb-record-note record 'category)))
+    (insert "begin:vcard\n"
+            "version:3.0\n")
     ;; Specify the formatted text corresponding to the name of the
     ;; object the vCard represents.  The property MUST be present in
     ;; the vCard object.
-    (bbdb-vcard-insert-attribute "FN" (bbdb-vcard-export-escape name) "\n")
+    (insert "fn:" (bbdb-vcard-export-escape name) "\n")
     ;; Family Name, Given Name, Additional Names, Honorific
     ;; Prefixes, and Honorific Suffixes
     (when (or last-name first-name)
-      (bbdb-vcard-insert-attribute "N"
-	      (bbdb-vcard-export-escape last-name) ";"  
-	      (bbdb-vcard-export-escape first-name) ";;;\n"))
+      (insert "n:"
+              (bbdb-vcard-export-escape last-name) ";"
+              (bbdb-vcard-export-escape first-name) ";;;\n"))
     ;; Nickname of the object the vCard represents.  One or more text
     ;; values separated by a COMMA character (ASCII decimal 44).
     (when aka
-      (bbdb-vcard-insert-attribute "NICKNAME" (bbdb-vcard-export-several aka) "\n"))
+      (insert "nickname:" (bbdb-vcard-export-several aka) "\n"))
     ;; FIXME: use face attribute for this one.
     ;; PHOTO;ENCODING=b;TYPE=JPEG:MIICajCCAdOgAwIBAgICBEUwDQYJKoZIhvcN
     ;; AQEEBQAwdzELMAkGA1UEBhMCVVMxLDAqBgNVBAoTI05ldHNjYXBlIENvbW11bm
@@ -204,49 +162,47 @@ scheme doesn't fit.")
     ;; separated the SEMI-COLON character (ASCII decimal 59).  But
     ;; BBDB doesn't use this.  So there's just one level:
     (when company
-      (bbdb-vcard-insert-attribute "ORG" (bbdb-vcard-export-escape company) "\n"))
+      (insert "org:" (bbdb-vcard-export-escape company) "\n"))
     (when notes
-      (bbdb-vcard-insert-attribute "NOTE" (bbdb-vcard-export-escape notes) "\n"))
+      (insert "note:" (bbdb-vcard-export-escape notes) "\n"))
     (dolist (phone phones)
-      (bbdb-vcard-insert-attribute (concat "TEL;" (bbdb-vcard-export-escape (bbdb-phone-location phone)))
-	      (bbdb-vcard-export-escape (bbdb-phone-string phone)) "\n"))
+      (insert "tel;type=" (bbdb-vcard-export-escape (bbdb-phone-label phone)) ":"
+              (bbdb-vcard-export-escape (bbdb-phone-string phone)) "\n"))
     (dolist (address addresses)
       (insert (bbdb-vcard-export-address-string address) "\n"))
     (dolist (mail net)
-      (bbdb-vcard-insert-attribute "EMAIL;TYPE=INTERNET" (bbdb-vcard-export-escape mail) "\n"))
+      (insert "email;type=internet:" (bbdb-vcard-export-escape mail) "\n"))
     ;; Use CATEGORIES based on mail-alias.  One or more text values
     ;; separated by a COMMA character (ASCII decimal 44).
     (when categories
-      (bbdb-vcard-insert-attribute "CATEGORIES" 
-	      (bbdb-join (mapcar 'bbdb-vcard-export-escape
-				 (bbdb-split categories ",")) ",") "\n"))
-    (insert "END:VCARD\n")))
-		    
+      (insert "categories:"
+              (mapconcat 'identity
+                         (mapcar 'bbdb-vcard-export-escape
+                                 (bbdb-split categories ",")) ",") "\n"))
+    (insert "end:vcard\n")))
+
 (defun bbdb-vcard-export-vcard-name-from-record (record)
   "Come up with a vcard name given a record"
   (let ((name (bbdb-record-name record))
-	(first-name (elt record 0))
-	(last-name (elt record 1)))
+        (first-name (elt record 0))
+        (last-name (elt record 1)))
     (concat first-name "_" last-name ".vcf")))
 
 (defun bbdb-vcard-export-make-vcard (record vcard-name)
   "Make a record buffer and write it"
-  (let ((buffer (get-buffer-create "*bbdb-vcard-export*")))
-    (save-excursion
-      (set-buffer buffer)
-      (kill-region (point-min) (point-max))
-      (bbdb-vcard-export-record-insert-vcard record)
-      (write-region (point-min) (point-max) vcard-name))
-    (kill-buffer buffer)))
+  (with-temp-buffer
+    (bbdb-vcard-export-record-insert-vcard record)
+    (write-region (point-min) (point-max) vcard-name)))
 
 (defun bbdb-vcard-do-record (record output-dir coding-system)
-  "Update the vcard of one bbdb record" 
+  "Update the vcard of one bbdb record"
   (setq coding-system (or coding-system 'utf-16))
   (let ((coding-system-for-write coding-system))
-    (bbdb-vcard-export-make-vcard 
+    (message "Updating %s" (bbdb-record-name record))
+    (bbdb-vcard-export-make-vcard
      record
-     (concat output-dir "/"
-	     (funcall bbdb-vcard-export-name-function record)))))
+     (concat output-dir
+             (bbdb-vcard-export-vcard-name-from-record record)))))
 
 (defun bbdb-vcard-export-update-all (output-dir coding-system)
   "Update the vcard Contacts directory from the bbdb database"

@@ -80,7 +80,6 @@
 ;;   * Improve the sample formatter.
 
 ;;; Code:
-(require 'qp)
 
 (defgroup vcard nil
   "Support for the vCard electronic business card format."
@@ -130,18 +129,13 @@ the function `vcard-standard-filter' is supplied as the second argument to
 ;; `encoding' property.  If these are encountered while parsing, associate
 ;; them as parameters of the `encoding' property in the returned structure.
 (defvar vcard-encoding-tags
-  '("quoted-printable" "base64" "8bit" "7bit" "QUOTED-PRINTABLE" "BASE64" "8BIT" "7BIT"))
-
-(defvar vcard-property-names
-  '("charset" "CHARSET" "encoding" "ENCODING"))
+  '("quoted-printable" "base64" "8bit" "7bit"))
 
 ;; The vcard parser will auto-decode these encodings when they are
 ;; encountered.  These methods are invoked via vcard-parse-region-value.
 (defvar vcard-region-decoder-methods
   '(("quoted-printable" . vcard-region-decode-quoted-printable)
-    ("QUOTED-PRINTABLE" . vcard-region-decode-quoted-printable)
-    ("base64"           . vcard-region-decode-base64)
-    ("BASE64"           . vcard-region-decode-base64)))
+    ("base64"           . vcard-region-decode-base64)))
 
 ;; This is used by vcard-region-decode-base64
 (defvar vcard-region-decode-base64-table
@@ -223,7 +217,6 @@ This function is just like `vcard-parse-string' except that it operates on
 a region of the current buffer rather than taking a string as an argument.
 
 Note: this function modifies the buffer!"
-  (message "beg, end: %S %S" beg end)
   (or filter
       (setq filter 'vcard-standard-filter))
   (let ((case-fold-search t)
@@ -239,15 +232,11 @@ Note: this function modifies the buffer!"
         (while (re-search-forward "\r$\\|\n[ \t]" nil t)
           (goto-char (match-beginning 0))
           (delete-char 1))
+
         (goto-char (point-min))
-        (while (re-search-forward "=\r?\n" nil t)
-          (replace-match ""))
-        (goto-char (point-min))
-        (or (re-search-forward "^begin:[ \t]*vcard[ \t]*$" (point-max) t)
-	    (re-search-forward "^BEGIN:[ \t]*VCARD[ \t]*$" (point-max) nil))
+        (re-search-forward "^begin:[ \t]*vcard[ \t]*\n")
         (set-marker pos (point))
-        (while (and (not (or (looking-at "^end[ \t]*:[ \t]*vcard[ \t]*$")
-			     (looking-at "^END[ \t]*:[ \t]*VCARD[ \t]*$")))
+        (while (and (not (looking-at "^end[ \t]*:[ \t]*vcard[ \t]*$"))
                     (re-search-forward ":[ \t]*" nil t))
           (set-marker newpos (match-end 0))
           (setq properties
@@ -264,27 +253,24 @@ Note: this function modifies the buffer!"
     (nreverse vcard-data)))
 
 (defun vcard-parse-region-properties (beg end)
-  (let* ((proplist (vcard-split-string (buffer-substring beg end) "[;:]"))
+  (downcase-region beg end)
+  (let* ((proplist (vcard-split-string (buffer-substring beg end) ";"))
          (props proplist)
          split)
-    (setcar props (downcase (car props)))
     (save-match-data
       (while props
-	(cond ((string-match "=" (car props))
-	       (setq split (vcard-split-string (car props) "=" 2))
-	       (when (member (car split) vcard-property-names)
-		 (setcar props (cons (downcase (car split)) (car (cdr split))))))
-	      ((member (car props) vcard-encoding-tags)
-	       (setcar props (cons "encoding" (car props)))))
-	(setq props (cdr props))))
+        (cond ((string-match "=" (car props))
+               (setq split (vcard-split-string (car props) "=" 2))
+               (setcar props (cons (car split) (car (cdr split)))))
+              ((member (car props) vcard-encoding-tags)
+               (setcar props (cons "encoding" (car props)))))
+        (setq props (cdr props))))
     proplist))
 
 (defun vcard-parse-region-value (proplist beg end)
   (let* ((encoding (vcard-get-property proplist "encoding"))
-	 (charset (vcard-get-property proplist "charset"))
          (decoder (cdr (assoc encoding vcard-region-decoder-methods)))
          result pos match-beg match-end)
-    (message "v-parse-region-value: %s %s %s" charset encoding decoder)
     (save-restriction
       (narrow-to-region beg end)
       (cond (decoder
@@ -356,7 +342,6 @@ the property name as a string."
   (let ((result t))
     (while (and result props)
       (or (vcard-get-property proplist (car props))
-	  (vcard-get-property proplist (car props))
           (setq result nil))
       (setq props (cdr props)))
     result))
@@ -458,7 +443,6 @@ that element should never be deleted since it is the primary key."
   "Normalize telephone numbers in `tel' values.
 Spaces and hyphens are replaced with `.'.
 US domestic telephone numbers are replaced with international format."
-  (message "v-f-t-n: %s %s %s" proplist values (vcard-get-property proplist "tel"))
   (and (vcard-get-property proplist "tel")
        (save-match-data
          (while values
@@ -490,35 +474,17 @@ US domestic telephone numbers are replaced with international format."
     `(format "%c" (string-to-number ,s 16))))
 
 (defun vcard-region-decode-quoted-printable (&optional beg end)
-  (let ((start (copy-marker (or beg (point-min))))
-	(finish (copy-marker (or end (point-max)))))
-    (quoted-printable-decode-region (marker-position start) (marker-position finish))
-    (decode-coding-region  (marker-position start) (marker-position finish) 'utf-8))
-  (message "v-region-decode-qp: %s" (buffer-string)))
-
-(defun vcard-region-encode-quoted-printable (string)
-  "Encode the STRING as quoted-printable and return the result."
-  (with-temp-buffer
-    (toggle-enable-multibyte-characters)
-    (insert string)
-    ;; Avoid using 8bit characters. = is \075.
-    ;; Equivalent to "^\000-\007\013\015-\037\200-\377="
-    (setq class "")
-    (setq class "\040-\074\076-\177")
-    (save-excursion
-      (goto-char (point-min))
-      (save-restriction
-        (narrow-to-region (point-min) (point-max))
-        ;; Encode all the non-ascii and control characters.
+  (save-excursion
+    (save-restriction
+      (save-match-data
+        (narrow-to-region (or beg (point-min)) (or end (point-max)))
         (goto-char (point-min))
-        (while (and (skip-chars-forward class)
-                    (not (eobp)))
-          (insert
-           (prog1
-               ;; To unibyte in case of Emacs 23 (unicode) eight-bit.
-               (format "=%02X" (char-after))
-             (delete-char 1))))))
-    (buffer-string)))
+        (while (re-search-forward "=\n" nil t)
+          (delete-region (match-beginning 0) (match-end 0)))
+        (goto-char (point-min))
+        (while (re-search-forward "=[0-9A-Za-z][0-9A-Za-z]" nil t)
+          (let ((s (buffer-substring (1+ (match-beginning 0)) (match-end 0))))
+            (replace-match (vcard-hexstring-to-ascii s) t t)))))))
 
 (defun vcard-region-decode-base64 (&optional beg end)
   (save-restriction
