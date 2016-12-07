@@ -325,7 +325,8 @@
     (function (ext:compiled-function-name f))))
 
 ;; FIXME
-(defimplementation macroexpand-all (form)
+(defimplementation macroexpand-all (form &optional env)
+  (declare (ignore env))
   (macroexpand form))
 
 (defimplementation describe-symbol-for-emacs (symbol)
@@ -427,7 +428,9 @@
 
 (defimplementation call-with-debugging-environment (debugger-loop-fn)
   (declare (type function debugger-loop-fn))
-  (let* ((*ihs-top* (ihs-top))
+  (let* ((*ihs-top* (or #+#.(swank/backend:with-symbol '*stack-top-hint* 'core)
+                        core:*stack-top-hint*
+                        (ihs-top)))
          (*ihs-current* *ihs-top*)
 #+frs         (*frs-base* (or (sch-frs-base *frs-top* *ihs-base*) (1+ (frs-top))))
 #+frs         (*frs-top* (frs-top))
@@ -461,26 +464,14 @@
       x
       (function-name x))))
 
-(defun function-position (fun)
-  (let* ((source-pos-info (core:function-source-pos-info fun)))
-    (when source-pos-info
-      (let* ((real-position (core:source-pos-info-filepos source-pos-info))
-             (sfi (core:source-file-info source-pos-info))
-             (real-pathname (core:source-file-info-pathname sfi))
-             (spoofed-namestring (core:source-file-info-source-debug-namestring sfi))
-             (spoofed-offset (core:source-file-info-source-debug-offset sfi))
-             (position (+ real-position spoofed-offset)))
-        (make-file-location spoofed-namestring position)))))
-
-(defun frame-function (frame)
-  (let* ((x (first frame))
-         fun position)
+(defun frame-function (frame-number)
+  (let ((x (first (elt *backtrace* frame-number))))
     (etypecase x
-      (symbol (and (fboundp x)
-                   (setf fun (fdefinition x)
-                         position (function-position fun))))
-      (function (setf fun x position (function-position x))))
-    (values fun position)))
+      (symbol
+       (and (fboundp x)
+            (fdefinition x)))
+      (function
+       x))))
 
 (defimplementation print-frame (frame stream)
   (format stream "(~s~{ ~s~})" (function-name (first frame))
@@ -490,7 +481,7 @@
           nil))
 
 (defimplementation frame-source-location (frame-number)
-  (nth-value 1 (frame-function (elt *backtrace* frame-number))))
+  (source-location (frame-function frame-number)))
 
 #+clasp-working
 (defimplementation frame-catch-tags (frame-number)
@@ -500,31 +491,32 @@
   (- (core:ihs-top) frame-number))
 
 (defimplementation frame-locals (frame-number)
-  (let ((env (cadr (elt *backtrace* frame-number))))
-    (loop for x = env then (core:get-parent-environment x)
-       with id = 0
-       until (null x)
-       append (loop for name across (core:environment-debug-names x)
-                 for value across (core:environment-debug-values x)
-                 do (setq id (1+ id))
-                 collect (list :name name :id id :value value)))))
+  (let* ((frame (elt *backtrace* frame-number))
+         (env (second frame))
+         (locals (loop for x = env then (core:get-parent-environment x)
+                       while x
+                       nconc (loop for name across (core:environment-debug-names x)
+                                   for value across (core:environment-debug-values x)
+                                   collect (list :name name :id 0 :value value)))))
+    (nconc
+     (loop for arg across (core:ihs-arguments (third frame))
+           for i from 0
+           collect (list :name (intern (format nil "ARG~d" i) #.*package*)
+                         :id 0
+                         :value arg))
+     locals)))
 
 (defimplementation frame-var-value (frame-number var-number)
-  (let ((env (cadr (elt *backtrace* frame-number))))
-    (block gotit
-      (loop for x = env then (core:get-parent-environment x)
-         with id = -1
-         until (null x)
-         do (loop for name across (core:environment-debug-names x)
-               for value across (core:environment-debug-values x)
-               do (setq id (1+ id))
-               do (when (eql id var-number)
-                    (return-from gotit value)))))))
-
+  (let* ((frame (elt *backtrace* frame-number))
+         (env (second frame))
+         (args (core:ihs-arguments (third frame))))
+    (if (< var-number (length args))
+        (svref args var-number)
+        (elt (frame-locals frame-number) var-number))))
 
 #+clasp-working
 (defimplementation disassemble-frame (frame-number)
-  (let ((fun (frame-function (elt *backtrace* frame-number))))
+  (let ((fun (frame-function frame-number)))
     (disassemble fun)))
 
 (defimplementation eval-in-frame (form frame-number)
@@ -550,9 +542,6 @@
 
 ;;;; Definitions
 
-(defvar +TAGS+ (namestring
-                (merge-pathnames "TAGS" (translate-logical-pathname "SYS:"))))
-
 (defun make-file-location (file file-position)
   ;; File positions in CL start at 0, but Emacs' buffer positions
   ;; start at 1. We specify (:ALIGN T) because the positions comming
@@ -567,132 +556,22 @@
                  `(:offset ,start-position ,offset)
                  `(:align t)))
 
-(defun make-TAGS-location (&rest tags)
-  (make-location `(:etags-file ,+TAGS+)
-                 `(:tag ,@tags)))
-
-
+(defun translate-location (location)
+  (make-location (list :file (namestring (ext:source-location-pathname location)))
+                 (list :position (ext:source-location-offset location))
+                 '(:align t)))
 
 (defimplementation find-definitions (name)
-  (let ((annotations (core:get-annotation name 'si::location :all)))
-    (cond (annotations
-           (loop for annotation in annotations
-                 collect (destructuring-bind (dspec file . pos) annotation
-                           `(,dspec ,(make-file-location file pos)))))
-          (t
-           (mapcan #'(lambda (type) (find-definitions-by-type name type))
-                   (classify-definition-name name))))))
-
-(defun classify-definition-name (name)
-  (let ((types '()))
-    (when (fboundp name)
-      (cond ((special-operator-p name)
-             (push :special-operator types))
-            ((macro-function name)
-             (push :macro types))
-            ((typep (fdefinition name) 'generic-function)
-             (push :generic-function types))
-            ((si:mangle-name name t)
-             (push :c-function types))
-            (t
-             (push :lisp-function types))))
-    (when (boundp name)
-      (cond ((constantp name)
-             (push :constant types))
-            (t
-             (push :global-variable types))))
-    types))
-
-(defun find-definitions-by-type (name type)
-  (ecase type
-    (:lisp-function
-     (when-let (loc (source-location (fdefinition name)))
-       (list `((defun ,name) ,loc))))
-    (:c-function
-     (when-let (loc (source-location (fdefinition name)))
-       (list `((c-source ,name) ,loc))))
-    (:generic-function
-     (loop for method in (clos:generic-function-methods (fdefinition name))
-           for specs = (clos:method-specializers method)
-           for loc   = (source-location method)
-           when loc
-             collect `((defmethod ,name ,specs) ,loc)))
-    (:macro
-     (when-let (loc (source-location (macro-function name)))
-       (list `((defmacro ,name) ,loc))))
-    (:constant
-     (when-let (loc (source-location name))
-       (list `((defconstant ,name) ,loc))))
-    (:global-variable
-     (when-let (loc (source-location name))
-       (list `((defvar ,name) ,loc))))
-    (:special-operator)))
-
-;;; FIXME: There ought to be a better way.
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun c-function-name-p (name)
-    (and (symbolp name) (si:mangle-name name t) t))
-  (defun c-function-p (object)
-    (and (functionp object)
-         (let ((fn-name (function-name object)))
-           (and fn-name (c-function-name-p fn-name))))))
-
-(deftype c-function ()
-  `(satisfies c-function-p))
-
-(defun assert-source-directory ()
-  (unless (probe-file #P"SYS:")
-    (error "CLASP's source directory ~A does not exist. ~
-            You can specify a different location via the environment ~
-            variable `CLASPSRCDIR'."
-           (namestring (translate-logical-pathname #P"SYS:"))))) 
-
-(defun assert-TAGS-file ()
-  (unless (probe-file +TAGS+)
-    (error "No TAGS file ~A found. It should have been installed with CLASP."
-           +TAGS+)))
-
-(defun package-names (package)
-  (cons (package-name package) (package-nicknames package)))
+  (loop for kind in ext:*source-location-kinds*
+        for locations = (ext:source-location name kind)
+        when locations
+        nconc (loop for location in locations
+                    collect (list kind (translate-location location)))))
 
 (defun source-location (object)
-  (converting-errors-to-error-location
-   (typecase object
-     (c-function
-      (assert-source-directory)
-      (assert-TAGS-file)
-      (let ((lisp-name (function-name object)))
-        (assert lisp-name)
-        (multiple-value-bind (flag c-name) (si:mangle-name lisp-name t)
-          (assert flag)
-          ;; In CLASP's code base sometimes the mangled name is used
-          ;; directly, sometimes CLASP's DPP magic of @SI::SYMBOL or
-          ;; @EXT::SYMBOL is used. We cannot predict here, so we just
-          ;; provide several candidates.
-          (apply #'make-TAGS-location
-                 c-name
-                 (loop with s = (symbol-name lisp-name)
-                       for p in (package-names (symbol-package lisp-name))
-                       collect (format nil "~A::~A" p s)
-                       collect (format nil "~(~A::~A~)" p s))))))
-     (function
-      (multiple-value-bind (file pos) (ext:compiled-function-file object)
-        (cond ((not file)
-               (return-from source-location nil))
-              ((tmpfile-to-buffer file)
-               (make-buffer-location (tmpfile-to-buffer file) pos))
-              (t
-               (assert (probe-file file))
-               (assert (not (minusp pos)))
-               (make-file-location file pos)))))
-     (method
-      ;; FIXME: This will always return NIL at the moment; CLASP does not
-      ;; store debug information for methods yet.
-      (source-location (clos:method-function object)))
-     ((member nil t)
-      (multiple-value-bind (flag c-name) (si:mangle-name object)
-        (assert flag)
-        (make-TAGS-location c-name))))))
+  (let ((location (ext:source-location object t)))
+    (when location
+      (translate-location (car location)))))
 
 (defimplementation find-source-location (object)
   (or (source-location object)
@@ -843,3 +722,9 @@
                                             0.2)))))
 
   ) ; #+threads (progn ...
+
+
+(defmethod emacs-inspect ((object core:cxx-object))
+  (let ((encoded (core:encode object)))
+    (loop for (key . value) in encoded
+       append (list (string key) ": " (list :value value) (list :newline)))))

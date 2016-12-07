@@ -13,13 +13,15 @@
   (:license "GPL")
   (:swank-dependencies swank-fuzzy)
   (:on-load
+   ;; Install as the default completion in slime
    (push
-    `(progn
+    `(when (eq slime-complete-symbol-function 'slime-fuzzy-complete-symbol)
        (setq slime-complete-symbol-function ',slime-complete-symbol-function))
     slime-fuzzy-init-undo-stack)
    (setq slime-complete-symbol-function 'slime-fuzzy-complete-symbol)
+   ;; Also install on C-c M-i
    (define-key slime-mode-map "\C-c\M-i" 'slime-fuzzy-complete-symbol)
-   (when (featurep 'slime-repl)
+   (when (featurep 'slime-repl) ; FIXME this is load-order dependent
      (define-key slime-repl-mode-map "\C-c\M-i"
        'slime-fuzzy-complete-symbol)))
   (:on-unload

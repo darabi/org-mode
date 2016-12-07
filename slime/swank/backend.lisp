@@ -27,6 +27,8 @@ magic but really show every frame including SWANK related ones.")
   "List of interface functions that are not implemented.
 DEFINTERFACE adds to this list and DEFIMPLEMENTATION removes.")
 
+(defvar *log-output* nil)            ; should be nil for image dumpers
+
 (defmacro definterface (name args documentation &rest default-body)
   "Define an interface function for the backend to implement.
 A function is defined with NAME, ARGS, and DOCUMENTATION.  This
@@ -146,12 +148,25 @@ This will be used like so:
   `(let ((,var ,value))
      (when ,var ,@body)))
 
-(defun with-symbol (name package)
-  "Generate a form suitable for testing with #+."
-  (if (and (find-package package)
-           (find-symbol (string name) package))
+(defun boolean-to-feature-expression (value)
+  "Converts a boolean VALUE to a form suitable for testing with #+."
+  (if value
       '(:and)
       '(:or)))
+
+(defun with-symbol (name package)
+  "Check if a symbol with a given NAME exists in PACKAGE and returns a
+form suitable for testing with #+."
+  (boolean-to-feature-expression
+   (and (find-package package)
+        (find-symbol (string name) package))))
+
+(defun choose-symbol (package name alt-package alt-name)
+  "If symbol package:name exists return that symbol, otherwise alt-package:alt-name.
+  Suitable for use with #."
+  (or (and (find-package package)
+           (find-symbol (string name) package))
+      (find-symbol (string alt-name) alt-package)))
 
 
 ;;;; UFT8
@@ -699,7 +714,7 @@ available."
         (and (consp form) (length=2 form)
              (eq (first form) 'setf) (symbolp (second form))))))
 
-(definterface macroexpand-all (form)
+(definterface macroexpand-all (form &optional env)
    "Recursively expand all macros in FORM.
 Return the resulting form.")
 
@@ -711,7 +726,7 @@ return the results and T.  Otherwise, return the original form and
 NIL."
   (let ((fun (and (consp form)
                   (valid-function-name-p (car form))
-                  (compiler-macro-function (car form)))))
+                  (compiler-macro-function (car form) env))))
     (if fun
 	(let ((result (funcall *macroexpand-hook* fun form env)))
           (values result (not (eq result form))))
@@ -726,6 +741,50 @@ NIL."
                    (frob new-form t)
                    (values new-form expanded)))))
     (frob form env)))
+
+(defmacro with-collected-macro-forms
+    ((forms &optional result) instrumented-form &body body)
+  "Collect macro forms by locally binding *MACROEXPAND-HOOK*.
+
+Evaluates INSTRUMENTED-FORM and collects any forms which undergo
+macro-expansion into a list.  Then evaluates BODY with FORMS bound to
+the list of forms, and RESULT (optionally) bound to the value of
+INSTRUMENTED-FORM."
+  (assert (and (symbolp forms) (not (null forms))))
+  (assert (symbolp result))
+  (let ((result-symbol (or result (gensym))))
+   `(call-with-collected-macro-forms
+     (lambda (,forms ,result-symbol)
+       (declare (ignore ,@(and (not result)
+                               `(,result-symbol))))
+       ,@body)
+     (lambda () ,instrumented-form))))
+
+(defun call-with-collected-macro-forms (body-fn instrumented-fn)
+  (let ((return-value nil)
+        (collected-forms '()))
+    (let* ((real-macroexpand-hook *macroexpand-hook*)
+           (*macroexpand-hook*
+            (lambda (macro-function form environment)
+              (let ((result (funcall real-macroexpand-hook
+                                     macro-function form environment)))
+                (unless (eq result form)
+                  (push form collected-forms))
+                result))))
+      (setf return-value (funcall instrumented-fn)))
+    (funcall body-fn collected-forms return-value)))
+
+(definterface collect-macro-forms (form &optional env)
+  "Collect subforms of FORM which undergo (compiler-)macro expansion.
+Returns two values: a list of macro forms and a list of compiler macro
+forms."
+  (with-collected-macro-forms (macro-forms expansion)
+      (ignore-errors (macroexpand-all form env))
+    (with-collected-macro-forms (compiler-macro-forms)
+        (handler-bind ((warning #'muffle-warning))
+          (ignore-errors
+            (compile nil `(lambda () ,expansion))))
+      (values macro-forms compiler-macro-forms))))
 
 (definterface format-string-expand (control-string)
   "Expand the format string CONTROL-STRING."
@@ -1161,7 +1220,8 @@ output of CL:DESCRIBE."
   '())
 
 ;;; Utilities for inspector methods.
-;;; 
+;;;
+
 (defun label-value-line (label value &key padding-length display-nil-value hide-when-nil
                                splice-as-ispec value-text (newline t))
   "Create a control list which prints \"LABEL: VALUE\" in the inspector.
@@ -1435,7 +1495,7 @@ COMPLETION-FUNCTION, if non-nil, should be called after saving the image.")
 
 (defun deinit-log-output ()
   ;; Can't hang on to an fd-stream from a previous session.
-  (setf swank:*log-output* nil))
+  (setf *log-output* nil))
 
 
 ;;;; Wrapping

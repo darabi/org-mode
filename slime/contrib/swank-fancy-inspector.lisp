@@ -225,9 +225,12 @@
                 (:defined
                  (or (sb-int:info :type :expander symbol) t))
                 (:primitive
-                 (or (if (swank/sbcl::sbcl-version>= 1 3 1)
-                         (car (sb-int:info :type :expander symbol))
-                         (sb-int:info :type :translator symbol))
+                 (or #.(if (swank/sbcl::sbcl-version>= 1 3 1)
+                           '(let ((x (sb-int:info :type :expander symbol)))
+                             (if (consp x)
+                                 (car x)
+                                 x))
+                           '(sb-int:info :type :translator symbol))
                      t)))))
     (when fun
       (append
@@ -237,16 +240,21 @@
         '(:newline))
        (docstring-ispec  symbol :label "Type-specifier documentation" :kind 'type)
        (unless (eq t fun)
-         (append
-          `("Type-specifier lambda-list: "
-            ,(inspector-princ (arglist fun))
-            (:newline))
-          (multiple-value-bind (expansion ok)
-              (handler-case (sb-ext:typexpand-1 symbol)
-                (error () (values nil nil)))
-            (when ok
-              (list "Type-specifier expansion: "
-                    (princ-to-string expansion))))))))))
+         (let ((arglist (arglist fun)))
+           (append
+            `("Type-specifier lambda-list: "
+              ;; Could use ~:s, but inspector-princ does a bit more,
+              ;; and not all NILs in the arglist should be printed that way.
+              ,(if arglist
+                   (inspector-princ arglist)
+                   "()")
+              (:newline))
+            (multiple-value-bind (expansion ok)
+                (handler-case (sb-ext:typexpand-1 symbol)
+                  (error () (values nil nil)))
+              (when ok
+                (list "Type-specifier expansion: "
+                      (princ-to-string expansion)))))))))))
 
 (defun docstring-ispec (object &key (label "Documentation") (kind t))
   "Return a inspector spec if OBJECT has a docstring of kind KIND."
@@ -286,12 +294,19 @@
             (typecase spec
               (swank-mop:eql-specializer
                `(eql ,(swank-mop:eql-specializer-object spec)))
-              #-sbcl (t
+              #-sbcl
+              (t
                (swank-mop:class-name spec))
-              #+sbcl (t
-                      (sb-pcl:unparse-specializer-using-class
-                       (sb-mop:method-generic-function method)
-                       spec))))
+              #+sbcl
+              (t
+               ;; SBCL has extended specializers
+               (let ((gf (sb-mop:method-generic-function method)))
+                 (cond (gf
+                        (sb-pcl:unparse-specializer-using-class gf spec))
+                       ((typep spec 'class)
+                        (class-name spec))
+                       (t
+                        spec))))))
           (swank-mop:method-specializers method)))
 
 (defun method-for-inspect-value (method)
