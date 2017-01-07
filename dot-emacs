@@ -640,3 +640,9 @@ performed, then slime-complete-symbol is called"
     (add-to-list 'load-path (concat path "/lib/node_modules/tern/emacs"))
     (autoload 'tern-mode "tern.el" nil t)
     (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
+
+;;; restclient
+(autoload 'restclient-mode "restclient" nil t)
+
+;;; markdown
+(autoload 'markdown-mode "markdown-mode" nil t)
