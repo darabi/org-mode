@@ -16,5 +16,5 @@
     (message "")
   (message "Hello foo"))
 
-(provide 'warnings)
+(provide 'flycheck-test-warnings)
 ;;; warnings.el ends here
