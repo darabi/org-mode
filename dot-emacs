@@ -646,3 +646,6 @@ performed, then slime-complete-symbol is called"
 
 ;;; markdown
 (autoload 'markdown-mode "markdown-mode" nil t)
+
+;;; dockerfile
+(autoload 'dockerfile-mode "dockerfile-mode" nil t)
