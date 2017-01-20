@@ -45,11 +45,13 @@ Contributors
 - Adeodato Simó <dato@net.com.org.es>
 - Ævar Arnfjörð Bjarmason <avarab@gmail.com>
 - Alan Falloon <alan.falloon@gmail.com>
+- Aleksey Uimanov <s9gf4ult@gmail.com>
 - Alexander Gramiak <fice-t@protonmail.com>
 - Alex Dunn <adunn@ucsb.edu>
 - Alexey Voinov <alexey.v.voinov@gmail.com>
 - Alex Kost <alezost@gmail.com>
 - Alex Ott <alexott@gmail.com>
+- Allen <darkfeline@felesatra.moe>
 - Andreas Fuchs <asf@boinkor.net>
 - Andreas Liljeqvist <andreas.liljeqvist@robacks.se>
 - Andreas Rottmann <a.rottmann@gmx.at>
@@ -121,6 +123,7 @@ Contributors
 - Jeff Bellegarde <jbellegarde@whitepages.com>
 - Jeff Dairiki <dairiki@dairiki.org>
 - Jesse Alama <jesse.alama@gmail.com>
+- Joakim Jalap <JOJA@stoneridge.com>
 - Johann Klähn <kljohann@gmail.com>
 - John Mastro <john.b.mastro@gmail.com>
 - John Wiegley <johnw@newartisans.com>
@@ -151,6 +154,7 @@ Contributors
 - Marc Herbert <marc.herbert@gmail.com>
 - Marcin Bachry <hegel666@gmail.com>
 - Marco Craveiro <marco.craveiro@gmail.com>
+- Marco Wahl <marcowahlsoft@gmail.com>
 - Marian Schubert <marian.schubert@gmail.com>
 - Mario Rodas <marsam@users.noreply.github.com>
 - Marius Vollmer <marius.vollmer@gmail.com>
@@ -190,6 +194,7 @@ Contributors
 - Peter Vasil <mail@petervasil.net>
 - Philippe Vaucher <philippe.vaucher@gmail.com>
 - Philipp Haselwarter <philipp@haselwarter.org>
+- Philipp Stephani <phst@google.com>
 - Philip Weaver <philip.weaver@gmail.com>
 - Phil Jackson <phil@shellarchive.co.uk>
 - Phil Sainty <phil@catalyst.net.nz>
@@ -252,6 +257,7 @@ Contributors
 - Wei Huang <weih@opera.com>
 - Wilfred Hughes <me@wilfred.me.uk>
 - Win Treese <treese@acm.org>
+- Wouter Bolsterlee <wouter@bolsterl.ee>
 - Xavier Noria <fxn@hashref.com>
 - Yann Hodique <yann.hodique@gmail.com>
 - York Zhao <gtdplatform@gmail.com>
