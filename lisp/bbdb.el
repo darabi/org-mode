@@ -1,7 +1,7 @@
 ;;; bbdb.el --- core of BBDB -*- lexical-binding: t -*-
 
 ;; Copyright (C) 1991, 1992, 1993, 1994 Jamie Zawinski <jwz@netscape.com>.
-;; Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
+;; Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
 
 ;; This file is part of the Insidious Big Brother Database (aka BBDB),
 
@@ -3075,7 +3075,7 @@ copy it to `bbdb-file'."
 
   ;; Make sure `bbdb-buffer' is not out of sync with disk.
   (with-current-buffer bbdb-buffer
-    (cond ((verify-visited-file-modtime bbdb-buffer)) ; arg for Emacs 23
+    (cond ((verify-visited-file-modtime))
           ((bbdb-revert-buffer))
           ;; This is the case where `bbdb-file' has changed; the buffer
           ;; has changed as well; and the user has answered "no" to the
@@ -3192,7 +3192,7 @@ Return nil otherwise."
              (set-buffer-modified-p nil)
              (bbdb-undisplay-records t)))
           ;; If nothing has changed do nothing, return t.
-          ((and (verify-visited-file-modtime bbdb-buffer) ; arg for Emacs 23
+          ((and (verify-visited-file-modtime)
                 (not (buffer-modified-p))))
           ((or (and (not (verify-visited-file-modtime bbdb-buffer))
                     ;; File changed on disk
