@@ -1,4 +1,4 @@
-Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
+Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
 See the end of the file for license conditions.
 
 BBDB is the Insidious Big Brother Database for GNU Emacs.
@@ -33,7 +33,7 @@ To compile and install BBDB with `make':
 
    Run the `configure' script in the top directory of the BBDB code.
    This performs a number of checks on your system and generates the
-   Makefiles accordingly.  You need at least GNU Emacs 23.
+   Makefiles accordingly.  You need at least GNU Emacs 24.
 
    The `configure' script comes with various options:
 
@@ -87,8 +87,11 @@ To compile and install BBDB with `make':
 ===============================================================================
 Usage notes
 
-BBDB 3.1 is the first release of BBDB after a long time.
-It requires GNU Emacs 23 or newer.  Its code is still under development.
+BBDB 3 is the first release of BBDB after a long time.
+Up to BBDB 3.1.2 it requires GNU Emacs 23 or newer.
+More recent versions require GNU Emacs 24 or newer.
+
+The code of BBDB 3 is still under development.
 While it should work reliably, users of previous versions of BBDB
 are advised that the format of the BBDB database file has changed.
 Migration to the new format should happen automatically.
@@ -99,9 +102,11 @@ As compared with BBDB 2.xx, many variables, functions, and commands
 have changed in BBDB 3.  Most likely you will have to review your
 customizations carefully.  You may want to call bbdb-undocumented-variables
 to identify outdated (i.e., now usually undocumented) variables in
-your init file.  All user variables for the core of BBDB 3 are listed
-at the beginning of bbdb.el.  Some extensions of BBDB 3 define their
-user variables at the beginning of the respective files.
+your init file.  Those upgrading from BBDB 2.xx may also find this
+Emacs wiki page helpful: https://www.emacswiki.org/emacs/UpgradeBBDB
+All user variables for the core of BBDB 3 are listed at the beginning
+of bbdb.el.  Some extensions of BBDB 3 define their user variables
+at the beginning of the respective files.
 
 Generally the default values for user variables are chosen such that they make
 BBDB the least aggressive.  You can customize this behavior in many ways.
@@ -209,7 +214,7 @@ sequence of calls is
 
 ==================================================================
 
-Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
+Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
 
 This file is part of the Insidious Big Brother Database (aka BBDB),
 

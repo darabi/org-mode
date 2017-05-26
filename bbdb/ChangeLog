@@ -1,3 +1,38 @@
+2017-01-31  Roland Winkler  <winkler@gnu.org>
+	* README: Really discontinue support for GNU Emacs 23.
+
+2017-01-30  Barak A. Pearlmutter <barak@pearlmutter.net>
+	* TODO: Extend feature wishlist.
+
+2017-01-30  Barak A. Pearlmutter <barak@pearlmutter.net>
+	* README: Add pointer to emacs wiki upgrade page.
+
+2017-01-30  Roland Winkler  <winkler@gnu.org>
+	* README, lisp/bbdb-site.el.in: Discontinue support for GNU Emacs
+	23.
+
+2017-01-28  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-anniv.el (bbdb-anniv-diary-entries): Propertize the
+	strings passed to diary-add-to-list.
+	(bbdb-anniv-goto-entry): New function used as
+	diary-goto-entry-function.
+
+2017-01-28  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-anniv.el (bbdb-anniv-diary-entries): Use cl-flet.
+
+2017-01-28  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-anniv.el: Use lexical binding.
+	* lisp/bbdb-anniv.el (bbdb-anniv-diary-entries): Use lexical
+	environment for eval.
+
+2017-01-28  Roland Winkler  <winkler@gnu.org>
+	Discontinue support for old GNU Emacs 23.
+	* lisp/bbdb.el (bbdb-buffer, bbdb-revert):
+	* lisp/bbdb-com.el (bbdb-complete-mail): Update accordingly.
+
+2017-01-28  Roland Winkler  <winkler@gnu.org>
+	Update copyright year in all files.
+
 2016-10-02  Roland Winkler  <winkler@gnu.org>
 	* lisp/bbdb-com.el, lisp/bbdb-gnus.el, lisp/bbdb-ispell.el:
 	* lisp/bbdb-message.el, lisp/bbdb-mhe.el, lisp/bbdb-migrate.el:
@@ -2164,7 +2199,7 @@
 ;; coding: utf-8
 ;; End:
 
-  Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
+  Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
 
   This file is part of the Insidious Big Brother Database (aka BBDB),
 
