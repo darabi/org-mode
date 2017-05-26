@@ -430,9 +430,10 @@ performed, then slime-complete-symbol is called"
 (setq slime-net-coding-system 'utf-8-unix)
 
 ;; lisp buffers always use slime
-(require 'slime)
+;; (autoload 'slime "slime" "Superior Lisp Interaction Mode" t)
+(require 'slime-autoloads)
 
-(slime-setup '(slime-fancy slime-asdf slime-tramp slime-repl slime-compiler-notes-tree))
+(setq slime-contribs '(slime-fancy slime-asdf slime-tramp slime-repl slime-compiler-notes-tree))
 
 (add-hook 'slime-compilation-finished-hook 'slime-maybe-list-compiler-notes)
 
@@ -500,23 +501,20 @@ performed, then slime-complete-symbol is called"
        'backward-word)))
 
 
-(require 'paredit)
+;; Paredit will be loaded by lisp-mode-hook
+;; (require 'paredit)
 
-(add-hook 'paredit-mode-hook
-          '(lambda ()
-            (kd-dwim-redefine-keys)))
-
-(setf paredit-mode-hook nil)
+;; (setf paredit-mode-hook nil)
 
 ;;
 ;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
 ;;
 
-(if (getenv "QUICKLISP_HOME")
-    (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
-    (let ((default-slime-helper "~/quicklisp/slime-helper.el"))
-      (when (and quicklisp-slime-helper-dist (file-exists-p default-slime-helper)
-                 (load default-slime-helper)))))
+;; (if (getenv "QUICKLISP_HOME")
+;;     (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
+;;     (let ((default-slime-helper "~/quicklisp/slime-helper.el"))
+;;       (when (and quicklisp-slime-helper-dist (file-exists-p default-slime-helper)
+;;                  (load default-slime-helper)))))
 
 ;; ;; try to load the elisp files from the current quicklisp distribution
 (when (functionp 'quicklisp-slime-helper-system-directory)
@@ -530,17 +528,20 @@ performed, then slime-complete-symbol is called"
 (add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
 (add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))
 
-;; we have added the user dir to load path, so anybody who doesn't
-;; have a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
-;; receive an error here
-(message "vor my-dwim-init")
-(require 'my-dwim-init)
 
-;; undo the changes in dwim init files
-(show-paren-mode t)
-(setq show-paren-style 'parenthesis)
+;; Put a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
+(let (user-dwim-init (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/my-dwim-init.el"))
+  (if (file-exists-p user-dwim-init)
+      (load user-dwim-init)
+    (message "Not loading file %s as it does not exist." user-dwim-init)))
 
-(setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/")
+(add-hook 'slime-mode-hook
+          '(lambda ()
+            (require 'my-dwim-init)
+            ;; undo the changes in dwim init files
+            (show-paren-mode t)
+            (setq show-paren-style 'parenthesis)
+            (setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/")))
 
 (add-hook 'lisp-mode-hook
           '(lambda ()

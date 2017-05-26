@@ -246,12 +246,17 @@
 (dwim/add-slime-impl-image "fluvium")
 (dwim/add-slime-impl-image "nibbles")
 (dwim/add-slime-impl-image "qap-server")
+(dwim/add-slime-impl-image "ayacandas2")
+(dwim/add-slime-impl-image "restful-objects")
+(dwim/add-slime-impl-image "ayacandas-server")
+(dwim/add-slime-impl-image "sftp-downloader")
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
-(add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl-1.3.8")))
+(add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl")))
+(add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
 
-(setf slime-default-lisp 'web-server)
+(setf slime-default-lisp 'restful-objects)
 
 ;; (setf slime-default-lisp 'rodin)
 ;; (setf slime-default-lisp 'rdbms)
@@ -263,8 +268,12 @@
          (arglist (plist-get impl :program-args)))
     (append arglist (if (typep args 'list)
                         args
-                        (list args)))))
+                      (list args)))))
 
-(setq slime-compilation-slime-maybe-show-compilation-log)
+(setq slime-compilation-slime-maybe-show-compilation-log t)
+
+(add-hook 'paredit-mode-hook
+          '(lambda ()
+            (kd-dwim-redefine-keys)))
 
 (provide 'my-dwim-init)
