@@ -528,9 +528,8 @@ performed, then slime-complete-symbol is called"
 (add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
 (add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))
 
-
 ;; Put a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
-(let (user-dwim-init (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/my-dwim-init.el"))
+(let ((user-dwim-init (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/my-dwim-init.el")))
   (if (file-exists-p user-dwim-init)
       (load user-dwim-init)
     (message "Not loading file %s as it does not exist." user-dwim-init)))
