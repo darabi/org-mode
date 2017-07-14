@@ -258,11 +258,6 @@
 
 (setf slime-default-lisp 'restful-objects)
 
-;; (setf slime-default-lisp 'rodin)
-;; (setf slime-default-lisp 'rdbms)
-
-;; (setf slime-default-lisp 'alexandria)
-
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
          (arglist (plist-get impl :program-args)))
@@ -271,6 +266,17 @@
                       (list args)))))
 
 (setq slime-compilation-slime-maybe-show-compilation-log t)
+
+(defun kd-dwim-redefine-keys ()
+  ;; C-right forward-word is important for me
+  (define-key paredit-mode-map (kbd "M-<right>")
+    'paredit-forward-slurp-sexp)
+  (define-key paredit-mode-map (kbd "C-<right>")
+    'forward-word)
+  (define-key paredit-mode-map (kbd "M-<left>")
+    'paredit-forward-barf-sexp)
+  (define-key paredit-mode-map (kbd "C-<left>")
+    'backward-word))
 
 (add-hook 'paredit-mode-hook
           '(lambda ()
