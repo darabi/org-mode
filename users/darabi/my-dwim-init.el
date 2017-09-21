@@ -63,10 +63,10 @@
 ;;                            (ielm-complete-symbol)) :elisp nil)
 (dwim-define-lisp-key (kbd "M-<delete>") 'paredit-forward-kill-word)
 (dwim-define-lisp-key (kbd "M-<backspace>") 'paredit-backward-kill-word)
-(dwim-define-lisp-key (kbd "M-<left>") (lambda () (interactive) (backward-sexp)))
+(dwim-define-lisp-key (kbd "M-<left>") 'paredit-forward-barf-sexp)
 (dwim-define-lisp-key (kbd "M-<down>") 'down-list)
 (dwim-define-lisp-key (kbd "M-<up>") 'backward-up-list)
-(dwim-define-lisp-key (kbd "M-<right>") (lambda () (interactive) (slime-forward-sexp)))
+(dwim-define-lisp-key (kbd "M-<right>") 'paredit-forward-slurp-sexp)
 
 (when (boundp 'sgml-mode-hook)
   (add-hook 'sgml-mode-hook
