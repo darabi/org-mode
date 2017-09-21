@@ -649,3 +649,7 @@ performed, then slime-complete-symbol is called"
 
 ;;; dockerfile
 (autoload 'dockerfile-mode "dockerfile-mode" nil t)
+
+;; Asciidoc mode https://github.com/sensorflo/adoc-mode.git
+(autoload 'adoc-mode "adoc-mode.el" nil t)
+(add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
