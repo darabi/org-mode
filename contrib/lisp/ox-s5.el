@@ -48,7 +48,14 @@
 ;; in an Org mode buffer.  See ox.el and ox-html.el for more details
 ;; on how this exporter works.
 
+;; TODOs
+;; ------
+;; The title page is formatted using format-spec.  This is error prone
+;; when details are missing and may insert empty tags, like <h2></h2>,
+;; for missing values.
+
 (require 'ox-html)
+(eval-when-compile (require 'cl))
 
 (org-export-define-derived-backend 's5 'html
   :menu-entry
@@ -173,6 +180,7 @@ or an empty string."
 
 (defcustom org-s5-title-slide-template
   "<h1>%t</h1>
+<h2>%s</h2>
 <h2>%a</h2>
 <h3>%e</h3>
 <h4>%d</h4>"
@@ -296,13 +304,15 @@ holding export options."
   "Return complete document string after HTML conversion.
 CONTENTS is the transcoded contents string.  INFO is a plist
 holding export options."
-  (let ((org-html-divs
-	 (if (equal (plist-get info :html-container) "li")
-	     (append '((content "ol" "content")) org-s5--divs)
-	   org-s5--divs))
-	 (info (plist-put
+  (let ((info (plist-put
+	       (plist-put
 		(plist-put info :html-preamble (plist-get info :s5-preamble))
-		:html-postamble (plist-get info :s5-postamble))))
+		:html-postamble
+		(plist-get info :s5-postamble))
+	       :html-divs
+	       (if (equal "li" (plist-get info :html-container))
+		   (cons '(content "ol" "content") org-s5--divs)
+		 org-s5--divs))))
     (mapconcat
      'identity
      (list

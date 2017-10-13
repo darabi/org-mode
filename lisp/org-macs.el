@@ -1,6 +1,6 @@
-;;; org-macs.el --- Top-level definitions for Org-mode
+;;; org-macs.el --- Top-level Definitions for Org -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2017 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -19,88 +19,123 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
 
 ;; This file contains macro definitions, defsubst definitions, other
-;; stuff needed for compilation and top-level forms in Org-mode, as well
-;; lots of small functions that are not org-mode specific but simply
-;; generally useful stuff.
+;; stuff needed for compilation and top-level forms in Org mode, as
+;; well lots of small functions that are not Org mode specific but
+;; simply generally useful stuff.
 
 ;;; Code:
 
-(eval-and-compile
-  (unless (fboundp 'declare-function)
-    (defmacro declare-function (fn file &optional arglist fileonly)
-      `(autoload ',fn ,file)))
-
-  (if (>= emacs-major-version 23)
-      (defsubst org-char-to-string(c)
-	"Defsubst to decode UTF-8 character values in emacs 23 and beyond."
-	(char-to-string c))
-    (defsubst org-char-to-string (c)
-      "Defsubst to decode UTF-8 character values in emacs 22."
-      (string (decode-char 'ucs c)))))
-
-(declare-function org-add-props "org-compat" (string plist &rest props))
-(declare-function org-string-match-p "org-compat" (&rest args))
-
 (defmacro org-with-gensyms (symbols &rest body)
+  (declare (debug (sexp body)) (indent 1))
   `(let ,(mapcar (lambda (s)
-		   `(,s (make-symbol (concat "--" (symbol-name ',s))))) symbols)
+		   `(,s (make-symbol (concat "--" (symbol-name ',s)))))
+                 symbols)
      ,@body))
-(def-edebug-spec org-with-gensyms (sexp body))
-(put 'org-with-gensyms 'lisp-indent-function 1)
-
-(defmacro org-called-interactively-p (&optional kind)
-  (if (featurep 'xemacs)
-      `(interactive-p)
-    (if (or (> emacs-major-version 23)
-	    (and (>= emacs-major-version 23)
-		 (>= emacs-minor-version 2)))
-	;; defined with no argument in <=23.1
-	`(with-no-warnings (called-interactively-p ,kind))
-      `(interactive-p))))
-(def-edebug-spec org-called-interactively-p (&optional ("quote" symbolp)))
-
-(defmacro org-bound-and-true-p (var)
-  "Return the value of symbol VAR if it is bound, else nil."
-  `(and (boundp (quote ,var)) ,var))
-(def-edebug-spec org-bound-and-true-p (symbolp))
 
 (defun org-string-nw-p (s)
-  "Is S a string with a non-white character?"
+  "Return S if S is a string containing a non-blank character.
+Otherwise, return nil."
   (and (stringp s)
-       (org-string-match-p "\\S-" s)
+       (string-match-p "[^ \r\t\n]" s)
        s))
+
+(defun org-split-string (string &optional separators)
+  "Splits STRING into substrings at SEPARATORS.
+
+SEPARATORS is a regular expression.  When nil, it defaults to
+\"[ \f\t\n\r\v]+\".
+
+Unlike to `split-string', matching SEPARATORS at the beginning
+and end of string are ignored."
+  (let ((separators (or separators "[ \f\t\n\r\v]+")))
+    (when (string-match (concat "\\`" separators) string)
+      (setq string (replace-match "" nil nil string)))
+    (when (string-match (concat separators "\\'") string)
+      (setq string (replace-match "" nil nil string)))
+    (split-string string separators)))
+
+(defun org-string-display (string)
+  "Return STRING as it is displayed in the current buffer.
+This function takes into consideration `invisible' and `display'
+text properties."
+  (let* ((build-from-parts
+	  (lambda (s property filter)
+	    ;; Build a new string out of string S.  On every group of
+	    ;; contiguous characters with the same PROPERTY value,
+	    ;; call FILTER on the properties list at the beginning of
+	    ;; the group.  If it returns a string, replace the
+	    ;; characters in the group with it.  Otherwise, preserve
+	    ;; those characters.
+	    (let ((len (length s))
+		  (new "")
+		  (i 0)
+		  (cursor 0))
+	      (while (setq i (text-property-not-all i len property nil s))
+		(let ((end (next-single-property-change i property s len))
+		      (value (funcall filter (text-properties-at i s))))
+		  (when value
+		    (setq new (concat new (substring s cursor i) value))
+		    (setq cursor end))
+		  (setq i end)))
+	      (concat new (substring s cursor)))))
+	 (prune-invisible
+	  (lambda (s)
+	    (funcall build-from-parts s 'invisible
+		     (lambda (props)
+		       ;; If `invisible' property in PROPS means text
+		       ;; is to be invisible, return the empty string.
+		       ;; Otherwise return nil so that the part is
+		       ;; skipped.
+		       (and (or (eq t buffer-invisibility-spec)
+				(assoc-string (plist-get props 'invisible)
+					      buffer-invisibility-spec))
+			    "")))))
+	 (replace-display
+	  (lambda (s)
+	    (funcall build-from-parts s 'display
+		     (lambda (props)
+		       ;; If there is any string specification in
+		       ;; `display' property return it.  Also attach
+		       ;; other text properties on the part to that
+		       ;; string (face...).
+		       (let* ((display (plist-get props 'display))
+			      (value (if (stringp display) display
+				       (cl-some #'stringp display))))
+			 (when value
+			   (apply
+			    #'propertize
+			    ;; Displayed string could contain
+			    ;; invisible parts, but no nested display.
+			    (funcall prune-invisible value)
+			    (plist-put props
+				       'display
+				       (and (not (stringp display))
+					    (cl-remove-if #'stringp
+							  display)))))))))))
+    ;; `display' property overrides `invisible' one.  So we first
+    ;; replace characters with `display' property.  Then we remove
+    ;; invisible characters.
+    (funcall prune-invisible (funcall replace-display string))))
+
+(defun org-string-width (string)
+  "Return width of STRING when displayed in the current buffer.
+Unlike to `string-width', this function takes into consideration
+`invisible' and `display' text properties."
+  (string-width (org-string-display string)))
 
 (defun org-not-nil (v)
   "If V not nil, and also not the string \"nil\", then return V.
 Otherwise return nil."
   (and v (not (equal v "nil")) v))
 
-(defun org-substitute-posix-classes (re)
-  "Substitute posix classes in regular expression RE."
-  (let ((ss re))
-    (save-match-data
-      (while (string-match "\\[:alnum:\\]" ss)
-	(setq ss (replace-match "a-zA-Z0-9" t t ss)))
-      (while (string-match "\\[:word:\\]" ss)
-	(setq ss (replace-match "a-zA-Z0-9" t t ss)))
-      (while (string-match "\\[:alpha:\\]" ss)
-	(setq ss (replace-match "a-zA-Z" t t ss)))
-      (while (string-match "\\[:punct:\\]" ss)
-	(setq ss (replace-match "\001-@[-`{-~" t t ss)))
-      ss)))
-
-(defmacro org-re (s)
-  "Replace posix classes in regular expression."
-  (if (featurep 'xemacs) `(org-substitute-posix-classes ,s) s))
-(def-edebug-spec org-re (form))
-
 (defmacro org-preserve-lc (&rest body)
+  (declare (debug (body)))
   (org-with-gensyms (line col)
     `(let ((,line (org-current-line))
 	   (,col (current-column)))
@@ -108,12 +143,12 @@ Otherwise return nil."
 	   (progn ,@body)
 	 (org-goto-line ,line)
 	 (org-move-to-column ,col)))))
-(def-edebug-spec org-preserve-lc (body))
 
 ;; Use `org-with-silent-modifications' to ignore cosmetic changes and
 ;; `org-unmodified' to ignore real text modifications
 (defmacro org-unmodified (&rest body)
   "Run BODY while preserving the buffer's `buffer-modified-p' state."
+  (declare (debug (body)))
   (org-with-gensyms (was-modified)
     `(let ((,was-modified (buffer-modified-p)))
        (unwind-protect
@@ -121,9 +156,9 @@ Otherwise return nil."
 		 (inhibit-modification-hooks t))
 	     ,@body)
 	 (set-buffer-modified-p ,was-modified)))))
-(def-edebug-spec org-unmodified (body))
 
 (defmacro org-without-partial-completion (&rest body)
+  (declare (debug (body)))
   `(if (and (boundp 'partial-completion-mode)
 	    partial-completion-mode
 	    (fboundp 'partial-completion-mode))
@@ -133,23 +168,10 @@ Otherwise return nil."
 	     ,@body)
 	 (partial-completion-mode 1))
      ,@body))
-(def-edebug-spec org-without-partial-completion (body))
-
-;; FIXME: Slated for removal.  Current Org mode does not support Emacs < 22
-(defmacro org-maybe-intangible (props)
-  "Add '(intangible t) to PROPS if Emacs version is earlier than Emacs 22.
-In Emacs 21, invisible text is not avoided by the command loop, so the
-intangible property is needed to make sure point skips this text.
-In Emacs 22, this is not necessary.  The intangible text property has
-led to problems with flyspell.  These problems are fixed in flyspell.el,
-but we still avoid setting the property in Emacs 22 and later.
-We use a macro so that the test can happen at compilation time."
-  (if (< emacs-major-version 22)
-      `(append '(intangible t) ,props)
-    props))
 
 (defmacro org-with-point-at (pom &rest body)
   "Move to buffer and point of point-or-marker POM for the duration of BODY."
+  (declare (debug (form body)) (indent 1))
   (org-with-gensyms (mpom)
     `(let ((,mpom ,pom))
        (save-excursion
@@ -157,15 +179,10 @@ We use a macro so that the test can happen at compilation time."
 	 (org-with-wide-buffer
 	  (goto-char (or ,mpom (point)))
 	  ,@body)))))
-(def-edebug-spec org-with-point-at (form body))
-(put 'org-with-point-at 'lisp-indent-function 1)
-
-(defmacro org-no-warnings (&rest body)
-  (cons (if (fboundp 'with-no-warnings) 'with-no-warnings 'progn) body))
-(def-edebug-spec org-no-warnings (body))
 
 (defmacro org-with-remote-undo (buffer &rest body)
   "Execute BODY while recording undo information in two buffers."
+  (declare (debug (form body)) (indent 1))
   (org-with-gensyms (cline cmd buf1 buf2 undo1 undo2 c1 c2)
     `(let ((,cline (org-current-line))
 	   (,cmd this-command)
@@ -187,35 +204,23 @@ We use a macro so that the test can happen at compilation time."
 	   ;; remember which buffer to undo
 	   (push (list ,cmd ,cline ,buf1 ,c1 ,buf2 ,c2)
 		 org-agenda-undo-list))))))
-(def-edebug-spec org-with-remote-undo (form body))
-(put 'org-with-remote-undo 'lisp-indent-function 1)
 
 (defmacro org-no-read-only (&rest body)
   "Inhibit read-only for BODY."
+  (declare (debug (body)))
   `(let ((inhibit-read-only t)) ,@body))
-(def-edebug-spec org-no-read-only (body))
 
 (defconst org-rm-props '(invisible t face t keymap t intangible t mouse-face t
 				   rear-nonsticky t mouse-map t fontified t
 				   org-emphasis t)
   "Properties to remove when a string without properties is wanted.")
 
-(defsubst org-match-string-no-properties (num &optional string)
-  (if (featurep 'xemacs)
-      (let ((s (match-string num string)))
-	(and s (remove-text-properties 0 (length s) org-rm-props s))
-	s)
-    (match-string-no-properties num string)))
-
 (defsubst org-no-properties (s &optional restricted)
   "Remove all text properties from string S.
 When RESTRICTED is non-nil, only remove the properties listed
 in `org-rm-props'."
-  (if (fboundp 'set-text-properties)
-      (set-text-properties 0 (length s) nil s)
-    (if restricted
-	(remove-text-properties 0 (length s) org-rm-props s)
-      (set-text-properties 0 (length s) nil s)))
+  (if restricted (remove-text-properties 0 (length s) org-rm-props s)
+    (set-text-properties 0 (length s) nil s))
   s)
 
 (defsubst org-get-alist-option (option key)
@@ -236,16 +241,6 @@ program is needed for, so that the error message can be more informative."
 	  nil
 	(error "Can't find `%s'%s" cmd
 	       (if use (format " (%s)" use) "")))))
-
-(defsubst org-inhibit-invisibility ()
-  "Modified `buffer-invisibility-spec' for Emacs 21.
-Some ops with invisible text do not work correctly on Emacs 21.  For these
-we turn off invisibility temporarily.  Use this in a `let' form."
-  (if (< emacs-major-version 22) nil buffer-invisibility-spec))
-
-(defsubst org-set-local (var value)
-  "Make VAR local in current buffer and set it to VALUE."
-  (set (make-local-variable var) value))
 
 (defsubst org-last (list)
   "Return the last element of LIST."
@@ -283,11 +278,11 @@ we turn off invisibility temporarily.  Use this in a `let' form."
        (<= (match-beginning n) pos)
        (>= (match-end n) pos)))
 
-(defun org-match-line (re)
-  "Looking-at at the beginning of the current line."
+(defun org-match-line (regexp)
+  "Match REGEXP at the beginning of the current line."
   (save-excursion
-    (goto-char (point-at-bol))
-    (looking-at re)))
+    (beginning-of-line)
+    (looking-at regexp)))
 
 (defun org-plist-delete (plist property)
   "Delete PROPERTY from PLIST.
@@ -299,13 +294,6 @@ This is in contrast to merely setting it to 0."
       (setq plist (cddr plist)))
     p))
 
-(defun org-replace-match-keep-properties (newtext &optional fixedcase
-						  literal string)
-  "Like `replace-match', but add the text properties found original text."
-  (setq newtext (org-add-props newtext (text-properties-at
-					(match-beginning 0) string)))
-  (replace-match newtext fixedcase literal string))
-
 (defmacro org-save-outline-visibility (use-markers &rest body)
   "Save and restore outline visibility around BODY.
 If USE-MARKERS is non-nil, use markers for the positions.
@@ -313,38 +301,38 @@ This means that the buffer may change while running BODY,
 but it also means that the buffer should stay alive
 during the operation, because otherwise all these markers will
 point nowhere."
-  (declare (indent 1))
-  (org-with-gensyms (data rtn)
-    `(let ((,data (org-outline-overlay-data ,use-markers))
-	   ,rtn)
+  (declare (debug (form body)) (indent 1))
+  (org-with-gensyms (data)
+    `(let ((,data (org-outline-overlay-data ,use-markers)))
        (unwind-protect
-	   (progn
-	     (setq ,rtn (progn ,@body))
+	   (prog1 (progn ,@body)
 	     (org-set-outline-overlay-data ,data))
 	 (when ,use-markers
-	   (mapc (lambda (c)
-		   (and (markerp (car c)) (move-marker (car c) nil))
-		   (and (markerp (cdr c)) (move-marker (cdr c) nil)))
-		 ,data)))
-       ,rtn)))
-(def-edebug-spec org-save-outline-visibility (form body))
+	   (dolist (c ,data)
+	     (when (markerp (car c)) (move-marker (car c) nil))
+	     (when (markerp (cdr c)) (move-marker (cdr c) nil))))))))
 
 (defmacro org-with-wide-buffer (&rest body)
   "Execute body while temporarily widening the buffer."
+  (declare (debug (body)))
   `(save-excursion
      (save-restriction
        (widen)
        ,@body)))
-(def-edebug-spec org-with-wide-buffer (body))
 
 (defmacro org-with-limited-levels (&rest body)
   "Execute BODY with limited number of outline levels."
-  `(let* ((org-called-with-limited-levels t)
-	  (org-outline-regexp (org-get-limited-outline-regexp))
-	  (outline-regexp org-outline-regexp)
-	  (org-outline-regexp-bol (concat "^" org-outline-regexp)))
-     ,@body))
-(def-edebug-spec org-with-limited-levels (body))
+  (declare (debug (body)))
+  `(progn
+     (defvar org-called-with-limited-levels)
+     (defvar org-outline-regexp)
+     (defvar outline-regexp)
+     (defvar org-outline-regexp-bol)
+     (let* ((org-called-with-limited-levels t)
+            (org-outline-regexp (org-get-limited-outline-regexp))
+            (outline-regexp org-outline-regexp)
+            (org-outline-regexp-bol (concat "^" org-outline-regexp)))
+       ,@body)))
 
 (defvar org-outline-regexp) ; defined in org.el
 (defvar org-odd-levels-only) ; defined in org.el
@@ -363,16 +351,9 @@ The number of levels is controlled by `org-inlinetask-min-level'"
 			  limit-level)))
 	   (format "\\*\\{1,%d\\} " nstars)))))
 
-(defun org-format-seconds (string seconds)
-  "Compatibility function replacing format-seconds."
-  (if (fboundp 'format-seconds)
-      (format-seconds string seconds)
-    (format-time-string string (seconds-to-time seconds))))
-
 (defmacro org-eval-in-environment (environment form)
+  (declare (debug (form form)) (indent 1))
   `(eval (list 'let ,environment ',form)))
-(def-edebug-spec org-eval-in-environment (form form))
-(put 'org-eval-in-environment 'lisp-indent-function 1)
 
 (defun org-make-parameter-alist (flat)
   "Return alist based on FLAT.
@@ -385,10 +366,64 @@ the value in cdr."
 
 ;;;###autoload
 (defmacro org-load-noerror-mustsuffix (file)
-  "Load FILE with optional arguments NOERROR and MUSTSUFFIX.  Drop the MUSTSUFFIX argument for XEmacs, which doesn't recognize it."
-  (if (featurep 'xemacs)
-      `(load ,file 'noerror)
-    `(load ,file 'noerror nil nil 'mustsuffix)))
+  "Load FILE with optional arguments NOERROR and MUSTSUFFIX."
+  `(load ,file 'noerror nil nil 'mustsuffix))
+
+(defun org-unbracket-string (pre post string)
+  "Remove PRE/POST from the beginning/end of STRING.
+Both PRE and POST must be pre-/suffixes of STRING, or neither is
+removed."
+  (if (and (string-prefix-p pre string)
+	   (string-suffix-p post string))
+      (substring string (length pre) (- (length post)))
+    string))
+
+(defun org-read-function (prompt &optional allow-empty?)
+  "Prompt for a function.
+If ALLOW-EMPTY? is non-nil, return nil rather than raising an
+error when the user input is empty."
+  (let ((func (completing-read prompt obarray #'fboundp t)))
+    (cond ((not (string= func ""))
+	   (intern func))
+	  (allow-empty? nil)
+	  (t (user-error "Empty input is not valid")))))
+
+(defconst org-unique-local-variables
+  '(org-element--cache
+    org-element--cache-objects
+    org-element--cache-sync-keys
+    org-element--cache-sync-requests
+    org-element--cache-sync-timer)
+  "List of local variables that cannot be transferred to another buffer.")
+
+(defun org-get-local-variables ()
+  "Return a list of all local variables in an Org mode buffer."
+  (delq nil
+	(mapcar
+	 (lambda (x)
+	   (let* ((binding (if (symbolp x) (list x) (list (car x) (cdr x))))
+		  (name (car binding)))
+	     (and (not (get name 'org-state))
+		  (not (memq name org-unique-local-variables))
+		  (string-match-p
+		   "\\`\\(org-\\|orgtbl-\\|outline-\\|comment-\\|paragraph-\\|\
+auto-fill\\|normal-auto-fill\\|fill-paragraph\\|indent-\\)"
+		   (symbol-name name))
+		  binding)))
+	 (with-temp-buffer
+	   (org-mode)
+	   (buffer-local-variables)))))
+
+(defun org-clone-local-variables (from-buffer &optional regexp)
+  "Clone local variables from FROM-BUFFER.
+Optional argument REGEXP selects variables to clone."
+  (dolist (pair (buffer-local-variables from-buffer))
+    (pcase pair
+      (`(,name . ,value)		;ignore unbound variables
+       (when (and (not (memq name org-unique-local-variables))
+		  (or (null regexp) (string-match-p regexp (symbol-name name))))
+	 (ignore-errors (set (make-local-variable name) value)))))))
+
 
 (provide 'org-macs)
 
