@@ -178,6 +178,14 @@ Also, mute output from `message'."
 	      (org-timer-set-timer 10))
 	    (test-org-timer/with-current-time test-org-timer/time1
 	      (org-timer))
+	    (org-trim (buffer-string)))))
+  (should
+   (equal "0:00:04"
+	  (test-org-timer/with-temp-text ""
+	    (test-org-timer/with-current-time test-org-timer/time0
+	      (org-timer-set-timer "3:30"))
+	    (test-org-timer/with-current-time test-org-timer/time1
+	      (org-timer))
 	    (org-trim (buffer-string))))))
 
 (ert-deftest test-org-timer/pause-timer ()
@@ -271,5 +279,21 @@ Also, mute output from `message'."
      (org-timer-start))
    :type (list 'error 'user-error)))
 
+(ert-deftest test-org-timer/set-timer-from-effort-prop ()
+  "Test timer setting from effort property."
+  (should
+   (< (* 60 9) 				; 9m
+      (test-org-timer/with-temp-text
+       "* foo
+:PROPERTIES:
+:Effort:   10
+:END:"
+       (org-mode)
+       (org-timer-set-timer)
+       (org-timer-hms-to-secs (org-timer nil t)))
+      (1+ (* 60 10))			; 10m 1s
+      )))
+
+
 (provide 'test-org-timer)
 ;;; test-org-timer.el end here

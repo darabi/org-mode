@@ -38,6 +38,12 @@
 ;; See ox.el and ox-html.el for more details on how this exporter
 ;; works (it is derived from ox-html.)
 
+;; TODOs
+;; ------
+;; The title page is formatted using format-spec.  This is error prone
+;; when details are missing and may insert empty tags, like <h2></h2>,
+;; for missing values.
+
 (require 'ox-html)
 (eval-when-compile (require 'cl))
 
@@ -51,7 +57,9 @@
 	      (if a (org-deck-export-to-html t s v b)
 		(org-open-file (org-deck-export-to-html nil s v b)))))))
   :options-alist
-  '((:html-link-home "HTML_LINK_HOME" nil nil)
+  '((:description "DESCRIPTION" nil nil newline)
+    (:keywords "KEYWORDS" nil nil space)
+    (:html-link-home "HTML_LINK_HOME" nil nil)
     (:html-link-up "HTML_LINK_UP" nil nil)
     (:deck-postamble "DECK_POSTAMBLE" nil org-deck-postamble newline)
     (:deck-preamble "DECK_PREAMBLE" nil org-deck-preamble newline)
@@ -259,6 +267,7 @@ Defaults to styles for the title page."
 
 (defcustom org-deck-title-slide-template
   "<h1>%t</h1>
+<h2>%s</h2>
 <h2>%a</h2>
 <h2>%e</h2>
 <h2>%d</h2>"
@@ -373,7 +382,9 @@ the \"slide\" class will be added to the to the list element,
  which will make the list into a \"build\"."
   (let ((text (org-html-item item contents info)))
     (if (org-export-get-node-property :STEP item t)
-        (replace-regexp-in-string "^<li>" "<li class='slide'>" text)
+	(progn
+	  (replace-regexp-in-string "^<li>" "<li class='slide'>" text)
+	  (replace-regexp-in-string "^<li class='checkbox'>" "<li class='checkbox slide'>" text))
       text)))
 
 (defun org-deck-link (link desc info)

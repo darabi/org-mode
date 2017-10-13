@@ -1,6 +1,6 @@
-;;; org-src.el --- Source code examples in Org
+;;; org-src.el --- Source code examples in Org       -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2017 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;	   Bastien Guerry <bzg@gnu.org>
@@ -21,28 +21,38 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
 
-;; This file contains the code dealing with source code examples in Org-mode.
+;; This file contains the code dealing with source code examples in
+;; Org mode.
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'org-macs)
 (require 'org-compat)
 (require 'ob-keys)
 (require 'ob-comint)
-(eval-when-compile
-  (require 'cl))
 
+(declare-function org-base-buffer "org" (buffer))
 (declare-function org-do-remove-indentation "org" (&optional n))
+(declare-function org-element-at-point "org-element" ())
+(declare-function org-element-class "org-element" (datum &optional parent))
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-lineage "org-element"
+		  (blob &optional types with-self))
+(declare-function org-element-property "org-element" (property element))
+(declare-function org-element-type "org-element" (element))
+(declare-function org-footnote-goto-definition "org-footnote"
+		  (label &optional location))
 (declare-function org-get-indentation "org" (&optional line))
 (declare-function org-switch-to-buffer-other-window "org" (&rest args))
-(declare-function org-pop-to-buffer-same-window
-		  "org-compat" (&optional buffer-or-name norecord label))
-(declare-function org-base-buffer "org" (buffer))
+(declare-function org-trim "org" (s &optional keep-lead))
+
+(defvar org-inhibit-startup)
 
 (defcustom org-edit-src-turn-on-auto-save nil
   "Non-nil means turn `auto-save-mode' on when editing a source block.
@@ -97,11 +107,12 @@ These are the regions where each line starts with a colon."
 
 (defcustom org-src-preserve-indentation nil
   "If non-nil preserve leading whitespace characters on export.
+\\<org-mode-map>
 If non-nil leading whitespace characters in source code blocks
 are preserved on export, and when switching between the org
 buffer and the language mode edit buffer.
 
-When this variable is nil, after editing with \\[org-edit-src-code],
+When this variable is nil, after editing with `\\[org-edit-src-code]',
 the minimum (across-lines) number of leading whitespace characters
 are removed from all lines, and the code block is uniformly indented
 according to the value of `org-edit-src-content-indentation'."
@@ -110,10 +121,12 @@ according to the value of `org-edit-src-content-indentation'."
 
 (defcustom org-edit-src-content-indentation 2
   "Indentation for the content of a source code block.
+
 This should be the number of spaces added to the indentation of the #+begin
 line in order to compute the indentation of the block content after
-editing it with \\[org-edit-src-code].  Has no effect if
-`org-src-preserve-indentation' is non-nil."
+editing it with `\\[org-edit-src-code]'.
+
+It has no effect if `org-src-preserve-indentation' is non-nil."
   :group 'org-edit-structure
   :type 'integer)
 
@@ -155,11 +168,11 @@ other-frame       Use `switch-to-buffer-other-frame' to display edit buffer.
 	  (const reorganize-frame)))
 
 (defvar org-src-mode-hook nil
-  "Hook  run after Org switched a source code snippet to its Emacs mode.
-This hook will run
-
-- when editing a source code snippet with \"C-c '\".
-- When formatting a source code snippet for export with htmlize.
+  "Hook run after Org switched a source code snippet to its Emacs mode.
+\\<org-mode-map>
+This hook will run:
+- when editing a source code snippet with `\\[org-edit-special]'
+- when formatting a source code snippet for export with htmlize.
 
 You may want to use this hook for example to turn off `outline-minor-mode'
 or similar things which you want to have when editing a source code file,
@@ -183,6 +196,28 @@ For example, there is no ocaml-mode in Emacs, but the mode to use is
 	   (string "Language name")
 	   (symbol "Major mode"))))
 
+(defcustom org-src-block-faces nil
+  "Alist of faces to be used for source-block.
+Each element is a cell of the format
+
+     (\"language\" FACE)
+
+Where FACE is either a defined face or an anonymous face.
+
+For instance, the following value would color the background of
+emacs-lisp source blocks and python source blocks in purple and
+green, respectability.
+
+    \\='((\"emacs-lisp\" (:background \"#EEE2FF\"))
+      (\"python\" (:background \"#e5ffb8\")))"
+  :group 'org-edit-structure
+  :type '(repeat (list (string :tag "language")
+                       (choice
+                        (face :tag "Face")
+                        (sexp :tag "Anonymous face"))))
+  :version "26.1"
+  :package-version '(Org . "9.0"))
+
 (defcustom org-src-tab-acts-natively nil
   "If non-nil, the effect of TAB in a code block is as if it were
 issued in the language major mode buffer."
@@ -194,16 +229,23 @@ issued in the language major mode buffer."
 
 ;;; Internal functions and variables
 
-(defvar org-src--allow-write-back-p t)
+(defvar org-src--allow-write-back t)
+(defvar org-src--auto-save-timer nil)
+(defvar org-src--babel-info nil)
 (defvar org-src--beg-marker nil)
 (defvar org-src--block-indentation nil)
-(defvar org-src--code-timer nil)
 (defvar org-src--end-marker nil)
 (defvar org-src--from-org-mode nil)
 (defvar org-src--overlay nil)
+(defvar org-src--preserve-indentation nil)
+(defvar org-src--remote nil)
 (defvar org-src--saved-temp-window-config nil)
-(defvar org-src--type nil)
-(defvar org-src--babel-info nil)
+(defvar org-src--source-type nil
+  "Type of element being edited, as a symbol.")
+(defvar org-src--tab-width nil
+  "Contains `tab-width' value from Org source buffer.
+However, if `indent-tabs-mode' is nil in that buffer, its value
+is 0.")
 
 (defun org-src--construct-edit-buffer-name (org-buffer-name lang)
   "Construct the buffer name for a source editing buffer."
@@ -266,19 +308,46 @@ which see.  BEG and END are buffer positions."
       (org-move-to-column (max (+ (current-column) (cdr coord)) 0))
       (point)))))
 
-(defun org-src--element-contents-area (element)
-  "Return contents boundaries of ELEMENT.
-Return value is a pair (BEG . END) where BEG and END are buffer
-positions."
-  (let ((blockp (memq (org-element-type element)
-		      '(example-block export-block src-block))))
-    (cons (org-with-wide-buffer
-	   (goto-char (org-element-property :post-affiliated element))
-	   (if blockp (line-beginning-position 2) (point)))
-	  (org-with-wide-buffer
-	   (goto-char (org-element-property :end element))
-	   (skip-chars-backward " \r\t\n")
-	   (line-beginning-position (if blockp 1 2))))))
+(defun org-src--contents-area (datum)
+  "Return contents boundaries of DATUM.
+DATUM is an element or object.  Return a list (BEG END CONTENTS)
+where BEG and END are buffer positions and CONTENTS is a string."
+  (let ((type (org-element-type datum)))
+    (org-with-wide-buffer
+     (cond
+      ((eq type 'footnote-definition)
+       (let* ((beg (progn
+		     (goto-char (org-element-property :post-affiliated datum))
+		     (search-forward "]")))
+	      (end (or (org-element-property :contents-end datum) beg)))
+	 (list beg end (buffer-substring-no-properties beg end))))
+      ((eq type 'inline-src-block)
+       (let ((beg (progn (goto-char (org-element-property :begin datum))
+			 (search-forward "{" (line-end-position) t)))
+	     (end (progn (goto-char (org-element-property :end datum))
+			 (search-backward "}" (line-beginning-position) t))))
+	 (list beg end (buffer-substring-no-properties beg end))))
+      ((org-element-property :contents-begin datum)
+       (let ((beg (org-element-property :contents-begin datum))
+	     (end (org-element-property :contents-end datum)))
+	 (list beg end (buffer-substring-no-properties beg end))))
+      ((memq type '(example-block export-block src-block))
+       (list (progn (goto-char (org-element-property :post-affiliated datum))
+		    (line-beginning-position 2))
+	     (progn (goto-char (org-element-property :end datum))
+		    (skip-chars-backward " \r\t\n")
+		    (line-beginning-position 1))
+	     (org-element-property :value datum)))
+      ((memq type '(fixed-width latex-environment table))
+       (let ((beg (org-element-property :post-affiliated datum))
+	     (end (progn (goto-char (org-element-property :end datum))
+			 (skip-chars-backward " \r\t\n")
+			 (line-beginning-position 2))))
+	 (list beg
+	       end
+	       (if (eq type 'fixed-width) (org-element-property :value datum)
+		 (buffer-substring-no-properties beg end)))))
+      (t (error "Unsupported element or object: %s" type))))))
 
 (defun org-src--make-source-overlay (beg end edit-buffer)
   "Create overlay between BEG and END positions and return it.
@@ -294,74 +363,90 @@ END."
 		 (let ((map (make-sparse-keymap)))
 		   (define-key map [mouse-1] 'org-edit-src-continue)
 		   map))
-    ;; TODO: The below line doesn't work for two reasons:
-    ;; - It should be 'read-only
-    ;; - 'read-only apparently doesn't work on overlays (also empirically tested):
-    ;;    <https://lists.gnu.org/archive/html/emacs-devel/2008-01/msg01598.html>
-    ;; If this feature is to be kept, it should be implemented via text
-    ;; properties, which will require fiddling around in more places
-    ;; (such as when the contents are copied back into the buffer after
-    ;; editing is complete.)
-    (overlay-put overlay :read-only "Leave me alone")
+    (let ((read-only
+	   (list
+	    (lambda (&rest _)
+	      (user-error
+	       "Cannot modify an area being edited in a dedicated buffer")))))
+      (overlay-put overlay 'modification-hooks read-only)
+      (overlay-put overlay 'insert-in-front-hooks read-only)
+      (overlay-put overlay 'insert-behind-hooks read-only))
     overlay))
 
 (defun org-src--remove-overlay ()
   "Remove overlay from current source buffer."
   (when (overlayp org-src--overlay) (delete-overlay org-src--overlay)))
 
-(defun org-src--on-element-p (element)
-  "Non-nil when point is on ELEMENT."
-  (and (>= (point) (org-element-property :begin element))
+(defun org-src--on-datum-p (datum)
+  "Non-nil when point is on DATUM.
+DATUM is an element or an object.  Consider blank lines or white
+spaces after it as being outside."
+  (and (>= (point) (org-element-property :begin datum))
        (<= (point)
 	   (org-with-wide-buffer
-	    (goto-char (org-element-property :end element))
+	    (goto-char (org-element-property :end datum))
 	    (skip-chars-backward " \r\t\n")
-	    (line-end-position)))))
+	    (if (eq (org-element-class datum) 'element)
+		(line-end-position)
+	      (point))))))
 
 (defun org-src--contents-for-write-back ()
   "Return buffer contents in a format appropriate for write back.
 Assume point is in the corresponding edit buffer."
-  (let ((indentation (+ (or org-src--block-indentation 0)
-			(if (memq org-src--type '(example-block src-block))
-			    org-edit-src-content-indentation
-			  0)))
-	(preserve-indentation org-src-preserve-indentation)
+  (let ((indentation-offset
+	 (if org-src--preserve-indentation 0
+	   (+ (or org-src--block-indentation 0)
+	      (if (memq org-src--source-type '(example-block src-block))
+		  org-edit-src-content-indentation
+		0))))
+	(use-tabs? (and (> org-src--tab-width 0) t))
+	(source-tab-width org-src--tab-width)
 	(contents (org-with-wide-buffer (buffer-string)))
-	(fixed-width-p (eq org-src--type 'fixed-width)))
+	(write-back org-src--allow-write-back))
     (with-temp-buffer
-      (insert contents)
+      ;; Reproduce indentation parameters from source buffer.
+      (setq-local indent-tabs-mode use-tabs?)
+      (when (> source-tab-width 0) (setq-local tab-width source-tab-width))
+      ;; Apply WRITE-BACK function on edit buffer contents.
+      (insert (org-no-properties contents))
       (goto-char (point-min))
-      (if fixed-width-p
-	  (progn
-	    (untabify (point-min) (point-max))
-	    (let ((prefix (concat (and (not preserve-indentation)
-				       (make-string indentation ?\s))
-				  ": ")))
-	      (while (not (eobp)) (insert prefix) (forward-line))))
-	(unless preserve-indentation (untabify (point-min) (point-max)))
-	(org-escape-code-in-region (point-min) (point-max))
-	(unless (or preserve-indentation (zerop indentation))
-	  (let ((ind (make-string indentation ?\s)))
-	    (while (not (eobp))
-	      (when (org-looking-at-p "[ \t]*\\S-") (insert ind))
-	      (forward-line)))))
+      (when (functionp write-back) (save-excursion (funcall write-back)))
+      ;; Add INDENTATION-OFFSET to every non-empty line in buffer,
+      ;; unless indentation is meant to be preserved.
+      (when (> indentation-offset 0)
+	(while (not (eobp))
+	  (skip-chars-forward " \t")
+	  (unless (eolp)		;ignore blank lines
+	    (let ((i (current-column)))
+	      (delete-region (line-beginning-position) (point))
+	      (indent-to (+ i indentation-offset))))
+	  (forward-line)))
       (buffer-string))))
 
-(defun org-src--edit-element (element name &optional major write-back contents)
-  "Edit ELEMENT contents in a dedicated buffer.
+(defun org-src--edit-element
+    (datum name &optional initialize write-back contents remote)
+  "Edit DATUM contents in a dedicated buffer NAME.
 
-MAJOR is the major mode used in the edit buffer.  A nil value is
-equivalent to `fundamental-mode'.  When WRITE-BACK is non-nil,
-assume contents will replace original region.  When CONTENTS is
-non-nil, display them in the edit buffer.  Otherwise, assume they
-are located in property `:value'.
+INITIALIZE is a function to call upon creating the buffer.
+
+When WRITE-BACK is non-nil, assume contents will replace original
+region.  Moreover, if it is a function, apply it in the edit
+buffer, from point min, before returning the contents.
+
+When CONTENTS is non-nil, display them in the edit buffer.
+Otherwise, show DATUM contents as specified by
+`org-src--contents-area'.
+
+When REMOTE is non-nil, do not try to preserve point or mark when
+moving from the edit area to the source.
 
 Leave point in edit buffer."
   (setq org-src--saved-temp-window-config (current-window-configuration))
-  (let* ((area (org-src--element-contents-area element))
-	 (beg (copy-marker (car area)))
-	 (end (copy-marker (cdr area) t))
-	 (old-edit-buffer (org-src--edit-buffer beg end)))
+  (let* ((area (org-src--contents-area datum))
+	 (beg (copy-marker (nth 0 area)))
+	 (end (copy-marker (nth 1 area) t))
+	 (old-edit-buffer (org-src--edit-buffer beg end))
+	 (contents (or contents (nth 2 area))))
     (if (and old-edit-buffer
 	     (or (not org-src-ask-before-returning-to-edit-buffer)
 		 (y-or-n-p "Return to existing edit buffer ([n] will revert changes)? ")))
@@ -372,18 +457,21 @@ Leave point in edit buffer."
 	(with-current-buffer old-edit-buffer (org-src--remove-overlay))
 	(kill-buffer old-edit-buffer))
       (let* ((org-mode-p (derived-mode-p 'org-mode))
-	     (type (org-element-type element))
+	     (source-tab-width (if indent-tabs-mode tab-width 0))
+	     (type (org-element-type datum))
 	     (ind (org-with-wide-buffer
-		   (goto-char (org-element-property :begin element))
+		   (goto-char (org-element-property :begin datum))
 		   (org-get-indentation)))
 	     (preserve-ind
 	      (and (memq type '(example-block src-block))
-		   (or (org-element-property :preserve-indent element)
+		   (or (org-element-property :preserve-indent datum)
 		       org-src-preserve-indentation)))
 	     ;; Store relative positions of mark (if any) and point
 	     ;; within the edited area.
-	     (point-coordinates (org-src--coordinates (point) beg end))
-	     (mark-coordinates (and (org-region-active-p)
+	     (point-coordinates (and (not remote)
+				     (org-src--coordinates (point) beg end)))
+	     (mark-coordinates (and (not remote)
+				    (org-region-active-p)
 				    (let ((m (mark)))
 				      (and (>= m beg) (>= end m)
 					   (org-src--coordinates m beg end)))))
@@ -394,67 +482,51 @@ Leave point in edit buffer."
 	;; Switch to edit buffer.
 	(org-src-switch-to-buffer buffer 'edit)
 	;; Insert contents.
-	(insert (or contents (org-element-property :value element)))
+	(insert contents)
 	(remove-text-properties (point-min) (point-max)
 				'(display nil invisible nil intangible nil))
 	(unless preserve-ind (org-do-remove-indentation))
 	(set-buffer-modified-p nil)
 	(setq buffer-file-name nil)
-	;; Start major mode.
-	(if (not major) (fundamental-mode)
+	;; Initialize buffer.
+	(when (functionp initialize)
 	  (let ((org-inhibit-startup t))
-	    (condition-case e (funcall major)
-	      (error (message "Language mode `%s' fails with: %S"
-			      major (nth 1 e))))))
+	    (condition-case e
+		(funcall initialize)
+	      (error (message "Initialization fails with: %S"
+			      (error-message-string e))))))
 	;; Transmit buffer-local variables for exit function.  It must
 	;; be done after initializing major mode, as this operation
 	;; may reset them otherwise.
-	(org-set-local 'org-src--from-org-mode org-mode-p)
-	(org-set-local 'org-src--beg-marker beg)
-	(org-set-local 'org-src--end-marker end)
-	(org-set-local 'org-src--type type)
-	(org-set-local 'org-src--block-indentation ind)
-	(org-set-local 'org-src-preserve-indentation preserve-ind)
-	(org-set-local 'org-src--overlay overlay)
-	(org-set-local 'org-src--allow-write-back-p write-back)
+	(setq-local org-src--tab-width source-tab-width)
+	(setq-local org-src--from-org-mode org-mode-p)
+	(setq-local org-src--beg-marker beg)
+	(setq-local org-src--end-marker end)
+	(setq-local org-src--remote remote)
+	(setq-local org-src--source-type type)
+	(setq-local org-src--block-indentation ind)
+	(setq-local org-src--preserve-indentation preserve-ind)
+	(setq-local org-src--overlay overlay)
+	(setq-local org-src--allow-write-back write-back)
 	;; Start minor mode.
 	(org-src-mode)
-	(when org-edit-src-persistent-message
-	  (org-set-local
-	   'header-line-format
-	   (substitute-command-keys
-	    (if write-back
-		"Edit, then exit with \\[org-edit-src-exit] or abort with \
-\\[org-edit-src-abort]"
-	      "Exit with \\[org-edit-src-exit] or abort with \
-\\[org-edit-src-abort]"))))
-	;; Possibly start `auto-save-mode'.
-	(when org-edit-src-turn-on-auto-save
-	  (setq buffer-auto-save-file-name
-		(concat (make-temp-name "org-src-")
-			(format-time-string "-%Y-%d-%m")
-			".txt")))
 	;; Move mark and point in edit buffer to the corresponding
 	;; location.
-	(when mark-coordinates
-	  (org-src--goto-coordinates mark-coordinates (point-min) (point-max))
-	  (push-mark (point) 'no-message t)
-	  (setq deactivate-mark nil))
-	(org-src--goto-coordinates point-coordinates (point-min) (point-max)))
-      ;; Install idle auto save feature, if necessary.
-      (or org-src--code-timer
-	  (zerop org-edit-src-auto-save-idle-delay)
-	  (setq org-src--code-timer
-		(run-with-idle-timer
-		 org-edit-src-auto-save-idle-delay t
-		 (lambda ()
-		   (cond
-		    ((org-src-edit-buffer-p)
-		     (when (buffer-modified-p) (org-edit-src-save)))
-		    ((not (org-some (lambda (b) (org-src-edit-buffer-p b))
-				    (buffer-list)))
-		     (cancel-timer org-src--code-timer)
-		     (setq org-src--code-timer nil))))))))))
+	(if remote
+	    (progn
+	      ;; Put point at first non read-only character after
+	      ;; leading blank.
+	      (goto-char
+	       (or (text-property-any (point-min) (point-max) 'read-only nil)
+		   (point-max)))
+	      (skip-chars-forward " \r\t\n"))
+	  ;; Set mark and point.
+	  (when mark-coordinates
+	    (org-src--goto-coordinates mark-coordinates (point-min) (point-max))
+	    (push-mark (point) 'no-message t)
+	    (setq deactivate-mark nil))
+	  (org-src--goto-coordinates
+	   point-coordinates (point-min) (point-max)))))))
 
 
 
@@ -468,26 +540,36 @@ as `org-src-fontify-natively' is non-nil."
     (when (fboundp lang-mode)
       (let ((string (buffer-substring-no-properties start end))
 	    (modified (buffer-modified-p))
-	    (org-buffer (current-buffer)) pos next)
+	    (org-buffer (current-buffer)))
 	(remove-text-properties start end '(face nil))
 	(with-current-buffer
 	    (get-buffer-create
-	     (concat " org-src-fontification:" (symbol-name lang-mode)))
-	  (delete-region (point-min) (point-max))
-	  (insert string " ") ;; so there's a final property change
+	     (format " *org-src-fontification:%s*" lang-mode))
+	  (let ((inhibit-modification-hooks nil))
+	    (erase-buffer)
+	    ;; Add string and a final space to ensure property change.
+	    (insert string " "))
 	  (unless (eq major-mode lang-mode) (funcall lang-mode))
-	  (font-lock-fontify-buffer)
-	  (setq pos (point-min))
-	  (while (setq next (next-single-property-change pos 'face))
-	    (put-text-property
-	     (+ start (1- pos)) (1- (+ start next)) 'face
-	     (get-text-property pos 'face) org-buffer)
-	    (setq pos next)))
+	  (org-font-lock-ensure)
+	  (let ((pos (point-min)) next)
+	    (while (setq next (next-property-change pos))
+	      ;; Handle additional properties from font-lock, so as to
+	      ;; preserve, e.g., composition.
+	      (dolist (prop (cons 'face font-lock-extra-managed-props))
+		(let ((new-prop (get-text-property pos prop)))
+		  (put-text-property
+		   (+ start (1- pos)) (1- (+ start next)) prop new-prop
+		   org-buffer)))
+	      (setq pos next))))
+	;; Add Org faces.
+	(let ((src-face (nth 1 (assoc-string lang org-src-block-faces t))))
+          (when (or (facep src-face) (listp src-face))
+            (font-lock-append-text-property start end 'face src-face))
+	  (font-lock-append-text-property start end 'face 'org-block))
 	(add-text-properties
 	 start end
 	 '(font-lock-fontified t fontified t font-lock-multiline t))
 	(set-buffer-modified-p modified)))))
-
 
 
 ;;; Escape contents
@@ -498,9 +580,9 @@ Escaping happens when a line starts with \"*\", \"#+\", \",*\" or
 \",#+\" by appending a comma to it."
   (interactive "r")
   (save-excursion
-    (goto-char beg)
-    (while (re-search-forward "^[ \t]*,?\\(\\*\\|#\\+\\)" end t)
-      (replace-match ",\\1" nil nil nil 1))))
+    (goto-char end)
+    (while (re-search-backward "^[ \t]*,?\\(\\*\\|#\\+\\)" beg t)
+      (save-excursion (replace-match ",\\1" nil nil nil 1)))))
 
 (defun org-escape-code-in-string (s)
   "Escape lines in string S.
@@ -514,9 +596,9 @@ Un-escaping happens by removing the first comma on lines starting
 with \",*\", \",#+\", \",,*\" and \",,#+\"."
   (interactive "r")
   (save-excursion
-    (goto-char beg)
-    (while (re-search-forward "^[ \t]*,?\\(,\\)\\(?:\\*\\|#\\+\\)" end t)
-      (replace-match "" nil nil nil 1))))
+    (goto-char end)
+    (while (re-search-backward "^[ \t]*,?\\(,\\)\\(?:\\*\\|#\\+\\)" beg t)
+      (save-excursion (replace-match "" nil nil nil 1)))))
 
 (defun org-unescape-code-in-string (s)
   "Un-escape lines in string S.
@@ -529,36 +611,69 @@ with \",*\", \",#+\", \",,*\" and \",,#+\"."
 
 ;;; Org src minor mode
 
-(defvar org-src-mode-map (make-sparse-keymap))
-(define-key org-src-mode-map "\C-c'" 'org-edit-src-exit)
-(define-key org-src-mode-map "\C-c\C-k" 'org-edit-src-abort)
-(define-key org-src-mode-map "\C-x\C-s" 'org-edit-src-save)
+(defvar org-src-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c'" 'org-edit-src-exit)
+    (define-key map "\C-c\C-k" 'org-edit-src-abort)
+    (define-key map "\C-x\C-s" 'org-edit-src-save)
+    map))
 
 (define-minor-mode org-src-mode
-  "Minor mode for language major mode buffers generated by org.
+  "Minor mode for language major mode buffers generated by Org.
+\\<org-mode-map>
 This minor mode is turned on in two situations:
-- when editing a source code snippet with \"C-c '\".
-- When formatting a source code snippet for export with htmlize.
-There is a mode hook, and keybindings for `org-edit-src-exit' and
-`org-edit-src-save'")
+  - when editing a source code snippet with `\\[org-edit-special]'
+  - when formatting a source code snippet for export with htmlize.
+
+\\{org-src-mode-map}
+
+See also `org-src-mode-hook'."
+  nil " OrgSrc" nil
+  (when org-edit-src-persistent-message
+    (setq-local
+     header-line-format
+     (substitute-command-keys
+      (if org-src--allow-write-back
+	  "Edit, then exit with `\\[org-edit-src-exit]' or abort with \
+`\\[org-edit-src-abort]'"
+	"Exit with `\\[org-edit-src-exit]' or abort with \
+`\\[org-edit-src-abort]'"))))
+  ;; Possibly activate various auto-save features (for the edit buffer
+  ;; or the source buffer).
+  (when org-edit-src-turn-on-auto-save
+    (setq buffer-auto-save-file-name
+	  (concat (make-temp-name "org-src-")
+		  (format-time-string "-%Y-%d-%m")
+		  ".txt")))
+  (unless (or org-src--auto-save-timer (zerop org-edit-src-auto-save-idle-delay))
+    (setq org-src--auto-save-timer
+	  (run-with-idle-timer
+	   org-edit-src-auto-save-idle-delay t
+	   (lambda ()
+	     (save-excursion
+	       (let (edit-flag)
+		 (dolist (b (buffer-list))
+		   (with-current-buffer b
+		     (when (org-src-edit-buffer-p)
+		       (unless edit-flag (setq edit-flag t))
+		       (when (buffer-modified-p) (org-edit-src-save)))))
+		 (unless edit-flag
+		   (cancel-timer org-src--auto-save-timer)
+		   (setq org-src--auto-save-timer nil)))))))))
 
 (defun org-src-mode-configure-edit-buffer ()
-  (when (org-bound-and-true-p org-src--from-org-mode)
-    (org-add-hook 'kill-buffer-hook #'org-src--remove-overlay nil 'local)
-    (if (org-bound-and-true-p org-src--allow-write-back-p)
+  (when (bound-and-true-p org-src--from-org-mode)
+    (add-hook 'kill-buffer-hook #'org-src--remove-overlay nil 'local)
+    (if (bound-and-true-p org-src--allow-write-back)
 	(progn
 	  (setq buffer-offer-save t)
 	  (setq buffer-file-name
 		(concat (buffer-file-name (marker-buffer org-src--beg-marker))
 			"[" (buffer-name) "]"))
-	  (if (featurep 'xemacs)
-	      (progn
-		(make-variable-buffer-local 'write-contents-hooks) ; needed only for 21.4
-		(setq write-contents-hooks '(org-edit-src-save)))
-	    (setq write-contents-functions '(org-edit-src-save))))
+	  (setq-local write-contents-functions '(org-edit-src-save)))
       (setq buffer-read-only t))))
 
-(org-add-hook 'org-src-mode-hook #'org-src-mode-configure-edit-buffer)
+(add-hook 'org-src-mode-hook #'org-src-mode-configure-edit-buffer)
 
 
 
@@ -567,7 +682,7 @@ There is a mode hook, and keybindings for `org-edit-src-exit' and
 (defun org-src-associate-babel-session (info)
   "Associate edit buffer with comint session."
   (interactive)
-  (let ((session (cdr (assoc :session (nth 2 info)))))
+  (let ((session (cdr (assq :session (nth 2 info)))))
     (and session (not (string= session "none"))
 	 (org-babel-comint-buffer-livep session)
 	 (let ((f (intern (format "org-babel-%s-associate-session"
@@ -578,16 +693,19 @@ There is a mode hook, and keybindings for `org-edit-src-exit' and
   (when org-src--babel-info
     (org-src-associate-babel-session org-src--babel-info)))
 
-(org-add-hook 'org-src-mode-hook #'org-src-babel-configure-edit-buffer)
+(add-hook 'org-src-mode-hook #'org-src-babel-configure-edit-buffer)
+
+
+;;; Public API
 
 (defmacro org-src-do-at-code-block (&rest body)
-  "Execute a command from an edit buffer in the Org mode buffer."
+  "Execute BODY from an edit buffer in the Org mode buffer."
+  (declare (debug (body)))
   `(let ((beg-marker org-src--beg-marker))
      (when beg-marker
        (with-current-buffer (marker-buffer beg-marker)
 	 (goto-char beg-marker)
 	 ,@body))))
-(def-edebug-spec org-src-do-at-code-block (body))
 
 (defun org-src-do-key-sequence-at-code-block (&optional key)
   "Execute key sequence at code block in the source Org buffer.
@@ -599,9 +717,9 @@ This command is not bound to a key by default, to avoid conflicts
 with language major mode bindings.  To bind it to C-c @ in all
 language major modes, you could use
 
-  (add-hook 'org-src-mode-hook
+  (add-hook \\='org-src-mode-hook
             (lambda () (define-key org-src-mode-map \"\\C-c@\"
-                    'org-src-do-key-sequence-at-code-block)))
+                    \\='org-src-do-key-sequence-at-code-block)))
 
 In that case, for example, C-c @ t issued in code edit buffers
 would tangle the current Org code block, C-c @ e would execute
@@ -613,10 +731,6 @@ Org-babel commands."
     (org-src-do-at-code-block
      (call-interactively (lookup-key org-babel-map key)))))
 
-
-
-;;; Public functions
-
 (defun org-src-edit-buffer-p (&optional buffer)
   "Non-nil when current buffer is a source editing buffer.
 If BUFFER is non-nil, test it instead."
@@ -626,84 +740,208 @@ If BUFFER is non-nil, test it instead."
 	 (local-variable-p 'org-src--end-marker buffer))))
 
 (defun org-src-switch-to-buffer (buffer context)
-  (case org-src-window-setup
-    (current-window (org-pop-to-buffer-same-window buffer))
-    (other-window
+  (pcase org-src-window-setup
+    (`current-window (pop-to-buffer-same-window buffer))
+    (`other-window
      (switch-to-buffer-other-window buffer))
-    (other-frame
-     (case context
-       (exit
+    (`other-frame
+     (pcase context
+       (`exit
 	(let ((frame (selected-frame)))
 	  (switch-to-buffer-other-frame buffer)
 	  (delete-frame frame)))
-       (save
+       (`save
 	(kill-buffer (current-buffer))
-	(org-pop-to-buffer-same-window buffer))
-       (t (switch-to-buffer-other-frame buffer))))
-    (reorganize-frame
+	(pop-to-buffer-same-window buffer))
+       (_ (switch-to-buffer-other-frame buffer))))
+    (`reorganize-frame
      (when (eq context 'edit) (delete-other-windows))
      (org-switch-to-buffer-other-window buffer)
      (when (eq context 'exit) (delete-other-windows)))
-    (switch-invisibly (set-buffer buffer))
-    (t
+    (`switch-invisibly (set-buffer buffer))
+    (_
      (message "Invalid value %s for `org-src-window-setup'"
 	      org-src-window-setup)
-     (org-pop-to-buffer-same-window buffer))))
+     (pop-to-buffer-same-window buffer))))
+
+(defun org-src-coderef-format (&optional element)
+  "Return format string for block at point.
+
+When optional argument ELEMENT is provided, use that block.
+Otherwise, assume point is either at a source block, at an
+example block.
+
+If point is in an edit buffer, retrieve format string associated
+to the remote source block."
+  (cond
+   ((and element (org-element-property :label-fmt element)))
+   ((org-src-edit-buffer-p) (org-src-do-at-code-block (org-src-coderef-format)))
+   ((org-element-property :label-fmt (org-element-at-point)))
+   (t org-coderef-label-format)))
+
+(defun org-src-coderef-regexp (fmt &optional label)
+  "Return regexp matching a coderef format string FMT.
+
+When optional argument LABEL is non-nil, match coderef for that
+label only.
+
+Match group 1 contains the full coderef string with surrounding
+white spaces.  Match group 2 contains the same string without any
+surrounding space.  Match group 3 contains the label.
+
+A coderef format regexp can only match at the end of a line."
+  (format "\\([ \t]*\\(%s\\)[ \t]*\\)$"
+	  (replace-regexp-in-string
+	   "%s"
+	   (if label (regexp-quote label) "\\([-a-zA-Z0-9_][-a-zA-Z0-9_ ]*\\)")
+	   (regexp-quote fmt)
+	   nil t)))
+
+(defun org-edit-footnote-reference ()
+  "Edit definition of footnote reference at point."
+  (interactive)
+  (let* ((context (org-element-context))
+	 (label (org-element-property :label context)))
+    (unless (and (eq (org-element-type context) 'footnote-reference)
+		 (org-src--on-datum-p context))
+      (user-error "Not on a footnote reference"))
+    (unless label (user-error "Cannot edit remotely anonymous footnotes"))
+    (let* ((definition (org-with-wide-buffer
+			(org-footnote-goto-definition label)
+			(backward-char)
+			(org-element-context)))
+	   (inline? (eq 'footnote-reference (org-element-type definition)))
+	   (contents
+	    (org-with-wide-buffer
+	     (buffer-substring-no-properties
+	      (or (org-element-property :post-affiliated definition)
+		  (org-element-property :begin definition))
+	      (cond
+	       (inline? (1+ (org-element-property :contents-end definition)))
+	       ((org-element-property :contents-end definition))
+	       (t (goto-char (org-element-property :post-affiliated definition))
+		  (line-end-position)))))))
+      (add-text-properties
+       0
+       (progn (string-match (if inline? "\\`\\[fn:.*?:" "\\`.*?\\]") contents)
+	      (match-end 0))
+       '(read-only "Cannot edit footnote label" front-sticky t rear-nonsticky t)
+       contents)
+      (when inline?
+	(let ((l (length contents)))
+	  (add-text-properties
+	   (1- l) l
+	   '(read-only "Cannot edit past footnote reference"
+		       front-sticky nil rear-nonsticky nil)
+	   contents)))
+      (org-src--edit-element
+       definition
+       (format "*Edit footnote [%s]*" label)
+       (let ((source (current-buffer)))
+	 (lambda ()
+	   (org-mode)
+	   (org-clone-local-variables source)))
+       (lambda ()
+	 (if (not inline?) (delete-region (point) (search-forward "]"))
+	   (delete-region (point) (search-forward ":" nil t 2))
+	   (delete-region (1- (point-max)) (point-max))
+	   (when (re-search-forward "\n[ \t]*\n" nil t)
+	     (user-error "Inline definitions cannot contain blank lines"))
+	   ;; If footnote reference belongs to a table, make sure to
+	   ;; remove any newline characters in order to preserve
+	   ;; table's structure.
+	   (when (org-element-lineage definition '(table-cell))
+	     (while (search-forward "\n" nil t) (replace-match "")))))
+       contents
+       'remote))
+    ;; Report success.
+    t))
 
 (defun org-edit-table.el ()
   "Edit \"table.el\" table at point.
-
+\\<org-src-mode-map>
 A new buffer is created and the table is copied into it.  Then
 the table is recognized with `table-recognize'.  When done
-editing, exit with \\[org-edit-src-exit].  The edited text will
-then replace the area in the Org mode buffer.
+editing, exit with `\\[org-edit-src-exit]'.  The edited text will \
+then replace
+the area in the Org mode buffer.
 
 Throw an error when not at such a table."
   (interactive)
   (let ((element (org-element-at-point)))
     (unless (and (eq (org-element-type element) 'table)
 		 (eq (org-element-property :type element) 'table.el)
-		 (org-src--on-element-p element))
+		 (org-src--on-datum-p element))
       (user-error "Not in a table.el table"))
     (org-src--edit-element
      element
      (org-src--construct-edit-buffer-name (buffer-name) "Table")
      #'text-mode t)
-    (when (org-bound-and-true-p flyspell-mode) (flyspell-mode -1))
+    (when (bound-and-true-p flyspell-mode) (flyspell-mode -1))
     (table-recognize)
+    t))
+
+(defun org-edit-latex-environment ()
+  "Edit LaTeX environment at point.
+\\<org-src-mode-map>
+The LaTeX environment is copied into a new buffer.  Major mode is
+set to the one associated to \"latex\" in `org-src-lang-modes',
+or to `latex-mode' if there is none.
+
+When done, exit with `\\[org-edit-src-exit]'.  The edited text \
+will then replace
+the LaTeX environment in the Org mode buffer."
+  (interactive)
+  (let ((element (org-element-at-point)))
+    (unless (and (eq (org-element-type element) 'latex-environment)
+		 (org-src--on-datum-p element))
+      (user-error "Not in a LaTeX environment"))
+    (org-src--edit-element
+     element
+     (org-src--construct-edit-buffer-name (buffer-name) "LaTeX environment")
+     (org-src--get-lang-mode "latex")
+     t)
     t))
 
 (defun org-edit-export-block ()
   "Edit export block at point.
-
+\\<org-src-mode-map>
 A new buffer is created and the block is copied into it, and the
 buffer is switched into an appropriate major mode.  See also
-`org-src-lang-modes'.  When done, exit with
-\\[org-edit-src-exit].  The edited text will then replace the
-area in the Org mode buffer.
+`org-src-lang-modes'.
+
+When done, exit with `\\[org-edit-src-exit]'.  The edited text \
+will then replace
+the area in the Org mode buffer.
 
 Throw an error when not at an export block."
   (interactive)
   (let ((element (org-element-at-point)))
     (unless (and (eq (org-element-type element) 'export-block)
-		 (org-src--on-element-p element))
+		 (org-src--on-datum-p element))
       (user-error "Not in an export block"))
-    (let* ((type (downcase (org-element-property :type element)))
+    (let* ((type (downcase (or (org-element-property :type element)
+			       ;; Missing export-block type.  Fallback
+			       ;; to default mode.
+			       "fundamental")))
 	   (mode (org-src--get-lang-mode type)))
       (unless (functionp mode) (error "No such language mode: %s" mode))
       (org-src--edit-element
-       element (org-src--construct-edit-buffer-name (buffer-name) type) mode t))
+       element
+       (org-src--construct-edit-buffer-name (buffer-name) type)
+       mode
+       (lambda () (org-escape-code-in-region (point-min) (point-max)))))
     t))
 
 (defun org-edit-src-code (&optional code edit-buffer-name)
   "Edit the source or example block at point.
-
+\\<org-src-mode-map>
 The code is copied to a separate buffer and the appropriate mode
-is turned on.  When done, exit with \\[org-edit-src-exit].  This
-will remove the original code in the Org buffer, and replace it
-with the edited version.  See `org-src-window-setup' to configure
-the display of windows containing the Org buffer and the code
-buffer.
+is turned on.  When done, exit with `\\[org-edit-src-exit]'.  This \
+will remove the
+original code in the Org buffer, and replace it with the edited
+version.  See `org-src-window-setup' to configure the display of
+windows containing the Org buffer and the code buffer.
 
 When optional argument CODE is a string, edit it in a dedicated
 buffer instead.
@@ -714,7 +952,7 @@ name of the sub-editing buffer."
   (let* ((element (org-element-at-point))
 	 (type (org-element-type element)))
     (unless (and (memq type '(example-block src-block))
-		 (org-src--on-element-p element))
+		 (org-src--on-datum-p element))
       (user-error "Not in a source or example block"))
     (let* ((lang
 	    (if (eq type 'src-block) (org-element-property :language element)
@@ -729,46 +967,85 @@ name of the sub-editing buffer."
        element
        (or edit-buffer-name
 	   (org-src--construct-edit-buffer-name (buffer-name) lang))
-       lang-f (null code) (and code (org-unescape-code-in-string code)))
+       lang-f
+       (and (null code)
+	    (lambda () (org-escape-code-in-region (point-min) (point-max))))
+       (and code (org-unescape-code-in-string code)))
       ;; Finalize buffer.
-      (org-set-local 'org-coderef-label-format
-		     (or (org-element-property :label-fmt element)
-			 org-coderef-label-format))
+      (setq-local org-coderef-label-format
+		  (or (org-element-property :label-fmt element)
+		      org-coderef-label-format))
       (when (eq type 'src-block)
-	(org-set-local 'org-src--babel-info babel-info)
+	(setq-local org-src--babel-info babel-info)
 	(let ((edit-prep-func (intern (concat "org-babel-edit-prep:" lang))))
 	  (when (fboundp edit-prep-func)
 	    (funcall edit-prep-func babel-info))))
       t)))
 
+(defun org-edit-inline-src-code ()
+  "Edit inline source code at point."
+  (interactive)
+  (let ((context (org-element-context)))
+    (unless (and (eq (org-element-type context) 'inline-src-block)
+		 (org-src--on-datum-p context))
+      (user-error "Not on inline source code"))
+    (let* ((lang (org-element-property :language context))
+	   (lang-f (org-src--get-lang-mode lang))
+	   (babel-info (org-babel-get-src-block-info 'light))
+	   deactivate-mark)
+      (unless (functionp lang-f) (error "No such language mode: %s" lang-f))
+      (org-src--edit-element
+       context
+       (org-src--construct-edit-buffer-name (buffer-name) lang)
+       lang-f
+       (lambda ()
+	 ;; Inline src blocks are limited to one line.
+	 (while (re-search-forward "\n[ \t]*" nil t) (replace-match " "))
+	 ;; Trim contents.
+	 (goto-char (point-min))
+	 (skip-chars-forward " \t")
+	 (delete-region (point-min) (point))
+	 (goto-char (point-max))
+	 (skip-chars-backward " \t")
+	 (delete-region (point) (point-max))))
+      ;; Finalize buffer.
+      (setq-local org-src--babel-info babel-info)
+      (setq-local org-src--preserve-indentation t)
+      (let ((edit-prep-func (intern (concat "org-babel-edit-prep:" lang))))
+	(when (fboundp edit-prep-func) (funcall edit-prep-func babel-info)))
+      ;; Return success.
+      t)))
+
 (defun org-edit-fixed-width-region ()
   "Edit the fixed-width ASCII drawing at point.
-
+\\<org-src-mode-map>
 This must be a region where each line starts with a colon
 followed by a space or a newline character.
 
 A new buffer is created and the fixed-width region is copied into
 it, and the buffer is switched into the major mode defined in
-`org-edit-fixed-width-region-mode', which see.  When done, exit
-with \\[org-edit-src-exit].  The edited text will then replace
+`org-edit-fixed-width-region-mode', which see.
+
+When done, exit with `\\[org-edit-src-exit]'.  The edited text \
+will then replace
 the area in the Org mode buffer."
   (interactive)
   (let ((element (org-element-at-point)))
     (unless (and (eq (org-element-type element) 'fixed-width)
-		 (org-src--on-element-p element))
+		 (org-src--on-datum-p element))
       (user-error "Not in a fixed-width area"))
     (org-src--edit-element
      element
      (org-src--construct-edit-buffer-name (buffer-name) "Fixed Width")
      org-edit-fixed-width-region-mode
-     t)
+     (lambda () (while (not (eobp)) (insert ": ") (forward-line))))
     ;; Return success.
     t))
 
 (defun org-edit-src-abort ()
   "Abort editing of the src code and return to the Org buffer."
   (interactive)
-  (let (org-src--allow-write-back-p) (org-edit-src-exit)))
+  (let (org-src--allow-write-back) (org-edit-src-exit)))
 
 (defun org-edit-src-continue (e)
   "Unconditionally return to buffer editing area under point.
@@ -791,45 +1068,57 @@ Throw an error if there is no such buffer."
     (with-current-buffer (org-src--source-buffer)
       (undo-boundary)
       (goto-char beg)
+      ;; Temporarily disable read-only features of OVERLAY in order to
+      ;; insert new contents.
+      (delete-overlay overlay)
       (delete-region beg end)
-      (when (org-string-nw-p edited-code) (insert edited-code))
-      (unless (bolp) (insert "\n"))
-      (move-overlay overlay beg (point))
-      (save-buffer))))
+      (let ((expecting-bol (bolp)))
+	(insert edited-code)
+	(when (and expecting-bol (not (bolp))) (insert "\n")))
+      (save-buffer)
+      (move-overlay overlay beg (point))))
+  ;; `write-contents-functions' requires the function to return
+  ;; a non-nil value so that other functions are not called.
+  t)
 
 (defun org-edit-src-exit ()
   "Kill current sub-editing buffer and return to source buffer."
   (interactive)
   (unless (org-src-edit-buffer-p) (error "Not in a sub-editing buffer"))
-  (let* ((allow-write-back-p org-src--allow-write-back-p)
-	 (beg org-src--beg-marker)
+  (let* ((beg org-src--beg-marker)
 	 (end org-src--end-marker)
-	 (coordinates (org-src--coordinates (point) 1 (point-max)))
-	 (code (and allow-write-back-p (org-src--contents-for-write-back))))
+	 (write-back org-src--allow-write-back)
+	 (remote org-src--remote)
+	 (coordinates (and (not remote)
+			   (org-src--coordinates (point) 1 (point-max))))
+	 (code (and write-back (org-src--contents-for-write-back))))
     (set-buffer-modified-p nil)
     ;; Switch to source buffer.  Kill sub-editing buffer.
-    (let ((edit-buffer (current-buffer)))
-      (org-src-switch-to-buffer (marker-buffer beg) 'exit)
+    (let ((edit-buffer (current-buffer))
+	  (source-buffer (marker-buffer beg)))
+      (unless source-buffer (error "Source buffer disappeared.  Aborting"))
+      (org-src-switch-to-buffer source-buffer 'exit)
       (kill-buffer edit-buffer))
     ;; Insert modified code.  Ensure it ends with a newline character.
-    (when (and allow-write-back-p
-	       (not (equal (buffer-substring-no-properties beg end) code)))
-      (undo-boundary)
-      (goto-char beg)
-      (delete-region beg end)
-      (when (org-string-nw-p code)
-	(insert code)
-	(unless (bolp) (insert "\n"))))
+    (org-with-wide-buffer
+     (when (and write-back (not (equal (buffer-substring beg end) code)))
+       (undo-boundary)
+       (goto-char beg)
+       (delete-region beg end)
+       (let ((expecting-bol (bolp)))
+	 (insert code)
+	 (when (and expecting-bol (not (bolp))) (insert "\n")))))
     ;; If we are to return to source buffer, put point at an
     ;; appropriate location.  In particular, if block is hidden, move
     ;; to the beginning of the block opening line.
-    (goto-char beg)
-    (cond
-     ;; Block is hidden; move at start of block.
-     ((org-some (lambda (o) (eq (overlay-get o 'invisible) 'org-hide-block))
-		(overlays-at (point)))
-      (beginning-of-line 0))
-     (allow-write-back-p (org-src--goto-coordinates coordinates beg end)))
+    (unless remote
+      (goto-char beg)
+      (cond
+       ;; Block is hidden; move at start of block.
+       ((cl-some (lambda (o) (eq (overlay-get o 'invisible) 'org-hide-block))
+		 (overlays-at (point)))
+	(beginning-of-line 0))
+       (write-back (org-src--goto-coordinates coordinates beg end))))
     ;; Clean up left-over markers and restore window configuration.
     (set-marker beg nil)
     (set-marker end nil)
