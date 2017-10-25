@@ -1,3 +1,5 @@
+(message "------ START OF my-sime-init")
+
 (require 'dwim-init)
 
 (dwim-define-lisp-key (kbd "C-c M-C-c") 'slime-eval-defun :elisp nil)
@@ -256,7 +258,9 @@
 (add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl")))
 (add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
 
-(setf slime-default-lisp 'restful-objects)
+; (setf slime-default-lisp 'installed-sbcl)
+
+(setf slime-default-lisp 'web-server)
 
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
@@ -282,4 +286,8 @@
           '(lambda ()
             (kd-dwim-redefine-keys)))
 
-(provide 'my-dwim-init)
+
+(setf show-paren-mode t)
+(setf show-paren-style 'parenthesis)
+
+(provide 'my-slime-init)
