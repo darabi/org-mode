@@ -25,7 +25,7 @@
 ;; Quicklisp is present? Then use slime either from m-creations dist or from quicklisp (default) 
 (setq quicklisp-home (or (getenv "QUICKLISP_HOME")
 			 (when (file-exists-p "~/quicklisp")
-			   ("~/quicklisp"))))
+			   "~/quicklisp")))
 
 (when quicklisp-home
   (loop for dist in '("m-creations" "quicklisp")
