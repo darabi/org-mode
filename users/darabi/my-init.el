@@ -620,15 +620,13 @@ performed, then slime-complete-symbol is called"
     (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.syntax-sugar") "emacs/"))))
 
 ;; if there are directories present in ~/dwim, they override the quicklisp ones
-(setq dwim-workspace (expand-file-name (getenv "DWIM_WORKSPACE")))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.def/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.logger/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))
-
-;; Put a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will make it load once when slime starts
-(add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/"))
+(let ((dwim-workspace (or (getenv "DWIM_WORKSPACE") "~/common-lisp")))
+  (when (file-exists-p dwim-workspace)
+    (add-to-load-path-if-exists (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
+    (add-to-load-path-if-exists (expand-file-name "hu.dwim.def/emacs/" dwim-workspace))
+    (add-to-load-path-if-exists (expand-file-name "hu.dwim.logger/emacs/" dwim-workspace))
+    (add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
+    (add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))))
 
 (add-hook 'slime-mode-hook
           '(lambda ()
