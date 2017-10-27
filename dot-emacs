@@ -99,5 +99,8 @@
 (autoload 'adoc-mode "adoc-mode.el" nil t)
 (add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
 
+;; slime-like navigation in Emacs lisp buffers
+(autoload 'elisp-slime-nav-mode "elisp-slime-nav" nil t)
+
 ;; load the user's my-init as the last action
 (require 'my-init "my-init" t)
