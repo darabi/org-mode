@@ -20,7 +20,7 @@
 
 ;;;; Comments:
 
-;; Template test file for Org-mode tests.  Many tests are also a howto
+;; Template test file for Org tests.  Many tests are also a howto
 ;; example collection as a user documentation, more or less all those
 ;; using `org-test-table-target-expect'.  See also the doc string of
 ;; `org-test-table-target-expect'.
@@ -106,18 +106,18 @@
   ;; See next ert-deftest how to group rows right.
   (org-test-table-target-expect
    "
-|       2 | replace |
-|       4 | replace |
-|       8 | replace |
+|       2 | header  |
+|       4 | header  |
+|       8 | header  |
 |---------+---------|
 | replace | replace |
 "
    "
-|  2 | replace |
-|  4 | replace |
-|  8 | replace |
-|----+---------|
-| 14 | 28      |
+|  2 | header |
+|  4 | header |
+|  8 | header |
+|----+--------|
+| 14 | 28     |
 "
    2
    ;; Calc formula
@@ -166,6 +166,27 @@
 | <-0x0ab.cf | >-36#0vw.yz | nan | uinf | -inf | inf |
 |         ab |          ab |  ab |   ab |   ab |  ab |
 "))
+
+(ert-deftest test-org-table/align-buffer-tables ()
+  "Align all tables when updating buffer."
+  (let ((before "
+|  a  b  |
+
+|  c  d  |
+")
+	(after "
+| a  b |
+
+| c  d |
+"))
+    (should (equal (org-test-with-temp-text before
+		     (org-table-recalculate-buffer-tables)
+		     (buffer-string))
+		   after))
+    (should (equal (org-test-with-temp-text before
+		     (org-table-iterate-buffer-tables)
+		     (buffer-string))
+		   after))))
 
 (defconst references/target-normal "
 | 0 | 1 | replace | replace | replace | replace | replace | replace |
@@ -621,7 +642,7 @@ See also `test-org-table/remote-reference-access'."
 | c   d            | c   d            |
 |                  |                  |
 | 2012-12          | 2012-12          |
-| [2012-12-31 Mon] | <2012-12-31 Mon> |
+| [2012-12-31 Mon] | [2012-12-31 Mon] |
 "
      1 (concat "#+TBLFM: $2 = if(\"$1\" == \"nan\", "
 	       "string(\"\"), string(subvec(\"$1\", 2, vlen(\"$1\")))); E"))
@@ -635,7 +656,7 @@ See also `test-org-table/remote-reference-access'."
 | c   d            | c d              |
 |                  |                  |
 | 2012-12          | 2000             |
-| [2012-12-31 Mon] | <2012-12-31 Mon> |
+| [2012-12-31 Mon] | [2012-12-31 Mon] |
 "
      1 "#+TBLFM: $2 = if(\"$1\" == \"nan\", string(\"\"), $1); E")))
 
@@ -877,9 +898,9 @@ See also http://orgmode.org/worg/org-tutorials/org-lookups.html ."
   (should (equal "[0,1]" (f '( "inf" "1") nil t nil))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-an/1 ()
-  "Simple reference @1$1."
+  "Simple reference @2$1."
   (should
-   (string= "A1" (org-table-convert-refs-to-an "@1$1"))))
+   (string= "A2" (org-table-convert-refs-to-an "@2$1"))))
 
 ;; TODO: Test broken
 ;; (ert-deftest test-org-table/org-table-convert-refs-to-an/2 ()
@@ -893,9 +914,9 @@ See also http://orgmode.org/worg/org-tutorials/org-lookups.html ."
    (string= "C& = remote(FOO, @@#B&)" (org-table-convert-refs-to-an "$3 = remote(FOO, @@#$2)"))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-rc/1 ()
-  "Simple reference @1$1."
+  "Simple reference @2$1."
   (should
-   (string= "@1$1" (org-table-convert-refs-to-rc "A1"))))
+   (string= "@2$1" (org-table-convert-refs-to-rc "A2"))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-rc/2 ()
   "Self reference $0."
@@ -1434,7 +1455,7 @@ See also `test-org-table/copy-field'."
   ;; Test :raw parameter.
   (when (featurep 'ox-latex)
     (should
-     (org-string-match-p
+     (string-match-p
       "/a/"
       (orgtbl-to-generic (org-table-to-lisp "| /a/ | b |")
 			 '(:backend latex :raw t)))))
@@ -1453,7 +1474,11 @@ See also `test-org-table/copy-field'."
     "a\nb"
     (let ((org-export-filter-table-cell-functions (list (lambda (c b i) "filter"))))
       (orgtbl-to-generic (org-table-to-lisp "| a |\n|---|\n| b |")
-			 '(:hline nil))))))
+			 '(:hline nil)))))
+  ;; Macros, even if unknown, are returned as-is.
+  (should
+   (equal "{{{macro}}}"
+	  (orgtbl-to-generic (org-table-to-lisp "| {{{macro}}} |") nil))))
 
 (ert-deftest test-org-table/to-latex ()
   "Test `orgtbl-to-latex' specifications."
@@ -1467,11 +1492,15 @@ See also `test-org-table/copy-field'."
 			   '(:environment "tabularx"))))
   ;; Test :booktabs parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "\\toprule" (orgtbl-to-latex (org-table-to-lisp "| a |") '(:booktabs t))))
+  ;; Handle LaTeX snippets.
+  (should
+   (equal "\\begin{tabular}{l}\n\\(x\\)\\\\\n\\end{tabular}"
+	  (orgtbl-to-latex (org-table-to-lisp "| $x$ |") nil)))
   ;; Test pseudo objects and :raw parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "\\$x\\$" (orgtbl-to-latex (org-table-to-lisp "| $x$ |") '(:raw t)))))
 
 (ert-deftest test-org-table/to-html ()
@@ -1482,21 +1511,21 @@ See also `test-org-table/copy-field'."
 
 
 <colgroup>
-<col  class=\"left\" />
+<col  class=\"org-left\" />
 </colgroup>
 <tbody>
 <tr>
-<td class=\"left\">a</td>
+<td class=\"org-left\">a</td>
 </tr>
 </tbody>
 </table>"))
   ;; Test :attributes parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "<table>"
     (orgtbl-to-html (org-table-to-lisp "| a |") '(:attributes nil))))
   (should
-   (org-string-match-p
+   (string-match-p
     "<table border=\"2\">"
     (orgtbl-to-html (org-table-to-lisp "| a |") '(:attributes (:border "2"))))))
 
@@ -1568,7 +1597,21 @@ See also `test-org-table/copy-field'."
 	    (buffer-substring-no-properties
 	     (search-forward "# BEGIN RECEIVE ORGTBL table\n")
 	     (progn (search-forward "# END RECEIVE ORGTBL table")
-		    (match-beginning 0)))))))
+		    (match-beginning 0))))))
+  ;; Allow multiple receiver locations.
+  (should
+   (org-test-with-temp-text "
+# BEGIN RECEIVE ORGTBL table
+# END RECEIVE ORGTBL table
+
+#+ORGTBL: SEND table orgtbl-to-orgtbl :hlines nil
+<point>| a |
+
+# BEGIN RECEIVE ORGTBL table
+# END RECEIVE ORGTBL table"
+     (orgtbl-send-table)
+     (goto-char (point-min))
+     (search-forward "| a |" nil t 3))))
 
 
 ;;; Sorting
@@ -1604,7 +1647,7 @@ See also `test-org-table/copy-field'."
 	    (org-table-sort-lines t ?a)
 	    (buffer-string))))
   (should
-   (equal "| C |\n| b |\n| a |\n"
+   (equal "| b |\n| a |\n| C |\n"
 	  (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
 	    (org-table-sort-lines nil ?A)
 	    (buffer-string))))
@@ -1625,14 +1668,20 @@ See also `test-org-table/copy-field'."
       (buffer-string))))
   ;; Sort by time (HH:MM values)
   (should
-   (equal "| 1:00 |\n| 14:00 |\n| 17:00 |\n"
-	  (org-test-with-temp-text "| 14:00 |\n| 17:00 |\n| 1:00 |\n"
+   (equal "| 1:00 |\n| 17:00 |\n| 114:00 |\n"
+	  (org-test-with-temp-text "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
 	    (org-table-sort-lines nil ?t)
 	    (buffer-string))))
   (should
-   (equal "| 17:00 |\n| 14:00 |\n| 1:00 |\n"
-	  (org-test-with-temp-text "| 14:00 |\n| 17:00 |\n| 1:00 |\n"
+   (equal "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
+	  (org-test-with-temp-text "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
 	    (org-table-sort-lines nil ?T)
+	    (buffer-string))))
+  ;; Sort by time (durations)
+  (should
+   (equal "| 1d 3:00 |\n| 28:00 |\n"
+	  (org-test-with-temp-text "| 28:00 |\n| 1d 3:00 |\n"
+	    (org-table-sort-lines nil ?t)
 	    (buffer-string))))
   ;; Sort with custom functions.
   (should
@@ -1665,7 +1714,41 @@ See also `test-org-table/copy-field'."
       (buffer-string)))))
 
 
-;;; Field formulas
+;;; Formulas
+
+(ert-deftest test-org-table/eval-formula ()
+  "Test `org-table-eval-formula' specifications."
+  ;; Error when not on a table field.
+  (should-error
+   (org-test-with-temp-text "Text"
+     (org-table-eval-formula)))
+  (should-error
+   (org-test-with-temp-text "| a |\n|---|<point>"
+     (org-table-eval-formula)))
+  (should-error
+   (org-test-with-temp-text "| a |\n#+TBLFM:<point>"
+     (org-table-eval-formula)))
+  ;; Handle @<, @>, $< and $>.
+  (should
+   (equal "| 1 |\n| 1 |"
+	  (org-test-with-temp-text "| <point>  |\n| 1 |"
+	    (org-table-eval-formula nil "@>" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 |\n| 1 |"
+	  (org-test-with-temp-text "| 1 |\n| <point>  |"
+	    (org-table-eval-formula nil "@<" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 1 |"
+	  (org-test-with-temp-text "| <point>  | 1 |"
+	    (org-table-eval-formula nil "$>" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 1 |"
+	  (org-test-with-temp-text "| 1 | <point>  |"
+	    (org-table-eval-formula nil "$<" nil nil t)
+	    (buffer-string)))))
 
 (ert-deftest test-org-table/field-formula-outside-table ()
   "If `org-table-formula-create-columns' is nil, then a formula
@@ -1721,6 +1804,495 @@ is t, then new columns should be added as needed"
 "
      1
      "#+TBLFM: $3=15")))
+
+(ert-deftest test-org-table/duration ()
+  "Test durations in table formulas."
+  ;; Durations in cells.
+  (should
+   (string-match "| 2:12 | 1:47 | 03:59:00 |"
+		 (org-test-with-temp-text "
+       | 2:12 | 1:47 | |
+       <point>#+TBLFM: @1$3=$1+$2;T"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string))))
+  (should
+   (string-match "| 2:12 | 1:47 | 03:59 |"
+		 (org-test-with-temp-text "
+       | 2:12 | 1:47 | |
+       <point>#+TBLFM: @1$3=$1+$2;U"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string))))
+  (should
+   (string-match "| 3:02:20 | -2:07:00 | 0.92 |"
+		 (org-test-with-temp-text "
+       | 3:02:20 | -2:07:00 | |
+       <point>#+TBLFM: @1$3=$1+$2;t"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string))))
+  ;; Durations set through properties.
+  (should
+   (string-match "| 16:00:00 |"
+		 (org-test-with-temp-text "* H
+  :PROPERTIES:
+  :time_constant: 08:00:00
+  :END:
+
+  |  |
+  <point>#+TBLFM: $1=2*$PROP_time_constant;T"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string))))
+  (should
+   (string-match "| 16.00 |"
+		 (org-test-with-temp-text "* H
+  :PROPERTIES:
+  :time_constant: 08:00:00
+  :END:
+
+  |  |
+  <point>#+TBLFM: $1=2*$PROP_time_constant;t"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string)))))
+
+(ert-deftest test-org-table/end-on-hline ()
+  "Test with a table ending on a hline."
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+| 1 | 2 | 3 |
+| 4 | 5 | 6 |
+|   |   |   |
+|---+---+---|
+<point>#+TBLFM: @3$2..@3$>=vsum(@1..@2)"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+| 1 | 2 | 3 |
+| 4 | 5 | 6 |
+|   | 7 | 9 |
+|---+---+---|
+#+TBLFM: @3$2..@3$>=vsum(@1..@2)")))
+
+(ert-deftest test-org-table/named-field ()
+  "Test formula with a named field."
+  (should
+   (string-match-p
+    "| +| +1 +|"
+    (org-test-with-temp-text "
+|   |      |
+| ^ | name |
+<point>#+TBLFM: $name=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (string-match-p
+    "| +| +1 +|"
+    (org-test-with-temp-text "
+| _ | name |
+|   |      |
+<point>#+TBLFM: $name=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/named-column ()
+  "Test formula with a named field."
+  (should
+   (string-match-p
+    "| +| +1 +| +1 +|"
+    (org-test-with-temp-text "
+| ! | name |   |
+|   |    1 |   |
+<point>#+TBLFM: @2$3=$name"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/tab-indent ()
+  "Test named fields with tab indentation."
+  (should
+   (string-match-p
+    "| # | 111 |"
+    (org-test-with-temp-text
+	"
+	| ! |  sum |      | a |  b |   c |
+	|---+------+------+---+----+-----|
+	| # | 1011 | 1000 | 1 | 10 | 100 |
+	<point>#+TBLFM: $2=$a+$b+$c
+"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/first-rc ()
+  "Test \"$<\" and \"@<\" constructs in formulas."
+  (should
+   (string-match-p
+    "| 1 | 2 |"
+    (org-test-with-temp-text
+	"|   | 2 |
+<point>#+TBLFM: $<=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (string-match-p
+    "| 2 |\n| 2 |"
+    (org-test-with-temp-text
+	"| 2 |\n|   |
+<point>#+TBLFM: @2$1=@<"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/last-rc ()
+  "Test \"$>\" and \"@>\" constructs in formulas."
+  (should
+   (string-match-p
+    "| 2 | 1 |"
+    (org-test-with-temp-text
+	"| 2 |   |\n<point>#+TBLFM: $>=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (string-match-p
+    "| 2 |\n| 2 |"
+    (org-test-with-temp-text
+	"| 2 |\n|   |\n<point>#+TBLFM: @>$1=@<"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/time-stamps ()
+  "Test time-stamps handling."
+  ;; Standard test.
+  (should
+   (string-match-p
+    "| 1 |"
+    (org-test-with-temp-text
+	"| <2016-07-07 Sun> | <2016-07-08 Fri> |   |\n<point>#+TBLFM: $3=$2-$1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  ;; Handle locale specific time-stamps.
+  (should
+   (string-match-p
+    "| 1 |"
+    (org-test-with-temp-text
+	"| <2016-07-07 Do> | <2016-07-08 Fr> |   |\n<point>#+TBLFM: $3=$2-$1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+
+(ert-deftest test-org-table/orgtbl-ascii-draw ()
+  "Test `orgtbl-ascii-draw'."
+  ;; First value: Make sure that an integer input value is converted to a
+  ;; float before division. Further values: Show some float input value
+  ;; ranges corresponding to the same bar width.
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+|    Value | <l>     |
+|----------+---------|
+|       19 | replace |
+|----------+---------|
+| -0.50001 | replace |
+| -0.49999 | replace |
+|  0.49999 | replace |
+|  0.50001 | replace |
+|  1.49999 | replace |
+| 22.50001 | replace |
+| 23.49999 | replace |
+| 23.50001 | replace |
+| 24.49999 | replace |
+| 24.50001 | replace |
+<point>#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 24 3 \" 12345678\")"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+|    Value | <l>       |
+|----------+-----------|
+|       19 | 883       |
+|----------+-----------|
+| -0.50001 | too small |
+| -0.49999 |           |
+|  0.49999 |           |
+|  0.50001 | 1         |
+|  1.49999 | 1         |
+| 22.50001 | 887       |
+| 23.49999 | 887       |
+| 23.50001 | 888       |
+| 24.49999 | 888       |
+| 24.50001 | too large |
+#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 24 3 \" 12345678\")"))
+  ;; Draw bars with a bullet. The bullet does not count in the parameter
+  ;; WIDTH of `orgtbl-ascii-draw'.
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+| -1 | replace |
+|  0 | replace |
+|  1 | replace |
+|  2 | replace |
+|  3 | replace |
+|  4 | replace |
+<point>#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 3 3 \"$-\")"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+| -1 | too small |
+|  0 | $         |
+|  1 | -$        |
+|  2 | --$       |
+|  3 | ---$      |
+|  4 | too large |
+#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 3 3 \"$-\")")))
+
+(ert-deftest test-org-table/single-rowgroup ()
+  "Test column formula in a table with a single rowgroup."
+  (should
+   (equal
+    "
+|---+---|
+| 1 | 0 |
+|---+---|
+#+TBLFM: $2=$1-1"
+    (org-test-with-temp-text "
+|---+---|
+| 1 |   |
+|---+---|
+<point>#+TBLFM: $2=$1-1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (equal
+    "
+| 1 | 0 |
+#+TBLFM: $2=$1-1"
+    (org-test-with-temp-text "
+| 1 |   |
+<point>#+TBLFM: $2=$1-1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+
+;;; Navigation
+
+(ert-deftest test-org-table/next-field ()
+  "Test `org-table-next-field' specifications."
+  ;; Regular test.
+  (should
+   (equal
+    "b"
+    (org-test-with-temp-text "| a<point> | b |"
+      (org-table-next-field)
+      (org-trim (org-table-get-field)))))
+  ;; Create new rows as needed.
+  (should
+   (equal
+    "| a |\n|   |\n"
+    (org-test-with-temp-text "| a<point> |"
+      (org-table-next-field)
+      (buffer-string))))
+  ;; Jump over hlines, if `org-table-tab-jumps-over-hlines' is
+  ;; non-nil.
+  (should
+   (equal
+    "b"
+    (org-test-with-temp-text "| a<point> |\n|---|\n| b |"
+      (let ((org-table-tab-jumps-over-hlines t)) (org-table-next-field))
+      (org-trim (org-table-get-field)))))
+  ;; If `org-table-tab-jumps-over-hlines' is nil, however, create
+  ;; a new row before the rule.
+  (should
+   (equal
+    "| a |\n|   |\n|---|\n| b |"
+    (org-test-with-temp-text "| a<point> |\n|---|\n| b |"
+      (let ((org-table-tab-jumps-over-hlines nil)) (org-table-next-field))
+      (buffer-string)))))
+
+(ert-deftest test-org-table/previous-field ()
+  "Test `org-table-previous-field' specifications."
+  ;; Regular tests.
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a | <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a |\n| <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; Find previous field across horizontal rules.
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a |\n|---|\n| <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; When called on a horizontal rule, find previous data field.
+  (should
+   (eq ?b
+       (org-test-with-temp-text "| a | b |\n|---+-<point>--|"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; Error when at first field.  Make sure to preserve original
+  ;; position.
+  (should-error
+   (org-test-with-temp-text "| <point> a|"
+     (org-table-previous-field)))
+  (should-error
+   (org-test-with-temp-text "|---|\n| <point>a |"
+     (org-table-previous-field)))
+  (should
+   (eq ?a
+       (org-test-with-temp-text "|---|\n| <point>a |"
+	 (ignore-errors (org-table-previous-field))
+	 (char-after)))))
+
+
+
+;;; Moving rows, moving columns
+
+(ert-deftest test-org-table/move-row-down ()
+  "Test `org-table-move-row-down' specifications."
+  ;; Error out when row cannot be moved, e.g., it is the last row in
+  ;; the table.
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-row-down)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-row-down)))
+  (should-error
+   (org-test-with-temp-text "| a |\n| <point>b |"
+     (org-table-move-row-down)))
+  ;; Move data lines.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| b |\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n| a |\n"
+	  (org-test-with-temp-text "| a |\n|---|\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  ;; Move hlines.
+  (should
+   (equal "| b |\n|---|\n"
+	  (org-test-with-temp-text "|---|\n| b |\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n|---|\n"
+	  (org-test-with-temp-text "|---|\n|---|\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  ;; Move rows even without a final newline.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| b |"
+	    (org-table-move-row-down)
+	    (buffer-string)))))
+
+(ert-deftest test-org-table/move-row-up ()
+  "Test `org-table-move-row-up' specifications."
+  ;; Error out when row cannot be moved, e.g., it is the first row in
+  ;; the table.
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-row-up)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-row-up)))
+  ;; Move data lines.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| <point>b |\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  (should
+   (equal "| b |\n|---|\n"
+	  (org-test-with-temp-text "|---|\n| <point>b |\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  ;; Move hlines.
+  (should
+   (equal "|---|\n| a |\n"
+	  (org-test-with-temp-text "| a |\n|<point>---|\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n|---|\n"
+	  (org-test-with-temp-text "|---|\n|<point>---|\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  ;; Move rows even without a final newline.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| <point>b |"
+	    (org-table-move-row-up)
+	    (buffer-string)))))
+
+
+
+;;; Miscellaneous
+
+(ert-deftest test-org-table/get-field ()
+  "Test `org-table-get-field' specifications."
+  ;; Regular test.
+  (should
+   (equal " a "
+	  (org-test-with-temp-text "| <point>a |" (org-table-get-field))))
+  ;; Get field in open last column.
+  (should
+   (equal " a "
+	  (org-test-with-temp-text "| <point>a " (org-table-get-field))))
+  ;; Get empty field.
+  (should
+   (equal ""
+	  (org-test-with-temp-text "|<point>|" (org-table-get-field))))
+  (should
+   (equal " "
+	  (org-test-with-temp-text "| <point>|" (org-table-get-field))))
+  ;; Outside the table, return the empty string.
+  (should
+   (equal ""
+	  (org-test-with-temp-text "<point>| a |" (org-table-get-field))))
+  (should
+   (equal ""
+	  (org-test-with-temp-text "| a |<point>" (org-table-get-field))))
+  ;; With optional N argument, select a particular column in current
+  ;; row.
+  (should
+   (equal " 3 "
+	  (org-test-with-temp-text "| 1 | 2 | 3 |" (org-table-get-field 3))))
+  (should
+   (equal " 4 "
+	  (org-test-with-temp-text "| 1 | 2 |\n<point>| 3 | 4 |"
+	    (org-table-get-field 2))))
+  ;; REPLACE optional argument is used to replace selected field.
+  (should
+   (equal "| foo |"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil " foo ")
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 2 | foo |"
+	  (org-test-with-temp-text "| 1 | 2 | 3 |"
+	    (org-table-get-field 3 " foo ")
+	    (buffer-string))))
+  (should
+   (equal " 4 "
+	  (org-test-with-temp-text "| 1 | 2 |\n<point>| 3 | 4 |"
+	    (org-table-get-field 2))))
+  ;; An empty REPLACE string clears the field.
+  (should
+   (equal "| |"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil "")
+	    (buffer-string))))
+  ;; When using REPLACE still return old value.
+  (should
+   (equal " 1 "
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil " foo ")))))
 
 (provide 'test-org-table)
 

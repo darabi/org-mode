@@ -1,0 +1,5 @@
+This file prevents normal-top-level-add-subdirs-to-load-path (called from ../subdirs.el)
+to descend into the subdirectories recursively.
+
+This is necessary to avoid loading someone else's 'my-init.el' or 'my-slime-init.el' files.
+

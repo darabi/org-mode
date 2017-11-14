@@ -3,6 +3,14 @@
 ; in case of errors during startup
 ; (setq debug-on-error t)
 
+(require 'warnings)
+
+; Common Lisp compatibility mode
+(require 'cl)
+
+;; By default, emacs loads all installed packages at startup, which is not the best idea
+(setq package-enable-at-startup nil)
+
 ;; all custom files are in .emacs.d/site-lisp or subdirs of it
 (add-to-list 'load-path (expand-file-name "~/.emacs.d/site-lisp"))
 (let ((default-directory (expand-file-name "~/.emacs.d/site-lisp")))
@@ -13,551 +21,37 @@
     (when (file-exists-p dir)
       (add-to-list 'load-path dir))))
 
-;; a user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
+
+;; Quicklisp is present? Then use slime either from m-creations dist or from quicklisp (default) 
+(setq quicklisp-home (or (getenv "QUICKLISP_HOME")
+			 (when (file-exists-p "~/quicklisp")
+			   "~/quicklisp")))
+
+(when quicklisp-home
+  (loop for dist in '("m-creations" "quicklisp")
+	do
+	(when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
+	  (setq quicklisp-slime-helper-dist dist)
+	  (return)))
+  (unless (boundp 'quicklisp-slime-helper-dist)
+    (warn "You have no slime in your quicklisp installation at %s" quicklisp-home)))
+
+;; A user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
 (add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/"))
 
+;; lisp-mode-hook is of course also used in case of Emacs Lisp buffers, but when using
+;; slime-mode-hook, then it is too late to load my-slime-init
+(add-hook 'lisp-mode-hook
+          '(lambda ()
+            (when (file-exists-p "/usr/share/doc/hyperspec/")
+              (setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/"))
+            (require 'my-slime-init "my-slime-init" t)))
+
+;; increase the max number for variable bindings and unwind-protect
 (setf max-specpdl-size 4000)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;;; changes added by custom
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(custom-set-variables
-  ;; custom-set-variables was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
- '(calendar-week-start-day 1)
- '(org-time-stamp-custom-formats (quote ("<%a %Y-%m-%d>" "<%Y-%m-%d>" "<%Y-%m-%d %H:%M>")))
-;; '(paren-mode (quote paren) nil (paren))
- '(show-paren-delay 0)
- '(show-paren-mode (quote paren) nil (paren))
- '(vc-follow-symlinks t)
- '(x-select-enable-clipboard t))
-
-;; load built-in cl.el first, as slime's cl-lib seems to conflict
-;; with parts of it
-(require 'cl)
-
-;;;; Globally enable features
-
-(put 'upcase-region 'disabled nil)
-(put 'scroll-left 'disabled nil)
-(put 'downcase-region 'disabled nil)
-
-;;;; X Selection
-
-;; http://www.emacswiki.org/emacs/CopyAndPaste
-
-; (transient-mark-mode 1)  ; Now on by default: makes the region act quite like the text "highlight" in many apps.
-; (setq shift-select-mode t) ; Now on by default: allows shifted cursor-keys to control the region.
-(setq mouse-drag-copy-region nil)  ; stops selection with a mouse being immediately injected to the kill ring
-(setq x-select-enable-primary nil)  ; stops killing/yanking interacting with primary X11 selection
-(setq x-select-enable-clipboard t)  ; makes killing/yanking interact with clipboard X11 selection
-
-;; these will probably be already set to these values, leave them that way if so!
-(setq interprogram-cut-function 'x-select-text)
-(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-
-; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
-; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
-; if you're used to other modern apps (that is to say, the mere act of highlighting doesn't
-; overwrite the clipboard or alter the kill ring, but you can paste in merely highlighted
-; text with the mouse if you want to)
-(setq select-active-regions t) ;  active region sets primary X11 selection
-(global-set-key [mouse-2] 'mouse-yank-primary)  ; make mouse middle-click only paste from primary X11 selection, not clipboard and kill ring.
-
-;; with this, doing an M-y will also affect the X11 clipboard, making emacs act as a sort of clipboard history, at
-;; least of text you've pasted into it in the first place.
-;; (setq yank-pop-change-selection t)  ; makes rotating the kill ring change the X11 clipboard.
-
-;; stolen from
-;; http://wttools.sourceforge.net/emacs-stuff/emacs.html
-;;
-;; load personal-funcs which contains my-color-theme etc.
-;;(load-file "~/.emacs.d/site-lisp/personal-funcs.el")
-(require 'personal-funcs)
-
-(autoload 'w3m-browse-url "w3m" "Ask a WWW browser to show a URL." t)
-(if (getenv "DISPLAY")
-    (setq browse-url-browser-function '(("http" . browse-url-firefox)
-                                        ("file" . browse-url-firefox)))
-    (setq browse-url-browser-function 'w3m-browse-url))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; GLOBAL KEYS
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(global-set-key "\C-xm" 'browse-url-at-point)
-(global-set-key [f10] 'menu-bar-open)
-
-;; cf. personal-funcs.el
-;;
-;; I find it annoying when backward-kill-word eats up half of the
-;; previous line!
-(global-set-key [C-backspace] 'kd-backward-kill-whitespace-or-word);
-(global-set-key [M-backspace] 'kd-backward-kill-whitespace-or-word);
-(global-set-key [?\C-\d] 'kd-backward-kill-whitespace-or-word);
-
-;; whitespace-cleanup is often badly needed
-(global-set-key "\C-cw" 'whitespace-cleanup)
-
-; this is the original setting
-; (global-set-key [(control backspace)] 'backward-kill-word)
-
-;;;; Key binding for switching to next and previous buffer
-(global-set-key '[C-tab] 'bs-cycle-next)
-(global-set-key [S-tab] 'bs-cycle-previous)
-(global-set-key [C-iso-lefttab] 'bs-cycle-previous)
-
-;;;; Comment regions
-;;; Well, it is good to have the same keybinding for commenting out
-;;; region in all modes.
-(global-set-key [?\C-c ?c] 'comment-region)
-(global-set-key [?\C-c ?u] 'uncomment-region)
-
-;;;; Movement in screen and other terminals
-;; but in screen sessions, we need this
-(global-set-key "\M-[1;5B"    'forward-paragraph)  ; Ctrl+down   => forward para
-(global-set-key "\M-[1;5A"    'backward-paragraph) ; Ctrl+up     => backward para
-(global-set-key "\M-[1;5C"    'forward-word)       ; Ctrl+right  => forward word
-(global-set-key "\M-[1;5D"    'backward-word)      ; Ctrl+left   => backward word
-
-;; and in rxvt, these:
-; rxvt's keycodes for C-<left> and C-<right> are M-O d and M-O c,
-(global-set-key [(meta O) (a)] 'backward-paragraph)
-(global-set-key [(meta O) (b)] 'forward-paragraph)
-(global-set-key [(meta O) (c)] 'forward-word)
-(global-set-key [(meta O) (d)] 'backward-word)
-
-;;;; Scrolling the other window
-;; we need an interactive function for global-set-key (cf. below)
-(defun kd-scroll-other-window-up (arg)
-  (interactive "p")
-  (scroll-other-window '-))
-
-(global-set-key "\M-[5;3~"  'kd-scroll-other-window-up) ; M-<prior> (pg up)
-(global-set-key "\M-[6;3~"  'scroll-other-window)      ; M-<next> (pg dn)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Color theme
-;; CUSTOM FACES are replaced by color-theme-darabi-[x|term]
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(eval-after-load "color-theme"
-  '(progn
-    (color-theme-initialize)
-    (my-color-theme)))
-
 
 ;; start emacsclient server
 (server-start)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; LaTeX and friends
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(push '("\\.tex$" . LaTeX-mode) auto-mode-alist)
-
-(add-hook 'LaTeX-mode-hook (lambda ()
-                             (local-set-key "\C-x\C-j" 'okular-jump-to-line)
-                             (setq LaTeX-command-style '(("" "%(PDF)%(latex) -synctex=1 %S%(PDFout)")))
-                             (add-to-list 'TeX-output-view-style '("^pdf$" "." "okular --unique %s.pdf"))
-                             (setq TeX-view-program-list '(("Okular" "okular --unique %s.pdf")))
-                             (setq TeX-view-program-selection '((output-pdf "Okular") (output-dvi "Okular")))
-                             (setq TeX-master 'dwim)
-                             (TeX-PDF-mode)
-                             (require 'okular-search)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; ORG-MODE
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;; Loading and paths
-
-(require 'org-install)
-(add-to-list 'auto-mode-alist '("\\.org\\(-mode\\)?$" . org-mode))
-
-; you need to apt-get install ditaa to use it
-(setq org-ditaa-jar-path "/usr/bin/ditaa")
-
-(require 'info)
-(push "~/.emacs.d/site-lisp/org-mode/doc" Info-default-directory-list)
-
-(global-set-key "\C-cl" 'org-store-link)
-(global-set-key "\C-ca" 'org-agenda)
-(global-set-key "\C-cb" 'org-iswitchb)
-
-;; extension by Peter Jones pjones@pmade.com now part of org-mode contrib
-;; cf ~/.emacs.d/site-lisp/org-mode/contrib/lisp/org-invoice.el
-(autoload 'org-invoice-report "org-invoice")
-(autoload 'org-dblock-write:invoice "org-invoice")
-
-;; (add-to-list 'load-path "~/vc/org")
-; I prefer return to activate a link
-; this has to be set before org.el is loaded
-(setq org-return-follows-link t)
-(setq org-log-done t)
-
-(require 'my-org-init "my-org-init" nil)
-
-(require 'org)
-(require 'ox-odt)
-
-(add-to-list 'auto-mode-alist '("\.org$" . org-mode))
-
-;; specifying dirs is much safer, as new files
-;; are automatically picked up
-(setq org-agenda-files '("~/org"
-                         "~/org/work"
-                         "~/org/life"))
-
-;; Here is my setup for org-capture
-(setq org-directory "~/org")
-(setq org-default-notes-file "~/org/inbox.org")
-
-(eval-after-load 'org
-  '(progn
-    ;; C-right forward-word is important for me
-    (define-key org-mode-map (kbd "C-c t") 'org-set-tags)))
-
-;; plantuml export for org-mode
-;; active Org-babel languages
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (plantuml . t)
-   (dot . t)))
-
-(setq org-plantuml-jar-path "~/.emacs.d/plantuml/plantuml.jar")
-
-(setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; ENCRYPTION
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun open-encrypted-file (fname)
-  (interactive "Find file: n")
-  (let ((buf (create-file-buffer fname)))
-    (shell-command
-     (concat "echo " (read-passwd "Decrypt password: ") " | bcrypt -o " fname)
-     buf)
-    (set-buffer buf)
-    (kill-line)(kill-line)
-    (toggle-read-only)
-    (not-modified)))
-
-;; password-generate.el is in .emacs.d/site-lisp/
-(autoload 'password-generate "password-generate" "Return a string of LENGTH random characters." t)
-
-(defun my-password-generate ()
-  "Insert at point a random 8 character password (upper, lower, numbers)"
-  (interactive)
-  (insert (password-generate 8 t t t nil nil)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Git/Magit
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(add-hook 'magit-log-edit-mode-hook
-          '(lambda ()
-            (set-fill-column 60)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Dynamic font (size) selection with xrandr
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; FOR emacs-snapshot-gtk -enable-font-backend
-; (set-default-font "Bitstream Vera Sans Mono Roman-12")
-;; (set-default-font "Bitstream Vera Sans Mono Roman-13" t)
-;; (set-default-font "Inconsolata-10" t)
-
-(defun find-next-xrandr-screen-width ()
-  (let ((start (re-search-forward " connected[^0-9]+" nil t)))
-    (when start
-      (let ((end (re-search-forward "x" nil t)))
-        (when end
-          (buffer-substring-no-properties start (decf end)))))))
-
-(defun find-xrandr-screen-widths ()
-  (let ((width)
-        (widthlist))
-    (while (setf width (find-next-xrandr-screen-width))
-      (message "width %s" width)
-      (push (string-to-number width) widthlist))
-    widthlist))
-
-(defun xrandr-max-width ()
-  (let ((buffer "*Messages*")
-        ;; this one prevents the buffer from appearing
-        ;; as the output goes to the message area
-        (max-mini-window-height 1.0))
-    (if (eq 0 (shell-command "xrandr -q" buffer))
-        (with-current-buffer buffer
-          (let ((widths (find-xrandr-screen-widths))
-                (maxwidth 0))
-            (when widths
-              (dolist (w widths)
-                (setf maxwidth (max w maxwidth))))
-            maxwidth))
-        0)))
-
-(when (require 'my-x-functions "my-x-functions" nil)
-  (save-excursion
-    (unless (eq (window-system) 'w32)
-      (my-set-x-font))))
-
-;;; Kill ring browsing
-
-;; M-y calls browse-kill-ring
-(require 'browse-kill-ring)
-(browse-kill-ring-default-keybindings)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; LISP
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; The SBCL binary and command-line arguments
-;; this one doesn't print the SBCL greeting
-;; (setq inferior-lisp-program "sbcl --dynamic-space-size 256 --noinform")
-(setq inferior-lisp-program "sbcl --dynamic-space-size 512")
-
-(defmacro define-lisp-mode-tab-fn (fn-name symbol-completion-fn)
-  `(defun* ,fn-name ()
-     "Calls lisp-indent-line. If point does not change (if no indentation was
-performed, then slime-complete-symbol is called"
-     (interactive)
-     (let ((pos (point)))
-       (lisp-indent-line)
-       (when (= pos (point))
-         (,symbol-completion-fn)))))
-
-(define-lisp-mode-tab-fn dar-lisp-mode-tab lisp-complete-symbol)
-
-(add-hook 'lisp-mode-hook
-          (lambda ()
-            (define-key lisp-mode-map [tab] 'dar-lisp-mode-tab)
-            (define-key lisp-mode-map [?\C-c ?\C-r] 'eval-region)
-            (define-key lisp-mode-map [?\C-c ?c] 'comment-region)
-            (define-key lisp-mode-map [?\C-c ?c] 'comment-region)))
-
-(add-hook 'emacs-lisp-mode-hook
-          (lambda ()
-            (define-key emacs-lisp-mode-map [tab] 'dar-lisp-mode-tab)
-            (define-key emacs-lisp-mode-map [?\C-c ?\C-r] 'eval-region)
-            (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)
-            (define-key emacs-lisp-mode-map [?\C-c ?c] 'comment-region)))
-
-(add-hook 'emacs-lisp-mode-hook
-          (lambda ()
-            (make-local-variable 'outline-regexp)
-            (setq outline-regexp "^;;;+ ")
-            (make-local-variable 'outline-heading-end-regexp)
-            (setq outline-heading-end-regexp "\n")
-            (outline-minor-mode 1)))
-
-;; more ergonomic search for elisp definitions
-;; cf. http://emacsredux.com/blog/2014/06/18/quickly-find-emacs-lisp-sources/
-(define-key 'help-command (kbd "C-l") 'find-library)
-(define-key 'help-command (kbd "C-f") 'find-function)
-(define-key 'help-command (kbd "C-k") 'find-function-on-key)
-(define-key 'help-command (kbd "C-v") 'find-variable)
-
-;; elisp-slime-nav gives you M-. M-, navigation in elisp sources
-;; plus slime-describe-symbol C-c C-d C-d
-;; cf. https://github.com/purcell/elisp-slime-nav
-(require 'elisp-slime-nav)
-(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
-  (add-hook hook 'elisp-slime-nav-mode))
-
-;; some customising
-;; from http://boinkor.net/archives/2006/11/three_useful_emacs_hacks_for_l.html
-;; Turning off the "unsafe local variable" warning
-;; for common lisp source files. Several packages use the -*-
-;; convention to set the major mode; some also set variables like
-;; Package, Base and Syntax. Emacs 22 doesn't know that they're
-;; harmless and prompts almost every time I open a new lisp
-;; file. Ugh. Use this:
-(put 'package 'safe-local-variable 'symbolp)
-(put 'Package 'safe-local-variable 'symbolp)
-(put 'syntax 'safe-local-variable 'symbolp)
-(put 'Syntax 'safe-local-variable 'symbolp)
-(put 'Base 'safe-local-variable 'integerp)
-(put 'base 'safe-local-variable 'integerp)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; SLIME
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; (defun dar-slime-mode-tab ()
-;;   "Calls lisp-indent-line. If point does not change (if no indentation was
-;; performed, then slime-complete-symbol is called"
-;;   (interactive)
-;;   (let ((pos (point)))
-;;     (lisp-indent-line)
-;;     (when (= pos (point))
-;;       (slime-complete-symbol))))
-
-(define-lisp-mode-tab-fn dar-slime-mode-tab slime-complete-symbol)
-
-(add-hook 'slime-mode-hook
-          (lambda ()
-             (define-key slime-mode-map [tab] 'dar-slime-mode-tab)
-             (define-key slime-mode-map [?\C-\)] 'slime-close-all-sexp)
-             (define-key slime-mode-map [?\C-c ?c] 'comment-region)
-             (define-key slime-mode-map [?\C-c ?u] 'uncomment-region)
-             (unless (slime-connected-p)
-               (save-excursion (slime)))))
-
-(setq slime-net-coding-system 'utf-8-unix)
-
-;; lisp buffers always use slime
-;; (autoload 'slime "slime" "Superior Lisp Interaction Mode" t)
-(require 'slime-autoloads)
-
-(setq slime-contribs '(slime-fancy slime-asdf slime-tramp slime-repl slime-compiler-notes-tree))
-
-(add-hook 'slime-compilation-finished-hook 'slime-maybe-list-compiler-notes)
-
-(setq slime-tree-collapsed-severity-list '(:note))
-
-
-;;; findr
-
-(autoload 'findr "findr" "Find file name." t)
-
-(define-key global-map [(control shift f)] 'findr)
-
-(autoload 'findr-search "findr" "Find text in files." t)
-(define-key global-map [(control shift s)] 'findr-search)
-
-(autoload 'findr-query-replace "findr" "Replace text in files." t)
-(define-key global-map [(control shift q)] 'findr-query-replace)
-
-;;; never split the window vertically
-(setq split-width-threshold 1000)
-
-;;; XML handling
-
-;; maven pom files
-(add-to-list 'auto-mode-alist '("\\.pom\\(~\\|\\.~[0-9a-zA-Z_]+~\\)?\\'" . nxml-mode))
-
-(defun kd-format-xml-buffer ()
-  "Formats whole buffer with xmllint"
-  (interactive)
-  (save-excursion
-    (mark-whole-buffer)
-    ;;(shell-command-on-region START END COMMAND &optional OUTPUT-BUFFER
-    ;;                         REPLACE ERROR-BUFFER DISPLAY-ERROR-BUFFER)
-    (shell-command-on-region 1 (buffer-size)
-                             "xmllint --format -" (current-buffer) t nil t)))
-
-;;; It is always better to know current line and column number
-(column-number-mode t)
-(line-number-mode t)
-
-;;; Make all yes-or-no questions as y-or-n
-(fset 'yes-or-no-p 'y-or-n-p)
-
-;;; paredit
-
-(autoload 'paredit-mode "paredit"
-  "Minor mode for pseudo-structurally editing Lisp code."
-  t)
-
-(add-hook 'lisp-mode-hook
-          '(lambda ()
-            (paredit-mode +1)
-            (require 'findr)))
-
-(eval-after-load 'paredit
-  '(progn
-     ;; C-right forward-word is important for me
-     (define-key paredit-mode-map (kbd "M-<right>")
-       'paredit-forward-slurp-sexp)
-     (define-key paredit-mode-map (kbd "C-<right>")
-       'forward-word)
-     (define-key paredit-mode-map (kbd "M-<left>")
-       'paredit-forward-barf-sexp)
-     (define-key paredit-mode-map (kbd "C-<left>")
-       'backward-word)))
-
-
-;; Paredit will be loaded by lisp-mode-hook
-;; (require 'paredit)
-
-;; (setf paredit-mode-hook nil)
-
-;;
-;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
-;;
-
-;; (if (getenv "QUICKLISP_HOME")
-;;     (load (concat (getenv "QUICKLISP_HOME") "/slime-helper.el"))
-;;     (let ((default-slime-helper "~/quicklisp/slime-helper.el"))
-;;       (when (and quicklisp-slime-helper-dist (file-exists-p default-slime-helper)
-;;                  (load default-slime-helper)))))
-
-;; ;; try to load the elisp files from the current quicklisp distribution
-(when (functionp 'quicklisp-slime-helper-system-directory)
-  (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/")))
-
-;; if there are directories present in ~/dwim, they override the quicklisp ones
-(setq dwim-workspace (expand-file-name (getenv "DWIM_WORKSPACE")))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.def/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.logger/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
-(add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))
-
-;; Put a my-dwim-init.el in ~/.emacs.d/site-lisp/users/$USER/ will
-(let ((user-dwim-init (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/my-dwim-init.el")))
-  (if (file-exists-p user-dwim-init)
-      (load user-dwim-init)
-    (message "Not loading file %s as it does not exist." user-dwim-init)))
-
-(add-hook 'slime-mode-hook
-          '(lambda ()
-            (require 'my-dwim-init)
-            ;; undo the changes in dwim init files
-            (show-paren-mode t)
-            (setq show-paren-style 'parenthesis)
-            (setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/")))
-
-(add-hook 'lisp-mode-hook
-          '(lambda ()
-             (abbrev-mode t)
-             (paredit-mode +1)))
-
-
-;;; Easy PGA encryption
-
-;; setup easypga encryption support
-(require 'epa-file)
-(epa-file-enable)
-(add-to-list 'auto-mode-alist '("\\.gpg\\(~\\|\\.~[0-9a-zA-Z_]+~\\)?\\'" nil epa-file))
-
-;;; sqlplus
-(setenv "ORACLE_HOME" "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server")
-(setq sqlplus-command "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server/bin/sqlplus")
 
 ;;; system environment variables
 
@@ -578,12 +72,6 @@ performed, then slime-complete-symbol is called"
     (load machine-rc)
     (message "No machine specific emacs rc file for %s" sysname)))
 
-;;; Prime Confluence
-(setq confluence-url "https://confluence.prime-research.local:8443/rpc/xmlrpc")
-
-;;; dockerfile-mode
-(add-to-list 'auto-mode-alist '("Dockerfile" . dockerfile-mode))
-
 ;;; Set the PATH which is visible in emacs to the one defined in the shell startup files
 ;;
 ;; This is only relevant in graphical desktops, but can be re-executed to
@@ -593,59 +81,16 @@ performed, then slime-complete-symbol is called"
   (require 'exec-path-from-shell)
   (exec-path-from-shell-initialize))
 
-;;; Javascript
-
-;; JS2 mode https://github.com/mooz/js2-mode
-(autoload 'js2-mode "js2-mode.el" nil t)
-(add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
-
-;; for the flycheck validations, you need
-;; npm install -g eslint eslint-plugin-angular eslint-config-angular babel-eslint
-;;
-;; on emacs 24, you also need to install the package let-alist from melpa
-;; either with M-x package-list-packages, or C-u M-x package-install let-alist
-;;
-(add-hook 'js2-mode-hook
-          (lambda () (setq-default js2-basic-offset 2
-                                   js2-indent-switch-body t
-                                   js2-auto-indent-p t
-                                   js2-global-externs '("angular")
-                                   js2-indent-on-enter-key t
-                                   flycheck-disabled-checkers '(javascript-jshint)
-                                   flycheck-checkers '(javascript-eslint)
-                                   flycheck-eslintrc "~/.eslintrc")
-                  (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
-                  (flycheck-mode)))
-
-(set-variable 'js2-mode-hook '(lambda ()
-                               (setq-default js2-basic-offset 2
-                                js2-indent-switch-body t
-                                js2-auto-indent-p t
-                                js2-global-externs '("angular")
-                                js2-indent-on-enter-key t
-                                flycheck-disabled-checkers '(javascript-jshint)
-                                flycheck-checkers '(javascript-eslint)
-                                flycheck-eslintrc "~/.eslintrc")
-                               (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
-                               (flycheck-mode)))
-
- ;; Tern http://ternjs.net
-;; (install with npm install -g tern)
-;; if not present in PATH, don't add it to the load path/js2 hook
-(let ((path (replace-regexp-in-string "/bin/tern[\n \t]*$" "" (shell-command-to-string "which tern"))))
-  (unless (eq 0 (length path))
-    ;; tern config files are json
-    (add-to-list 'auto-mode-alist '("\\.tern-config\\'" . js-mode))
-    (add-to-list 'auto-mode-alist '("\\.tern-project\\'" . js-mode))
-    (add-to-list 'load-path (concat path "/lib/node_modules/tern/emacs"))
-    (autoload 'tern-mode "tern.el" nil t)
-    (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
+;;; dockerfile-mode
+(add-to-list 'auto-mode-alist '("Dockerfile" . dockerfile-mode))
 
 ;;; restclient
 (autoload 'restclient-mode "restclient" nil t)
+(add-to-list 'auto-mode-alist '("\\.restclient\\'" . restclient-mode))
 
 ;;; markdown
 (autoload 'markdown-mode "markdown-mode" nil t)
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 
 ;;; dockerfile
 (autoload 'dockerfile-mode "dockerfile-mode" nil t)
@@ -653,3 +98,9 @@ performed, then slime-complete-symbol is called"
 ;; Asciidoc mode https://github.com/sensorflo/adoc-mode.git
 (autoload 'adoc-mode "adoc-mode.el" nil t)
 (add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
+
+;; slime-like navigation in Emacs lisp buffers
+(autoload 'elisp-slime-nav-mode "elisp-slime-nav" nil t)
+
+;; load the user's my-init as the last action
+(require 'my-init "my-init" t)
