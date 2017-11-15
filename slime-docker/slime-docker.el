@@ -357,6 +357,9 @@ ARGS is the plist of all args passed to top level function."
         (make-local-variable 'slime-docker--cid)
         ;; Wait for cid-file to exist.
         (while (not (file-exists-p cid-file))
+	  (unless (process-live-p (get-buffer-process (current-buffer)))
+	    (switch-to-buffer-other-window (current-buffer) t)
+	    (error "Docker process died before we could attach to it!"))
           (sit-for 0.1))
 	(let ((cid (slime-docker--read-cid cid-file)))
 	  (while (string-equal "" cid)
