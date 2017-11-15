@@ -95,12 +95,21 @@
 ;;; dockerfile
 (autoload 'dockerfile-mode "dockerfile-mode" nil t)
 
+;;; docker-tramp
+(autoload 'docker-tramp "docker-tramp" nil t)
+
+;;; slime-docker
+(autoload 'slime-docker "slime-docker" nil t)
+
 ;; Asciidoc mode https://github.com/sensorflo/adoc-mode.git
 (autoload 'adoc-mode "adoc-mode.el" nil t)
 (add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
 
 ;; slime-like navigation in Emacs lisp buffers
 (autoload 'elisp-slime-nav-mode "elisp-slime-nav" nil t)
+
+;; paredit-mode
+(autoload 'paredit-mode "paredit" "Minor mode for pseudo-structurally editing Lisp code." t)
 
 ;; load the user's my-init as the last action
 (require 'my-init "my-init" t)
