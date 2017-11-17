@@ -77,6 +77,9 @@ For KEYWORD-ARGS see `slime-docker-start'")
   "The name of the default Lisp implementation for `slime-docker'.
 See `slime-docker-implementations'")
 
+(defvar slime-docker-default-swank-path nil
+  "The directory where `slime-docker' can find swank-loader.lisp.")
+
 (defvar slime-docker--cid nil
   "A buffer local variable in the inferior proccess.")
 
@@ -136,6 +139,12 @@ to disable ASLR.")
 (setq slime-docker-sbcl-seccomp-profile
       (slime-docker--find-sbcl-seccomp-profile))
 
+(defun slime-docker--find-swank ()
+  (if slime-docker-default-swank-path
+      slime-docker-default-swank-path
+      (if (file-exists-p (expand-file-name "swank-loader.lisp" slime-path))
+	   (return slime-path)
+	 (error "Cannot find 'swank-loader.lisp' in %s. Please specify the directory where swank is located with `slime-docker-default-swank-path'." slime-path))))
 
 ;;;; Docker machine integration
 (defun slime-docker--machine-get-env-string (machine)
@@ -635,7 +644,7 @@ PORTS is a list of port specifications to open in the docker
   properties :ip, :host-port, and :container-port. :ip must be a
   string. :host-port and :container-port must be a number or a
   cons cell."
-  (let* ((mounts (cl-list* `((,slime-path . ,slime-mount-path) :read-only ,slime-mount-read-only)
+  (let* ((mounts (cl-list* `((,(slime-docker--find-swank) . ,slime-mount-path) :read-only ,slime-mount-read-only)
                            mounts))
          (args (list :program program :program-args program-args
                      :directory directory :name name :buffer buffer
