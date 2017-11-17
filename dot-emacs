@@ -36,6 +36,20 @@
   (unless (boundp 'quicklisp-slime-helper-dist)
     (warn "You have no slime in your quicklisp installation at %s" quicklisp-home)))
 
+;;; slime-docker default docker image
+(setq mc-sbcl-docker-tag "1.4.1-mc-2017-10-23")
+
+(setq slime-docker-default-swank-path "/usr/share/common-lisp/source/slime")
+
+(setq slime-docker-implementations `(("sbcl-mc" ("--dynamic-space-size" "200")
+                                                :slime-mount-path ,slime-docker-default-swank-path
+                                                :image-name "mcreations/sbcl"
+                                                :image-tag ,mc-sbcl-docker-tag
+                                                :mounts ((("~/common-lisp" . "/common-lisp"))
+                                                         (("~/.cache" . "/cache"))
+                                                         (("/usr/share/emacs/site-lisp/slime" . "/usr/share/emacs/site-lisp/slime"))
+                                                         ))))
+
 ;; A user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
 (add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/"))
 
