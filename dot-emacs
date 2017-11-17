@@ -22,17 +22,17 @@
       (add-to-list 'load-path dir))))
 
 
-;; Quicklisp is present? Then use slime either from m-creations dist or from quicklisp (default) 
+;; Quicklisp is present? Then use slime either from m-creations dist or from quicklisp (default)
 (setq quicklisp-home (or (getenv "QUICKLISP_HOME")
-			 (when (file-exists-p "~/quicklisp")
-			   "~/quicklisp")))
+                         (when (file-exists-p "~/quicklisp")
+                           "~/quicklisp")))
 
 (when quicklisp-home
   (loop for dist in '("m-creations" "quicklisp")
-	do
-	(when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
-	  (setq quicklisp-slime-helper-dist dist)
-	  (return)))
+        do
+        (when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
+          (setq quicklisp-slime-helper-dist dist)
+          (return)))
   (unless (boundp 'quicklisp-slime-helper-dist)
     (warn "You have no slime in your quicklisp installation at %s" quicklisp-home)))
 
