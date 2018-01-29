@@ -113,6 +113,10 @@
 (global-set-key "\M-[5;3~"  'kd-scroll-other-window-up) ; M-<prior> (pg up)
 (global-set-key "\M-[6;3~"  'scroll-other-window)      ; M-<next> (pg dn)
 
+(global-set-key (kbd "C-,") 'copy-primary-selection)
+(global-set-key (kbd "C-.") 'yank-clipboard-selection)
+(global-set-key [(control insert)] 'kill-primary-selection)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Color theme
@@ -129,6 +133,9 @@
 ;;;; changes added by custom
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq custom-file "~/.emacs.d/custom.el")
+(load custom-file)
 
 (custom-set-variables
   ;; custom-set-variables was added by Custom.
@@ -181,6 +188,9 @@
 ;; load personal-funcs which contains my-color-theme etc.
 ;;(load-file "~/.emacs.d/site-lisp/personal-funcs.el")
 (require 'personal-funcs)
+
+;;(setq browse-url-firefox-program "/usr/local/bin/Icecat32")
+(setq browse-url-firefox-program "firefox")
 
 (autoload 'w3m-browse-url "w3m" "Ask a WWW browser to show a URL." t)
 (if (getenv "DISPLAY")
@@ -235,6 +245,10 @@
 (global-set-key [(meta O) (c)] 'forward-word)
 (global-set-key [(meta O) (d)] 'backward-word)
 
+;;; Scrolling
+
+(setq smooth-scroll-margin 5)
+
 ;;;; Scrolling the other window
 ;; we need an interactive function for global-set-key (cf. below)
 (defun kd-scroll-other-window-up (arg)
@@ -243,6 +257,37 @@
 
 (global-set-key "\M-[5;3~"  'kd-scroll-other-window-up) ; M-<prior> (pg up)
 (global-set-key "\M-[6;3~"  'scroll-other-window)      ; M-<next> (pg dn)
+
+
+(global-set-key (kbd "C-b") 'undo)
+(global-set-key (kbd "M-b") 'redo)
+
+(global-set-key (kbd "M-f") 'findr-search)
+(global-set-key (kbd "C-n") 'tags-loop-continue)
+
+;; C-o is normally bound to open-line which inserts a newline
+;; at point and stays there
+(global-set-key (kbd "C-o") 'other-window)
+(define-key Buffer-menu-mode-map (kbd "C-o") 'other-window)
+
+(global-set-key (kbd "C-p") 'dwim-kill-this-buffer-and-window)
+
+(add-hook 'dired-mode-hook (lambda ()
+			     (define-key dired-mode-map (kbd "C-o") 'other-window)
+			     (define-key dired-mode-map (kbd "C-p") 'dwim-kill-this-buffer-and-window)))
+
+;; usually: (move-to-window-line arg)
+(global-set-key (kbd "M-r") 'query-replace)
+(global-set-key [(control shift f)] 'findr)
+(global-set-key [(control shift s)] 'findr-search)
+(global-set-key [(control shift r)] 'findr-query-replace)
+
+;; darabi: C-M-l locks the gnome session
+;; (global-set-key (kbd "C-M-l") 'recenter)
+(global-set-key (kbd "C-M-u") 'universal-argument)
+(global-set-key (kbd "C-l") 'switch-to-other-buffer)
+;; (global-set-key [(control e)] 'delete-window)
+(global-set-key [(control shift e)] 'delete-other-windows)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -339,6 +384,16 @@
 
 (setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
 
+;; org-protocol and capturing from Chrome/Firefox
+(require 'org-protocol)
+
+(setq org-capture-templates
+      `(
+        ("p" "Protocol" entry (file+headline ,(concat org-directory "/notes.org") "Inbox")
+             "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
+        ("L" "Protocol Link" entry (file+headline ,(concat org-directory "/notes.org") "Inbox")
+             "* %? [[%:link][%:description]] \nCaptured On: %U")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; ENCRYPTION
@@ -419,6 +474,19 @@
   (save-excursion
     (unless (eq (window-system) 'w32)
       (my-set-x-font))))
+
+;;; Fonts
+
+(defun my-lisp-mode-fonts ()
+  (font-lock-add-keywords
+   'lisp-mode
+   ;; atdoc keywords
+   `(("@\\(a\\|aboutclass\\|aboutfun\\|arg\\|b\\|class\\|code\\|em\\|fun\\|itemize\\|pre\\|return\\|section\\|see\\|see-constructor\\|see-slot\\|short\\|variable\\)\\(\\[.*\\]\\)" 0 'font-lock-preprocessor-face t))) 'set)
+
+(my-lisp-mode-fonts)
+
+;; (font-lock-remove-keywords 'lisp-mode '(("\\(short\\|arg\\)")))
+;; (font-lock-refresh-defaults)
 
 ;;; Kill ring browsing
 
@@ -569,6 +637,8 @@ performed, then slime-complete-symbol is called"
     (shell-command-on-region 1 (buffer-size)
                              "xmllint --format -" (current-buffer) t nil t)))
 
+(push '("<\\?xml " . nxml-mode) magic-mode-alist)
+
 ;;; It is always better to know current line and column number
 (column-number-mode t)
 (line-number-mode t)
@@ -701,7 +771,7 @@ performed, then slime-complete-symbol is called"
     (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
 
 
-;START;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; changes added by custom
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -717,6 +787,60 @@ performed, then slime-complete-symbol is called"
  ; '(spam-use-bogofilter t)
  '(tool-bar-mode nil)
  '(use-file-dialog nil))
+
+(setq-default
+ findr-file-name-regexp-history (list "\\(\\.lisp\\|\\.lsp\\|\\.asd\\|\\.el\\|\\.c\\|\\.h\\|\\.cpp\\|\\.tal\\|\\.css\\|\\.sh\\|\\.lua\\|\\.py\\|\\.go\\)$")
+ findr-skip-directory-regexp "\\(/\\.backups$\\|/_darcs$\\|/\\.git$\\|/CVS$\\|/\\.svn$\\)\\|/www$\\|/wwwroot$"
+
+ save-place t
+ save-place-file "~/.emacs.d/places.el"
+
+ undo-limit 3000000
+ undo-strong-limit 5000000
+
+ slime-repl-history-size 3000
+ slime-kill-without-query-p t
+
+ swbuff-clear-delay 3
+ swbuff-clear-delay-ends-switching t
+ swbuff-exclude-buffer-regexps '("^ " "\\*.*\\*")
+ swbuff-separator " ### "
+
+ indent-tabs-mode nil
+ inhibit-startup-screen t
+ signal-error-on-buffer-boundary nil
+
+ ;; mostly to set LANG to have proper utf-8 encoding for file names
+ tramp-remote-process-environment '("LANG=en_US.UTF-8" "LC_ALL=" "HISTFILE=$HOME/.tramp_history" "HISTSIZE=1" "TERM=dumb" "CDPATH=" "HISTORY=" "MAIL=" "MAILCHECK=" "MAILPATH=" "autocorrect=" "correct=")
+ tramp-default-method "ssh"
+ tramp-default-proxies-alist '(("ebr42.otm.gov.hu" "" "/ssh:%u@armageddon.intranet.netvisor.hu#2222:"))
+ tramp-backup-directory-alist '((".*encrypt.*" . nil)
+                                (".*vault" . nil)
+                                (".*truecrypt.*" . nil)
+                                ("." . "~/.backups/"))
+ tramp-auto-save-directory "~/.backups/autosaves/"
+
+ shift-select-mode t
+
+ enable-local-variables :safe
+ font-lock-maximum-size 500000
+
+ unshifted-motion-keys-deselect-region t
+ x-select-enable-clipboard t
+ interprogram-cut-function nil ; so that kill does not clobber the clipboard
+ )
+
+(delete-selection-mode t)
+(tool-bar-mode 0)
+
+(add-hook 'global-whitespace-mode-hook
+          (defun dwim/global-whitespace-mode-hook ()
+            (setq whitespace-global-modes '(ada-mode asm-mode autoconf-mode awk-mode c-mode c++-mode cc-mode change-log-mode cperl-mode electric-nroff-mode emacs-lisp-mode f90-mode fortran-mode html-mode html3-mode java-mode jde-mode ksh-mode latex-mode LaTeX-mode lisp-mode m4-mode makefile-mode modula-2-mode nroff-mode objc-mode pascal-mode perl-mode prolog-mode python-mode scheme-mode sgml-mode sh-mode shell-script-mode simula-mode tcl-mode tex-mode texinfo-mode vrml-mode xml-mode lisp-mode)
+                  whitespace-action '(auto-cleanup)
+                  whitespace-style '(face trailing empty tabs))))
+
+(global-whitespace-mode t)
+
 
 ;;; Safe file-local variables
 
@@ -856,7 +980,51 @@ Content-Type: text/plain; charset=utf-8")
 ;;         (nil . "")))
 
 
+;;;;;;
+;;; IDO setup
+
+(require 'ido)
+
+(setq ido-everywhere t
+      ido-enable-flex-matching t
+      ido-max-directory-size 100000)
+
+;;; just like execute-extended-command bound to M-x but uses ido lookup
+(setq ido-execute-extended-command-cache nil)
+(defun ido-execute-extended-command ()
+  (interactive)
+  (call-interactively
+   (intern
+    (ido-completing-read
+     "M-x "
+     (progn
+       (unless ido-execute-extended-command-cache
+         (mapatoms (lambda (s)
+                     (when (commandp s)
+                       (setq ido-execute-extended-command-cache
+                             (cons (symbol-name s) ido-execute-extended-command-cache))))))
+       ido-execute-extended-command-cache)))))
+
+(defun dwim-redefine-ido-key (key function)
+  (define-key ido-common-completion-map key function)
+  (dolist (map (list ido-buffer-completion-map
+                     ido-file-completion-map
+                     ido-file-dir-completion-map))
+    (define-key map key nil)))
+
+(add-hook 'ido-define-mode-map-hook
+          (lambda ()
+            (cl-flet ((redef (key function)
+                     (define-key ido-completion-map key function)))
+              (redef (kbd "M-p") 'previous-history-element)
+              (redef (kbd "<up>") 'previous-history-element)
+              (redef (kbd "M-n") 'next-history-element)
+              (redef (kbd "<down>") 'next-history-element))))
+
+(ido-mode 1)
+
 (defun my-attach-directory-images ()
+  "Attach all jpeg images in a directory to the current mail message"
   (interactive)
   (let ((dir (ido-read-directory-name "Welches Verzeichnis? " "~/Pictures" nil t "appt")))
     (dolist (f (directory-files dir t "\\(\\.jpg\\|\\.JPG\\)" nil))
@@ -1131,7 +1299,9 @@ Content-Type: text/plain; charset=utf-8")
 (add-hook 'lisp-mode-hook
           '(lambda ()
             (abbrev-mode t)
-            (paredit-mode +1)))
+            (paredit-mode +1)
+            ;; dash is not a word delimiter any more
+            (modify-syntax-entry ?- "w")))
 
 ;;; We use left and right guillemet for quasi-quoted strings
 (global-set-key [?\C-<] 'insert-left-guillemet)
@@ -1228,6 +1398,10 @@ Content-Type: text/plain; charset=utf-8")
         (while (not (eq (point) (point-max)))
           (forward-line 1)
           (indent-according-to-mode))))))
+
+
+;;; Markdown
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 
 
 (provide 'my-init)

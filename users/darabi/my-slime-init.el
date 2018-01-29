@@ -1,24 +1,17 @@
-(message "------ START OF my-sime-init")
+(message "------ START OF my-slime-init")
 
 (require 'dwim-init)
 
+(setq slime-docker-implementations '((sbcl ("--eval" "(ql:quickload :swank)" "--eval" "(progn (swank-loader:init) (setf swank::*loopback-interface* \"0.0.0.0\") (swank:create-server))")
+                                           :image-name "mcreations/sbcl"
+                                           :image-tag "1.4.1-mc-2017-10-23")))
+
 (dwim-define-lisp-key (kbd "C-c M-C-c") 'slime-eval-defun :elisp nil)
-
-(global-set-key (kbd "C-,") 'copy-primary-selection)
-(global-set-key (kbd "C-.") 'yank-clipboard-selection)
-(global-set-key [(control insert)] 'kill-primary-selection)
-
-;;(setq browse-url-firefox-program "/usr/local/bin/Icecat32")
-(setq browse-url-firefox-program "firefox")
-
 
 (define-key slime-macroexpansion-minor-mode-map (kbd "M-b")
   (lookup-key slime-macroexpansion-minor-mode-map (kbd "C-c <RET>")))
 
 (dwim-define-lisp-key (kbd "C-M-,") 'dwim-copy-sexp)
-
-(global-set-key (kbd "M-b") 'redo)
-(global-set-key (kbd "C-b") 'undo)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -43,15 +36,6 @@
 
 ;; (unless icicle-fuzzy-completion-flag
 ;;   (icicle-toggle-fuzzy-completion))
-
-;; (add-hook 'ido-define-mode-map-hook
-;;           (lambda ()
-;;             (cl-flet ((redef (key function)
-;;                      (define-key ido-completion-map key function)))
-;;               (redef (kbd "M-p") 'previous-history-element)
-;;               (redef (kbd "<up>") 'previous-history-element)
-;;               (redef (kbd "M-n") 'next-history-element)
-;;               (redef (kbd "<down>") 'next-history-element))))
 
 (dwim-redefine-ido-key (kbd "C-b") 'undo)
 (dwim-redefine-ido-key (kbd "M-b") 'redo)
@@ -173,21 +157,8 @@
 (dwim-define-lisp-key (kbd "C-M-c") 'slime-repl-clear-buffer :buffers nil :elisp nil)
 (dwim-define-lisp-key (kbd "C-c C-c") 'eval-defun :elisp nil :repl nil)
 
-(global-set-key (kbd "M-f") 'findr-search)
-(global-set-key (kbd "C-n") 'tags-loop-continue)
-
-;; C-o is normally bound to open-line which inserts a newline
-;; at point and stays there
-(global-set-key (kbd "C-o") 'other-window)
-(define-key Buffer-menu-mode-map (kbd "C-o") 'other-window)
-(define-key dired-mode-map (kbd "C-o") 'other-window)
-
-;; usually: (move-to-window-line arg)
-(global-set-key (kbd "M-r") 'query-replace)
 (global-set-key [(meta shift r)] 'dwim-query-replace-current-sexp)
-(global-set-key [(control shift f)] 'findr)
-(global-set-key [(control shift s)] 'findr-search)
-(global-set-key [(control shift r)] 'findr-query-replace)
+
 (global-set-key [(control shift i)] (lambda ()
                                       (interactive)
                                       (slime-selector ?i)))
@@ -198,31 +169,11 @@
                                       (interactive)
                                       (slime-selector ?c)))
 
-;; darabi: C-M-l locks the gnome session
-;; (global-set-key (kbd "C-M-l") 'recenter)
-(global-set-key (kbd "C-M-u") 'universal-argument)
-(global-set-key (kbd "C-l") 'switch-to-other-buffer)
-;; (global-set-key [(control e)] 'delete-window)
-(global-set-key [(control shift e)] 'delete-other-windows)
-(global-set-key (kbd "C-p") 'dwim-kill-this-buffer-and-window)
-(define-key dired-mode-map (kbd "C-p") 'dwim-kill-this-buffer-and-window)
 (global-set-key (kbd "C-M-\\") 'slime-selector)
 ;; (global-set-key (kbd "S-<delete>") 'kill-primary-selection)
 ;; (global-set-key (kbd "C-<insert>") 'copy-primary-selection)
 ;; (global-set-key (kbd "S-<insert>") 'yank-clipboard-selection)
 
-;;; Fonts
-
-(defun my-lisp-mode-fonts ()
-  (font-lock-add-keywords
-   'lisp-mode
-   ;; atdoc keywords
-   `(("@\\(a\\|aboutclass\\|aboutfun\\|arg\\|b\\|class\\|code\\|em\\|fun\\|itemize\\|pre\\|return\\|section\\|see\\|see-constructor\\|see-slot\\|short\\|variable\\)\\(\\[.*\\]\\)" 0 'font-lock-preprocessor-face t))) 'set)
-
-(my-lisp-mode-fonts)
-
-;; (font-lock-remove-keywords 'lisp-mode '(("\\(short\\|arg\\)")))
-;; (font-lock-refresh-defaults)
 
 (defun dwim/add-slime-impl-image (image-name &rest args)
   (let ((name (replace-regexp-in-string "hu\.dwim\." "" image-name)))
@@ -260,7 +211,8 @@
 
 ; (setf slime-default-lisp 'installed-sbcl)
 
-(setf slime-default-lisp 'web-server)
+; (setf slime-default-lisp 'web-server)
+(setf slime-default-lisp 'restful-objects)
 
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
