@@ -827,7 +827,6 @@ performed, then slime-complete-symbol is called"
 
  unshifted-motion-keys-deselect-region t
  x-select-enable-clipboard t
- interprogram-cut-function nil ; so that kill does not clobber the clipboard
  )
 
 (delete-selection-mode t)
