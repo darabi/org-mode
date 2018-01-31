@@ -32,6 +32,11 @@
 (setq interprogram-cut-function 'x-select-text)
 (setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
 
+;; Shift movement selects region
+(setq shift-select-mode t)
+(setq unshifted-motion-keys-deselect-region t)
+(delete-selection-mode t)
+
 ; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
 ; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
 ; if you're used to other modern apps (that is to say, the mere act of highlighting doesn't
@@ -155,32 +160,6 @@
 (put 'upcase-region 'disabled nil)
 (put 'scroll-left 'disabled nil)
 (put 'downcase-region 'disabled nil)
-
-;;;; X Selection
-
-;; http://www.emacswiki.org/emacs/CopyAndPaste
-
-; (transient-mark-mode 1)  ; Now on by default: makes the region act quite like the text "highlight" in many apps.
-; (setq shift-select-mode t) ; Now on by default: allows shifted cursor-keys to control the region.
-(setq mouse-drag-copy-region nil)  ; stops selection with a mouse being immediately injected to the kill ring
-(setq x-select-enable-primary nil)  ; stops killing/yanking interacting with primary X11 selection
-(setq x-select-enable-clipboard t)  ; makes killing/yanking interact with clipboard X11 selection
-
-;; these will probably be already set to these values, leave them that way if so!
-(setq interprogram-cut-function 'x-select-text)
-(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-
-; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
-; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
-; if you're used to other modern apps (that is to say, the mere act of highlighting doesn't
-; overwrite the clipboard or alter the kill ring, but you can paste in merely highlighted
-; text with the mouse if you want to)
-(setq select-active-regions t) ;  active region sets primary X11 selection
-(global-set-key [mouse-2] 'mouse-yank-primary)  ; make mouse middle-click only paste from primary X11 selection, not clipboard and kill ring.
-
-;; with this, doing an M-y will also affect the X11 clipboard, making emacs act as a sort of clipboard history, at
-;; least of text you've pasted into it in the first place.
-;; (setq yank-pop-change-selection t)  ; makes rotating the kill ring change the X11 clipboard.
 
 ;; stolen from
 ;; http://wttools.sourceforge.net/emacs-stuff/emacs.html
@@ -820,16 +799,10 @@ performed, then slime-complete-symbol is called"
                                 ("." . "~/.backups/"))
  tramp-auto-save-directory "~/.backups/autosaves/"
 
- shift-select-mode t
-
  enable-local-variables :safe
  font-lock-maximum-size 500000
-
- unshifted-motion-keys-deselect-region t
- x-select-enable-clipboard t
  )
 
-(delete-selection-mode t)
 (tool-bar-mode 0)
 
 (add-hook 'global-whitespace-mode-hook
