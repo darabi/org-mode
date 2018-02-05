@@ -13,6 +13,8 @@ or in ~/.fonts"
       (1440 (set-default-font "Inconsolata-11" t))
       (1680 (set-default-font "Inconsolata-11" t))
       (1920 (set-default-font "Consolas-11" t))
+      (3200 (set-default-font "Inconsolata-12" t))
+      (3840 (set-default-font "Consolas-15" t))
       (0 (set-default-font "Inconsolata-10.5" t)))))
 
 ;; TODO: 9.5 is much better on an eee without external
