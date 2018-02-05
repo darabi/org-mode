@@ -152,8 +152,9 @@ looks like tree2, where the level is 2."
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" 'selective)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP" t)))
     (unless date (setq date (org-entry-get nil "TIMESTAMP_IA" t)))
-    (unless work (setq work (org-entry-get nil "CLOCKSUM" nil)))
-    (unless work (setq work "00:00"))
+    (unless work
+      (setq work (org-minutes-to-clocksum-string work-minutes)))
+    (when (> work-minutes 0)
     (when date
       (setq raw-date (apply 'encode-time (org-parse-time-string date)))
       (setq long-date (format-time-string org-invoice-long-date-format raw-date)))
@@ -175,7 +176,7 @@ looks like tree2, where the level is 2."
           (cons 'timelist timelist)
           (cons 'price (* rate (/ work 60.0)))))
     (run-hook-with-args 'org-invoice-heading-hook)
-    org-invoice-current-item))
+    org-invoice-current-item)))
 
 (defun org-invoice-level-min-max (ls)
   "Return a list where the car is the min level, and the cdr the max."
@@ -187,9 +188,19 @@ looks like tree2, where the level is 2."
         (when (> level max) (setq max level))))
     (cons (or min 0) max)))
 
+(defun clockdetails-title (entry)
+  (first (cdr (assq 'timelist entry))))
+
+(defun clockdetails-times (entry)
+  (second (cdr (assq 'timelist entry))))
+
+(defun clockdetails-times-start (entry)
+  (first (first (clockdetails-times entry))))
+
 (defun org-invoice-sort-list (ls)
   "Sort the give list by date."
-  (sort ls (lambda (a b) (string< (car a) (car b)))))
+  (sort (remove-if (lambda (elem) (null (clockdetails-times elem))) ls)
+        (lambda (a b) (< (clockdetails-times-start a) (clockdetails-times-start b)))))
 
 (defun org-invoice-collapse-list (ls)
   "Reorganize the given list by dates."
@@ -222,7 +233,7 @@ looks like tree2, where the level is 2."
             (setcdr (assq 'price (car bucket))
                     (+ price (cdr (assq 'price (car bucket)))))
             (nconc bucket (list info))))))
-    (org-invoice-sort-list new)))
+    (nreverse new)))
 
 (defun org-invoice-info-to-table (info)
   "Create a single org table row from the given info alist."
@@ -230,16 +241,16 @@ looks like tree2, where the level is 2."
         (total (cdr (assq 'total-work info)))
         (work  (cdr (assq 'work info)))
         (price (cdr (assq 'price info)))
-        (clockdetails (cdr (assq 'timelist info)))
+        (clockdetails (clockdetails-times info))
         (with-price (plist-get org-invoice-table-params :price))
         (with-details (plist-get org-invoice-table-params :clockdetails)))
     (unless total
       (setq
        org-invoice-total-time (+ org-invoice-total-time work)
        org-invoice-total-price (+ org-invoice-total-price price)))
-    (setq total (and total (org-duration-from-minutes total)))
-    (setq work  (and work  (org-duration-from-minutes work)))
-    (if with-details(setq total (and total (org-duration-from-minutes total)))
+    (setq total (and total (org-minutes-to-clocksum-string total)))
+    (setq work  (and work  (org-minutes-to-clocksum-string work)))
+    (if with-details
       (org-invoice-clockdetails-to-table clockdetails title)
       (insert-before-markers
        (concat "|" title
@@ -251,21 +262,20 @@ looks like tree2, where the level is 2."
 
 
 (defun org-invoice-clockdetails-to-table (clockdetails title)
-  (if (cadr clockdetails)
-      (dolist (tl (cadr clockdetails))
-        (let ((start (seconds-to-time (car tl)))
-              (end (seconds-to-time (cadr tl)))
-              (dateformat (plist-get org-invoice-table-params :dateformat))
-              (timeformat (plist-get org-invoice-table-params :timeformat)))
-          (insert-before-markers
-           (concat "\n|"
-                   (format-time-string dateformat start)
-                   "|"
-                   (format-time-string timeformat start)
-                   "|"
-                   (format-time-string timeformat end)
-                   "|" title
-                   "|"))))))
+  (dolist (tl clockdetails)
+    (let ((start (seconds-to-time (car tl)))
+	  (end (seconds-to-time (cadr tl)))
+	  (dateformat (plist-get org-invoice-table-params :dateformat))
+	  (timeformat (plist-get org-invoice-table-params :timeformat)))
+      (insert-before-markers
+       (concat "\n|"
+	       (format-time-string dateformat start)
+	       "|"
+	       (format-time-string timeformat start)
+	       "|"
+	       (format-time-string timeformat end)
+	       "|" title
+	       "|")))))
 
 (defun org-invoice-list-to-table (ls)
   "Convert a list of heading info to an org table"
@@ -278,8 +288,7 @@ looks like tree2, where the level is 2."
      (concat "| Task / Date | Time" (and with-price "| Price") "| Activity |"))
     (insert-before-markers "\n|-")
     (dolist (info ls)
-      (message "org-invoice-list-to-table info: %s" info)
-      (mapc 'org-invoice-info-to-table (if with-header (cdr info) (cdr (cdr info)))))
+      (org-invoice-info-to-table info))
     (when with-summary
       (insert-before-markers
        (concat "\n|-\n|Total:|"
@@ -294,14 +303,18 @@ heading that begins the invoice data, usually using the
 `org-invoice-goto-tree' function."
   (let ((org-invoice-current-invoice
          (list (cons 'point (point)) (cons 'buffer (current-buffer))))
-        (org-invoice-current-item nil))
+        (org-invoice-current-item nil)
+	(with-details (plist-get org-invoice-table-params :clockdetails))
+	entries)
     (save-restriction
       (org-narrow-to-subtree)
       (org-clock-sum)
       (run-hook-with-args 'org-invoice-start-hook)
-      (cons org-invoice-current-invoice
-            (org-invoice-collapse-list
-             (org-map-entries 'org-invoice-heading-info t 'tree 'archive))))))
+      (setf entries (org-map-entries 'org-invoice-heading-info t 'tree 'archive))
+      (if with-details
+	  (cons org-invoice-current-invoice (org-invoice-sort-list entries))
+	  (cons org-invoice-current-invoice
+		(org-invoice-collapse-list entries))))))
 
 (defun org-dblock-write:invoice (params)
   "Function called by OrgMode to write the invoice dblock.  To

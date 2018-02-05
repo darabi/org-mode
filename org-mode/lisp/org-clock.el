@@ -1850,7 +1850,7 @@ PROPNAME lets you set a custom text property instead of :org-clock-minutes."
 		  (dt (- (if tend (min te tend) te)
 			 (if tstart (max ts tstart) ts))))
 	     (when (> dt 0) (cl-incf t1 (floor (/ dt 60))))
-	     (push (list ts te t1) timelist))
+	     (push (list ts te t1) timelist)))
 	  ((match-end 4)
 	   ;; A naked time.
 	   (setq t1 (+ t1 (string-to-number (match-string 5))
