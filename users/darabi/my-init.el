@@ -338,13 +338,11 @@
 
 ;; specifying dirs is much safer, as new files
 ;; are automatically picked up
-(setq org-agenda-files '("~/org"
-                         "~/org/work"
-                         "~/org/life"))
+(setq org-agenda-files '("~/vc/org"
+                         "~/vc/org/work"
+                         "~/vc/org/life"))
 
-;; Here is my setup for org-capture
-(setq org-directory "~/org")
-(setq org-default-notes-file "~/org/inbox.org")
+(setq org-directory "~/vc/org")
 
 (eval-after-load 'org
   '(progn
@@ -363,8 +361,12 @@
 
 (setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
 
+;;; org-capture and org-protocol
+
 ;; org-protocol and capturing from Chrome/Firefox
 (require 'org-protocol)
+
+(setq org-default-notes-file "~/vc/org/notes.org")
 
 (setq org-capture-templates
       `(
@@ -842,10 +844,6 @@ performed, then slime-complete-symbol is called"
 (setq org-agenda-files '("~/vc/org"
                          "~/vc/org/work"
                          "~/vc/org/life"))
-
-;; Here is my setup for org-capture
-(setq org-directory "~/vc/org")
-(setq org-default-notes-file "~/vc/org/inbox.org")
 
 (setq org-clock-into-drawer nil)
 

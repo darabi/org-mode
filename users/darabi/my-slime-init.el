@@ -203,6 +203,7 @@
 (dwim/add-slime-impl-image "restful-objects")
 (dwim/add-slime-impl-image "ayacandas-server")
 (dwim/add-slime-impl-image "sftp-downloader")
+(dwim/add-slime-impl-image "cxml")
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
