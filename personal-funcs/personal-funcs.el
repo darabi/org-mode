@@ -945,4 +945,26 @@ in your path. Useful for reading non-regular files like
     (message isodate)
     isodate))
 
+(unless (fboundp 'switch-to-other-buffer)
+  (defun switch-to-other-buffer ()
+    "Switch to other-buffer in current window"
+    (interactive)
+    (switch-to-buffer (other-buffer))))
+
+
+(defun dwim-window-deletable-p (window)
+  "Return t if WINDOW is deletable, meaning that WINDOW is alive
+and not a minibuffer's window, plus there is two or more
+windows."
+  (and (window-live-p window)
+       (not (window-minibuffer-p window))
+       (not (one-window-p))))
+
+(defun dwim-kill-this-buffer-and-window ()
+  (interactive)
+  (kill-this-buffer)
+  (when (dwim-window-deletable-p (get-buffer-window (current-buffer)))
+    (delete-window)))
+
+
 (provide 'personal-funcs)
