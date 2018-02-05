@@ -4074,7 +4074,7 @@ contextual information."
        ;; 	(message "OpenDocument export failed: %s"
        ;; 		 (error-message-string err)))
        ;; )))
-	 ))
+	 )))
 
 ;;;; Export to OpenDocument formula
 
