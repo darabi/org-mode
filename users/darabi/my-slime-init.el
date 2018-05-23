@@ -2,6 +2,10 @@
 
 (require 'dwim-init)
 
+;; reset the dwim-init modification to these vars
+(setq-default
+ interprogram-cut-function (when (display-graphic-p) 'gui-select-text))
+
 (setq slime-docker-implementations '((sbcl ("--eval" "(ql:quickload :swank)" "--eval" "(progn (swank-loader:init) (setf swank::*loopback-interface* \"0.0.0.0\") (swank:create-server))")
                                            :image-name "mcreations/sbcl"
                                            :image-tag "1.4.1-mc-2017-10-23")))
@@ -193,6 +197,7 @@
 (dwim/add-slime-impl-image "hu.dwim.reader")
 (dwim/add-slime-impl-image "hu.dwim.web-server")
 (dwim/add-slime-impl-image "hu.dwim.presentation")
+(dwim/add-slime-impl-image "hu.dwim.zlib")
 (dwim/add-slime-impl-image "rodin")
 (dwim/add-slime-impl-image "rodin.peaches")
 (dwim/add-slime-impl-image "alexandria")
@@ -212,8 +217,9 @@
 
 ; (setf slime-default-lisp 'installed-sbcl)
 
-; (setf slime-default-lisp 'web-server)
-(setf slime-default-lisp 'restful-objects)
+(setf slime-default-lisp 'web-server)
+
+; (setf slime-default-lisp 'restful-objects)
 
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
