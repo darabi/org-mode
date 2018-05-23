@@ -51,7 +51,7 @@
                                                          ))))
 
 ;; A user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
-(add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/users/" (getenv "USER") "/"))
+(add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/m-creations/users/" (getenv "USER") "/"))
 
 ;; lisp-mode-hook is of course also used in case of Emacs Lisp buffers, but when using
 ;; slime-mode-hook, then it is too late to load my-slime-init
