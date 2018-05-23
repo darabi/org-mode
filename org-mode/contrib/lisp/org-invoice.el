@@ -269,11 +269,11 @@ looks like tree2, where the level is 2."
 	  (timeformat (plist-get org-invoice-table-params :timeformat)))
       (insert-before-markers
        (concat "\n|"
-	       (format-time-string dateformat start)
+	       (format-time-string dateformat start t)
 	       "|"
-	       (format-time-string timeformat start)
+	       (format-time-string timeformat start t)
 	       "|"
-	       (format-time-string timeformat end)
+	       (format-time-string timeformat end t)
 	       "|" title
 	       "|")))))
 
