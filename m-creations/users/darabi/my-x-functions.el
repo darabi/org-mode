@@ -1,6 +1,50 @@
 ;;
 ;; Font handling in X
 ;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;; Dynamic font (size) selection with xrandr
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun find-next-xrandr-screen-width ()
+  (let ((start (re-search-forward " connected[^0-9]+" nil t)))
+    (when start
+      (let ((end (re-search-forward "x" nil t)))
+        (when end
+          (buffer-substring-no-properties start (decf end)))))))
+
+(defun find-xrandr-screen-widths ()
+  (let ((width)
+        (widthlist))
+    (while (setf width (find-next-xrandr-screen-width))
+      (message "width %s" width)
+      (push (string-to-number width) widthlist))
+    widthlist))
+
+(defun xrandr-max-width ()
+  (let ((buffer "*Messages*")
+        ;; this one prevents the buffer from appearing
+        ;; as the output goes to the message area
+        (max-mini-window-height 1.0))
+    (if (eq 0 (shell-command "xrandr -q" buffer))
+        (with-current-buffer buffer
+          (let ((widths (find-xrandr-screen-widths))
+                (maxwidth 0))
+            (when widths
+              (dolist (w widths)
+                (setf maxwidth (max w maxwidth))))
+            maxwidth))
+        0)))
+
+
+;; Possible fonts:
+;; "Bitstream Vera Sans Mono Roman-12"
+;; "Bitstream Vera Sans Mono Roman-13"
+;; "Inconsolata-10"
+;; "lucidasanstypewriter-12.5"
+
 (defun my-set-x-font ()
   "Checks the width of the screen with xrandr and sets different fonts based on
 width thresholds. Note that the fonts must either be present in system font folders
@@ -16,12 +60,5 @@ or in ~/.fonts"
       (3200 (set-default-font "Inconsolata-12" t))
       (3840 (set-default-font "Consolas-15" t))
       (0 (set-default-font "Inconsolata-10.5" t)))))
-
-;; TODO: 9.5 is much better on an eee without external
-;;       monitor, but how do we find out whether we
-;;       have an external monitor connected, or not?
-;; (set-default-font "Monospace-9.5" t)
-
-;; (set-default-font "lucidasanstypewriter-12.5" t)
 
 (provide 'my-x-functions)

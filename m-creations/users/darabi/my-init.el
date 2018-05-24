@@ -410,47 +410,6 @@
           '(lambda ()
             (set-fill-column 60)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Dynamic font (size) selection with xrandr
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; FOR emacs-snapshot-gtk -enable-font-backend
-; (set-default-font "Bitstream Vera Sans Mono Roman-12")
-;; (set-default-font "Bitstream Vera Sans Mono Roman-13" t)
-;; (set-default-font "Inconsolata-10" t)
-
-(defun find-next-xrandr-screen-width ()
-  (let ((start (re-search-forward " connected[^0-9]+" nil t)))
-    (when start
-      (let ((end (re-search-forward "x" nil t)))
-        (when end
-          (buffer-substring-no-properties start (decf end)))))))
-
-(defun find-xrandr-screen-widths ()
-  (let ((width)
-        (widthlist))
-    (while (setf width (find-next-xrandr-screen-width))
-      (message "width %s" width)
-      (push (string-to-number width) widthlist))
-    widthlist))
-
-(defun xrandr-max-width ()
-  (let ((buffer "*Messages*")
-        ;; this one prevents the buffer from appearing
-        ;; as the output goes to the message area
-        (max-mini-window-height 1.0))
-    (if (eq 0 (shell-command "xrandr -q" buffer))
-        (with-current-buffer buffer
-          (let ((widths (find-xrandr-screen-widths))
-                (maxwidth 0))
-            (when widths
-              (dolist (w widths)
-                (setf maxwidth (max w maxwidth))))
-            maxwidth))
-        0)))
-
 (when (require 'my-x-functions "my-x-functions" nil)
   (save-excursion
     (unless (eq (window-system) 'w32)
