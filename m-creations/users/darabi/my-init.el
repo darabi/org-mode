@@ -1321,11 +1321,16 @@ Content-Type: text/plain; charset=utf-8")
   ;; `M-x package-install [ret] company`
   (company-mode +1))
 
-;; aligns annotation to the right hand side
-(setq company-tooltip-align-annotations t)
 
 ;; formats the buffer before saving
-(add-hook 'before-save-hook 'tide-format-before-save)
+(defun my-tide-mode-before-save-hook ()
+  (when (eq major-mode 'tide-mode)
+    (tide-format-before-save)))
+
+(add-hook 'typescript-mode-hook #'my-tide-mode-before-save-hook)
+
+;; aligns annotation to the right hand side
+(setq company-tooltip-align-annotations t)
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
