@@ -1,6 +1,10 @@
 (message "------ START OF my-slime-init")
 
-(require 'dwim-init)
+(require 'dwim-slime)
+(require 'dwim-util)
+
+(require 'mc-lisp-indent)
+(require 'mc-lisp-font-lock)
 
 ;; reset the dwim-init modification to these vars
 (setq-default
