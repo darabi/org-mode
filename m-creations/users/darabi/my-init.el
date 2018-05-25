@@ -1332,6 +1332,6 @@ Content-Type: text/plain; charset=utf-8")
 ;; aligns annotation to the right hand side
 (setq company-tooltip-align-annotations t)
 
-(add-hook 'typescript-mode-hook #'setup-tide-mode)
+(require 'mc-licence)
 
 (provide 'my-init)
