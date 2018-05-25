@@ -610,34 +610,6 @@ performed, then slime-complete-symbol is called"
        'backward-word)))
 
 
-;; Paredit will be loaded by lisp-mode-hook
-;; (require 'paredit)
-
-;; (setf paredit-mode-hook nil)
-
-;;
-;;; Load dwim elisp files from quicklisp or DWIM_WORKSPACE
-;;
-
-(let* ((ql-home (or (getenv "QUICKLISP_HOME") "~/quicklisp/"))
-       (slime-helper (expand-file-name "slime-helper.el" ql-home)))
-  (when (file-exists-p slime-helper)
-    (load slime-helper)
-    (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.environment") "emacs/"))
-    (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.def") "emacs/"))
-    (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.logger") "emacs/"))
-    (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.quasi-quote") "emacs/"))
-    (add-to-load-path-if-exists (concat (quicklisp-slime-helper-system-directory "hu.dwim.syntax-sugar") "emacs/"))))
-
-;; if there are directories present in ~/dwim, they override the quicklisp ones
-(let ((dwim-workspace (or (getenv "DWIM_WORKSPACE") "~/common-lisp")))
-  (when (file-exists-p dwim-workspace)
-    (add-to-load-path-if-exists (expand-file-name "hu.dwim.environment/emacs/" dwim-workspace))
-    (add-to-load-path-if-exists (expand-file-name "hu.dwim.def/emacs/" dwim-workspace))
-    (add-to-load-path-if-exists (expand-file-name "hu.dwim.logger/emacs/" dwim-workspace))
-    (add-to-load-path-if-exists (expand-file-name "hu.dwim.quasi-quote/emacs/" dwim-workspace))
-    (add-to-load-path-if-exists (expand-file-name "hu.dwim.syntax-sugar/emacs/" dwim-workspace))))
-
 (add-hook 'slime-mode-hook
           '(lambda ()
 	     ;; undo the changes in dwim init files
