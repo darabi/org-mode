@@ -61,4 +61,10 @@ or in ~/.fonts"
       (3840 (set-default-font "Consolas-15" t))
       (0 (set-default-font "Inconsolata-10.5" t)))))
 
+(defun my-presentation-font (font-size)
+  "Sets the color-theme to light background and the font to the argument font-size (default 21)"
+  (interactive "NFont size: ")
+  (set-default-font (format "Inconsolata-%d" font-size t))
+  (color-theme-snow))
+
 (provide 'my-x-functions)
