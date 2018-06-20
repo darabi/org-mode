@@ -670,6 +670,13 @@ performed, then slime-complete-symbol is called"
                                (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
                                (flycheck-mode)))
 
+
+(add-hook 'flycheck-mode-hook '(lambda ()
+                                 (require 'flycheck-js)
+                                 (setq js2-strict-missing-semi-warning nil)
+                                 (setq js2-missing-semi-one-line-override t)
+                                 (mc-use-js-executables-from-node-modules)))
+
  ;; Tern http://ternjs.net
 ;; (install with npm install -g tern)
 ;; if not present in PATH, don't add it to the load path/js2 hook
@@ -702,7 +709,7 @@ performed, then slime-complete-symbol is called"
 
 (setq-default
  findr-file-name-regexp-history (list "\\(\\.lisp\\|\\.lsp\\|\\.asd\\|\\.el\\|\\.c\\|\\.h\\|\\.cpp\\|\\.tal\\|\\.css\\|\\.sh\\|\\.lua\\|\\.py\\|\\.go\\)$")
- findr-skip-directory-regexp "\\(/\\.backups$\\|/_darcs$\\|/\\.git$\\|/CVS$\\|/\\.svn$\\)\\|/www$\\|/wwwroot$"
+ findr-skip-directory-regexp "\\(^\\.backups\\|^_darcs\\|^\\.git\\|^CVS\\|^\\.svn\\|^www\\|^wwwroot\\|^node_modules\\)$"
 
  save-place t
  save-place-file "~/.emacs.d/places.el"
