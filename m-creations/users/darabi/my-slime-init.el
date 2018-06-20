@@ -191,6 +191,8 @@
                      (dwim/build-sbcl-lisp-implementation-entry/image
                       ,(concat image-name "_development") ,@args))))))
 
+;; clean the slime-lisp-implementations
+(setq slime-lisp-implementations '((sbcl . "sbcl")))
 
 (dwim/add-slime-impl-image "hu.dwim.wiki")
 (dwim/add-slime-impl-image "hu.dwim.home")
@@ -222,6 +224,8 @@
 ; (setf slime-default-lisp 'installed-sbcl)
 
 (setf slime-default-lisp 'web-server)
+
+;; (setf slime-default-lisp 'quasi-quote)
 
 ; (setf slime-default-lisp 'restful-objects)
 
