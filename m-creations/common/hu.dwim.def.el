@@ -17,7 +17,7 @@
           (2 font-lock-type-face)
           (3 font-lock-function-name-face)))
    t)
-  (put 'def 'common-lisp-indent-function '(2 2 (&whole 2 &rest 2) &body))
+  (put 'def 'common-lisp-indent-function '(2 2 (&whole 2 &rest 1) &body))
   t)
 
 (add-hook 'lisp-mode-hook 'hu.dwim.def.lisp-mode-hook)
