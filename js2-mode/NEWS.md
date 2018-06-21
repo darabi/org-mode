@@ -2,6 +2,27 @@
 
 ## Next
 
+* Changed the default of `js2-strict-trailing-comma-warning` to nil.
+
+## 2018-03-01
+
+* Support single-line JSDocs.
+* New face `js2-object-property-access`.
+* Support for trailing comma in function arguments
+* JSDoc highlighting for `@yield`, `@yields`, `@abstract`, `@virtual` and `@typedef`.
+* Support for anonymous class exports.
+
+## 2017-07-21
+
+* Support for async arrow function without parentheses.
+* Support for `/*jslint` declarations.
+* User option `js2-getprop-has-side-effects`.
+* Support for trailing commas in function parameter lists.
+* Support for ES7 public class fields.
+* New user option `js2-ignored-warnings`.
+
+## 2017-01-16
+
 * `js2-include-*-externs` are now evaluated on demand.  As a result,
   they can now be effectively used as file- or directory-local
   variables.
