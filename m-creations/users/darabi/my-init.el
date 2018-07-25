@@ -670,6 +670,8 @@ performed, then slime-complete-symbol is called"
                                (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
                                (flycheck-mode)))
 
+(set-variable 'js2-jsx-mode-hook '(lambda ()
+                                    (setq-local sgml-basic-offset js2-basic-offset)))
 
 (add-hook 'flycheck-mode-hook '(lambda ()
                                  (require 'flycheck-js)
