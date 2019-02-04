@@ -277,17 +277,31 @@ looks like tree2, where the level is 2."
 	       "|" title
 	       "|")))))
 
+(defun org-invoice-flatten-list (ls)
+  (let ((result))
+    (dolist (info ls)
+      (let ((otherprops (cl-loop for prop in info
+				 unless (or (eq 'timelist (first prop)) (eq 'work (first prop))) collect prop))
+	    (title (clockdetails-title info)))
+	(dolist (time (clockdetails-times info))
+	  (let ((copy (copy-tree otherprops)))
+	    (push (list 'timelist title (list time)) copy)
+	    (push `(work . ,(third time)) copy)
+	    (push copy result)))))
+    (org-invoice-sort-list (nreverse result))))
+
 (defun org-invoice-list-to-table (ls)
   "Convert a list of heading info to an org table"
   (let ((with-price (plist-get org-invoice-table-params :price))
         (with-summary (plist-get org-invoice-table-params :summary))
         (with-header (plist-get org-invoice-table-params :headers))
+        (with-details (plist-get org-invoice-table-params :clockdetails))
         (org-invoice-total-time 0)
         (org-invoice-total-price 0))
     (insert-before-markers
      (concat "| Task / Date | Time" (and with-price "| Price") "| Activity |"))
     (insert-before-markers "\n|-")
-    (dolist (info ls)
+    (dolist (info (if with-details (org-invoice-flatten-list ls) ls))
       (org-invoice-info-to-table info))
     (when with-summary
       (insert-before-markers
