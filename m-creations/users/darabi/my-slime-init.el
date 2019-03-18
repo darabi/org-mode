@@ -215,26 +215,29 @@
 (dwim/add-slime-impl-image "ayacandas-server")
 (dwim/add-slime-impl-image "sftp-downloader")
 (dwim/add-slime-impl-image "cxml")
+(dwim/add-slime-impl-image "bernini")
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
 (add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl")))
-(add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
-
-; (setf slime-default-lisp 'installed-sbcl)
-
-(setf slime-default-lisp 'web-server)
-
-;; (setf slime-default-lisp 'quasi-quote)
-
-; (setf slime-default-lisp 'restful-objects)
-
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
          (arglist (plist-get impl :program-args)))
     (append arglist (if (typep args 'list)
                         args
                       (list args)))))
+
+; (setf slime-default-lisp 'installed-sbcl)
+
+; (setf slime-default-lisp 'web-server)
+
+(setf slime-default-lisp 'bernini)
+
+;; (setf slime-default-lisp 'quasi-quote)
+
+; (setf slime-default-lisp 'restful-objects)
+
+(add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
 
 (setq slime-compilation-slime-maybe-show-compilation-log t)
 
