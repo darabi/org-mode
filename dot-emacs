@@ -125,6 +125,10 @@
 ;; paredit-mode
 (autoload 'paredit-mode "paredit" "Minor mode for pseudo-structurally editing Lisp code." t)
 
+;; Cucumber (Gherkin) feature-mode: https://github.com/michaelklishin/cucumber.el/
+(autoload 'feature-mode "feature-mode.el" nil t)
+(add-to-list 'auto-mode-alist '("\\.feature\\'" . feature-mode))
+
 ;; flycheck
 (autoload 'flycheck-mode "flycheck" "On-the-fly syntax checking" t)
 
