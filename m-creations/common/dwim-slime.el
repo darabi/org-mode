@@ -9,6 +9,20 @@
 (require 'dwim-util)
 (require 'slime)
 
+(defun add-emacs.d-swank-to-asdf-source-registry ()
+  (let ((conf "~/.config/common-lisp/source-registry.conf.d/10-m-creations-emacs.d-swank.conf"))
+    (mkdir (file-name-directory conf) t)
+    (write-region
+     "
+;; AUTOMATICALLY GENERATED FILE - DO NOT EDIT
+;; (cf. ~/.emacs.d/site-lisp/m-creations/common/dwim-slime.el)
+;;
+;; This file configures ASDF to use the slime/swank version
+;; which is managed in the m-creations emacs repo
+
+ (:tree (:home \".emacs.d/site-lisp/slime\"))
+" nil conf)))
+
 (defun dwim/build-sbcl-lisp-implementation-entries/from-installed-binaries (base-path)
   (let* ((regexp "^sbcl-\\([0-9]+\\).\\([0-9]+\\).\\([0-9]+\\).*-linux$")
          (dirs (directory-files base-path nil regexp))
