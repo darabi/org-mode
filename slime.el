@@ -2440,7 +2440,7 @@ Debugged requests are ignored."
   "Kill and restart the Lisp subprocess."
   (interactive)
   (cl-assert (slime-inferior-process) () "No inferior lisp process")
-  (%slime-quit-inferior-lisp (slime-connection) 'slime-restart-sentinel t))
+  (slime-quit-lisp-internal (slime-connection) 'slime-restart-sentinel t))
 
 (defun slime-restart-sentinel (process _message)
   "Restart the inferior lisp process.
@@ -5041,12 +5041,12 @@ argument is given, with CL:MACROEXPAND."
 (defun slime-quit ()
   (error "Not implemented properly.  Use `slime-interrupt' instead."))
 
-(defun slime-quit-inferior-lisp (&optional kill)
+(defun slime-quit-lisp (&optional kill)
   "Quit lisp, kill the inferior process and associated buffers."
   (interactive "P")
-  (%slime-quit-inferior-lisp (slime-connection) 'slime-quit-sentinel kill))
+  (slime-quit-lisp-internal (slime-connection) 'slime-quit-sentinel kill))
 
-(defun %slime-quit-inferior-lisp (connection sentinel kill)
+(defun slime-quit-lisp-internal (connection sentinel kill)
   (let ((slime-dispatching-connection connection))
     (slime-eval-async '(swank:quit-lisp))
     (let* ((process (slime-inferior-process connection)))
@@ -6326,7 +6326,7 @@ was called originally."
   ;; but it was decided not to here: https://github.com/slime/slime/pull/107
   (let ((slime-dispatching-connection connection)
         (end (time-add (current-time) (seconds-to-time 3))))
-    (slime-quit-inferior-lisp t)
+    (slime-quit-lisp t)
     (while (memq connection slime-net-processes)
       (when (time-less-p end (current-time))
         (message "Quit timeout expired.  Disconnecting.")
