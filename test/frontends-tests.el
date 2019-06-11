@@ -83,10 +83,8 @@
     (save-window-excursion
       (set-window-buffer nil (current-buffer))
       (save-excursion (insert "\n"))
-      (let ((company-candidates-length 1)
-            (company-candidates '("123"))
-            (company-backend #'ignore))
-        (company-preview-show-at-point (point))
+      (let ((company-backend #'ignore))
+        (company-preview-show-at-point (point) "123")
         (let* ((ov company-preview-overlay)
                (str (overlay-get ov 'after-string)))
           (should (string= str "123"))
@@ -368,6 +366,14 @@
     (should (equal-including-properties
              (company-modify-line str "zz" 10)
              "-*-foobar zz"))))
+
+(ert-deftest company-modify-line-with-invisible-prop ()
+  (let ((str "-*-foobar")
+        (buffer-invisibility-spec '((outline . t) t)))
+    (put-text-property 1 2 'invisible 'foo str)
+    (should (equal
+             (company-modify-line str "zz" 4)
+             "-*-fzzbar"))))
 
 (ert-deftest company-scrollbar-bounds ()
   (should (equal nil (company--scrollbar-bounds 0 3 3)))

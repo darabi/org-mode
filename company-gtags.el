@@ -33,14 +33,14 @@
   "Completion backend for GNU Global."
   :group 'company)
 
+(define-obsolete-variable-alias
+  'company-gtags-gnu-global-program-name
+  'company-gtags-executable "earlier")
+
 (defcustom company-gtags-executable
   (executable-find "global")
   "Location of GNU global executable."
   :type 'string)
-
-(define-obsolete-variable-alias
-  'company-gtags-gnu-global-program-name
-  'company-gtags-executable "earlier")
 
 (defcustom company-gtags-insert-arguments t
   "When non-nil, insert function arguments as a template after completion."
@@ -65,7 +65,7 @@ completion."
 (defun company-gtags--fetch-tags (prefix)
   (with-temp-buffer
     (let (tags)
-      (when (= 0 (call-process company-gtags-executable nil
+      (when (= 0 (process-file company-gtags-executable nil
                                ;; "-T" goes through all the tag files listed in GTAGSLIBPATH
                                (list (current-buffer) nil) nil "-xGqT" (concat "^" prefix)))
         (goto-char (point-min))
