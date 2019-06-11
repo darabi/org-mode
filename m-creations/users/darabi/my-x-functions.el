@@ -51,20 +51,20 @@ width thresholds. Note that the fonts must either be present in system font fold
 or in ~/.fonts"
   (interactive)
   (let ((maxwidth (xrandr-max-width)))
-    (message "maxwidth %s" maxwidth)
+    ;; (message "maxwidth %s" maxwidth)
     (case maxwidth
-      (1280 (set-default-font "Consolas-11" t))
-      (1440 (set-default-font "Inconsolata-11" t))
-      (1680 (set-default-font "Inconsolata-11" t))
-      (1920 (set-default-font "Consolas-11" t))
-      (3200 (set-default-font "Inconsolata-12" t))
-      (3840 (set-default-font "Consolas-15" t))
-      (0 (set-default-font "Inconsolata-10.5" t)))))
+      (1280 (set-frame-font "Consolas-11" t))
+      (1440 (set-frame-font "Inconsolata-11" t))
+      (1680 (set-frame-font "Inconsolata-11" t))
+      (1920 (set-frame-font "Consolas-11" t))
+      (3200 (set-frame-font "Inconsolata-12" t))
+      (3840 (set-frame-font "Inconsolata-12" t))
+      (0 (set-frame-font "Inconsolata-10.5" t)))))
 
 (defun my-presentation-font (font-size)
   "Sets the color-theme to light background and the font to the argument font-size (default 21)"
   (interactive "NFont size: ")
-  (set-default-font (format "Inconsolata-%d" font-size t))
+  (set-frame-font (format "Inconsolata-%d" font-size t))
   (color-theme-snow))
 
 (provide 'my-x-functions)
