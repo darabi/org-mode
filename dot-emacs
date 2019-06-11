@@ -122,6 +122,11 @@
 ;;; slime-docker
 (autoload 'slime-docker "slime-docker" nil t)
 
+;;; neotree
+(autoload 'neotree "neotree" nil t)
+(setq neo-autorefresh nil
+      neo-theme (if (display-graphic-p) 'icons 'arrow))
+
 ;; Asciidoc mode https://github.com/sensorflo/adoc-mode.git
 (autoload 'adoc-mode "adoc-mode.el" nil t)
 (add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
