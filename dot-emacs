@@ -139,6 +139,8 @@
 ;; flycheck
 (autoload 'flycheck-mode "flycheck" "On-the-fly syntax checking" t)
 
+(setq indium-chrome-executable "chromium-browser")
+
 ;; jedi for python programming
 (autoload 'jedi:setup "jedi" "Python autocompletion for Emacs" t)
 
