@@ -216,6 +216,7 @@
 (dwim/add-slime-impl-image "sftp-downloader")
 (dwim/add-slime-impl-image "cxml")
 (dwim/add-slime-impl-image "bernini")
+(dwim/add-slime-impl-image "holz24")
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
@@ -231,7 +232,7 @@
 
 ; (setf slime-default-lisp 'web-server)
 
-(setf slime-default-lisp 'bernini)
+(setf slime-default-lisp 'holz24)
 
 ;; (setf slime-default-lisp 'quasi-quote)
 
