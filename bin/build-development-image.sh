@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #| -*- mode: lisp; coding: utf-8-unix -*-
 
 SCRIPT_DIR=`dirname "$0"`
