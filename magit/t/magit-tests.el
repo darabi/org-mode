@@ -1,6 +1,6 @@
 ;;; magit-tests.el --- tests for Magit
 
-;; Copyright (C) 2011-2017  The Magit Project Contributors
+;; Copyright (C) 2011-2018  The Magit Project Contributors
 ;;
 ;; License: GPLv3
 
@@ -9,6 +9,8 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'ert)
+(require 'tramp)
+(require 'tramp-sh)
 
 (require 'magit)
 
@@ -61,21 +63,27 @@
                      (expand-file-name "repo/"))))))
 
 (ert-deftest magit-toplevel:tramp ()
-  (let ((find-file-visit-truename nil))
+  (cl-letf* ((find-file-visit-truename nil)
+             ;; Override tramp method so that we don't actually
+             ;; require a functioning `sudo'.
+             (sudo-method (cdr (assoc "sudo" tramp-methods)))
+             ((cdr (assq 'tramp-login-program sudo-method))
+              (list shell-file-name))
+             ((cdr (assq 'tramp-login-args sudo-method)) nil))
     (magit-with-test-directory
-      (setq default-directory
-            (concat (format "/sudo:%s@localhost:" (user-login-name))
-                    default-directory))
-      (magit-git "init" "repo")
-      (magit-test-magit-toplevel)
-      (should (equal (magit-toplevel   "repo/.git/")
-                     (expand-file-name "repo/")))
-      (should (equal (magit-toplevel   "repo/.git/objects/")
-                     (expand-file-name "repo/")))
-      (should (equal (magit-toplevel   "repo-link/.git/")
-                     (expand-file-name "repo-link/")))
-      (should (equal (magit-toplevel   "repo-link/.git/objects/")
-                     (expand-file-name "repo/"))))))
+     (setq default-directory
+           (concat (format "/sudo:%s@localhost:" (user-login-name))
+                   default-directory))
+     (magit-git "init" "repo")
+     (magit-test-magit-toplevel)
+     (should (equal (magit-toplevel   "repo/.git/")
+                    (expand-file-name "repo/")))
+     (should (equal (magit-toplevel   "repo/.git/objects/")
+                    (expand-file-name "repo/")))
+     (should (equal (magit-toplevel   "repo-link/.git/")
+                    (expand-file-name "repo-link/")))
+     (should (equal (magit-toplevel   "repo-link/.git/objects/")
+                    (expand-file-name "repo/"))))))
 
 (ert-deftest magit-toplevel:submodule ()
   (let ((find-file-visit-truename nil))
@@ -174,7 +182,12 @@
     (should     (magit-get-boolean "a" "b"))
     (magit-git "config" "a.b" "false")
     (should-not (magit-get-boolean "a.b"))
-    (should-not (magit-get-boolean "a" "b"))))
+    (should-not (magit-get-boolean "a" "b"))
+    ;; Multiple values, last one wins.
+    (magit-git "config" "--add" "a.b" "true")
+    (should     (magit-get-boolean "a.b"))
+    (let ((magit--refresh-cache (list (cons 0 0))))
+     (should    (magit-get-boolean "a.b")))))
 
 (ert-deftest magit-get-{current|next}-tag ()
   (magit-with-test-repository
@@ -242,13 +255,36 @@
                              nil "Password for 'www.host.com':")
                             "mypasswd\n")))))
 
+(ert-deftest magit-process:password-prompt-observed ()
+  (with-temp-buffer
+    (cl-letf* ((test-proc (start-process
+                           "dummy-proc" (current-buffer)
+                           (concat invocation-directory invocation-name)
+                           "-Q" "--batch" "--eval" "(read-string \"\")"))
+               ((symbol-function 'read-passwd)
+                (lambda (_) "mypasswd"))
+               (sent-strings nil)
+               ((symbol-function 'process-send-string)
+                (lambda (_proc string) (push string sent-strings))))
+      ;; Don't get stuck when we close the buffer.
+      (set-process-query-on-exit-flag test-proc nil)
+      ;; Try some example passphrase prompts, reported by users.
+      (dolist (prompt '("
+Enter passphrase for key '/home/user/.ssh/id_rsa': "
+                        ;; Openssh 8.0 sends carriage return.
+                        "\
+\rEnter passphrase for key '/home/user/.ssh/id_ed25519': "))
+        (magit-process-filter test-proc prompt)
+        (should (equal (pop sent-strings) "mypasswd\n")))
+      (should (null sent-strings)))))
+
 ;;; Status
 
 (defun magit-test-get-section (list file)
   (magit-status-internal default-directory)
-  (--first (equal (magit-section-value it) file)
-           (magit-section-children
-            (magit-get-section `(,list (status))))))
+  (--first (equal (oref it value) file)
+           (oref (magit-get-section `(,list (status)))
+                 children)))
 
 (ert-deftest magit-status:file-sections ()
   (magit-with-test-repository
