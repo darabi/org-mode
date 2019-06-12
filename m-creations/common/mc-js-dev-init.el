@@ -53,7 +53,10 @@
   (tide-setup)
   (eldoc-mode +1)
   (tide-hl-identifier-mode +1)
-  (company-mode +1))
+  (company-mode +1)
+  (when (and (functionp 'er/expand-region)
+             js-jsx-syntax)
+    (require 'html-mode-expansions)))
 
 (add-hook 'js2-mode-hook 'mc-setup-js2-mode)
 (add-hook 'js2-minor-mode-hook 'mc-setup-js2-mode)
