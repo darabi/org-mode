@@ -1,7 +1,6 @@
 ;;; bbdb-mua.el --- various MUA functionality for BBDB -*- lexical-binding: t -*-
 
-;; Copyright (C) 1991, 1992, 1993 Jamie Zawinski <jwz@netscape.com>.
-;; Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
+;; Copyright (C) 2010-2018  Free Software Foundation, Inc.
 
 ;; This file is part of the Insidious Big Brother Database (aka BBDB),
 
@@ -19,19 +18,19 @@
 ;; along with BBDB.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;; This file provides various additional functionality for BBDB
-;;; See the BBDB info manual for documentation.
+;; This file provides various additional functionality for BBDB
+;; See the BBDB info manual for documentation.
 
-;;; This file lets you do stuff like
-;;;
-;;; o  automatically add some string to some field(s) based on the
-;;;    contents of header fields of the current message
-;;; o  only automatically create records when certain header fields
-;;;    are matched
-;;; o  do not automatically create records when certain header fields
-;;;    are matched
-;;;
-;;; Read the docstrings; read the texinfo file.
+;; This file lets you do stuff like
+;;
+;; o  automatically add some string to some field(s) based on the
+;;    contents of header fields of the current message
+;; o  only automatically create records when certain header fields
+;;    are matched
+;; o  do not automatically create records when certain header fields
+;;    are matched
+;;
+;; Read the docstrings; read the texinfo file.
 
 ;;; Code:
 
@@ -49,7 +48,7 @@
   (autoload 'vm-check-for-killed-summary "vm-misc")
   (autoload 'vm-error-if-folder-empty "vm-misc")
 
-  (autoload 'bbdb/rmail-header "bbdb-rmail")
+  (autoload 'rmail-get-header "rmail")
   (defvar rmail-buffer)
 
   (autoload 'bbdb/mh-header "bbdb-mhe")
@@ -69,7 +68,7 @@
     (rmail rmail-mode rmail-summary-mode)
     (mh mhe-mode mhe-summary-mode mh-folder-mode)
     (mu4e mu4e-view-mode)  ; Tackle `mu4e-headers-mode' later
-    (wl wl-summary-mode wl-draft-mode)
+    (wl wl-summary-mode wl-draft-mode mime-view-mode)
     (message message-mode mu4e-compose-mode notmuch-message-mode)
     (mail mail-mode))
   "Alist of MUA modes supported by BBDB.
@@ -116,7 +115,9 @@ MIME encoded headers are decoded.  Return nil if HEADER does not exist."
                      ;; See http://permalink.gmane.org/gmane.emacs.gnus.general/78741
                      (eq mua 'gnus) (gnus-fetch-original-field header))
                     ((eq mua 'vm) (bbdb/vm-header header))
-                    ((eq mua 'rmail) (bbdb/rmail-header header))
+                    ((eq mua 'rmail)
+                     (with-current-buffer rmail-buffer
+                       (rmail-get-header header)))
                     ((eq mua 'mh) (bbdb/mh-header header))
                     ((eq mua 'mu4e) (message-field-value header))
                     ((eq mua 'wl) (bbdb/wl-header header))
@@ -552,7 +553,7 @@ Return the records matching ADDRESS or nil."
                      (message "created %s's record with address \"%s\""
                               (bbdb-record-name record) mail)
                    (message "created record with naked address \"%s\"" mail)))
-               (bbdb-change-record record nil t))
+               (bbdb-change-record record))
 
               (change-p
                (unless bbdb-silent

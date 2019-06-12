@@ -28,13 +28,14 @@ dist_lisp_LISP = 				\
 	bbdb-anniv.el				\
 	bbdb-com.el				\
 	bbdb-gnus.el				\
+	bbdb-gnus-aux.el			\
 	bbdb-ispell.el				\
 	bbdb-message.el				\
 	bbdb-mhe.el				\
 	bbdb-migrate.el				\
 	bbdb-mua.el				\
 	bbdb-pgp.el				\
-	bbdb-print.el				\
+	bbdb-tex.el				\
 	bbdb-rmail.el				\
 	bbdb-sc.el				\
 	bbdb-snarf.el				\
@@ -42,6 +43,7 @@ dist_lisp_LISP = 				\
 
 if VM
 dist_lisp_LISP += bbdb-vm.el
+dist_lisp_LISP += bbdb-vm-aux.el
 # We use the Automake variable AM_ELCFLAGS to include the VM lisp directory
 # in the Emacs load path when compiling BBDB with VM support.
 endif
@@ -85,9 +87,14 @@ bbdb-loaddefs.el: $(dist_lisp_LISP)
 	@echo "" >> $@;
 #	Generated autoload-file must have an absolute path,
 #	$srcdir can be relative.
+#
+#       The equivalent command line with bash $(...) construct is:
+#       abs_target=$$($(CYGPATH_W) $(abs_builddir)/$@ | sed 's/\\/\\\\/g');
+#       See http://lists.nongnu.org/archive/html/bbdb-user/2018-02/msg00000.html
+	abs_target=`$(CYGPATH_W) $(abs_builddir)/$@ | sed 's/\\\\/\\\\\\\\/g'`; \
 	$(EMACS) --batch $(AM_ELCFLAGS) $(ELCFLAGS) \
 		--load autoload \
-		--eval '(setq generated-autoload-file "'$(abs_builddir)/$@'")' \
+		--eval '(setq generated-autoload-file "'"$$abs_target"'")' \
 		--eval '(setq make-backup-files nil)' \
 		--funcall batch-update-autoloads $(srcdir)
 
@@ -100,7 +107,6 @@ bbdb-loaddefs.el: $(dist_lisp_LISP)
 bbdb-site.el: $(top_builddir)/config.status bbdb-site.el.in
 	sed -e "s=[@]pkgdatadir[@]=$(pkgdatadir)=" \
 	    -e "s=[@]PACKAGE_VERSION[@]=$(PACKAGE_VERSION)=" \
-	    -e "s=[@]PACKAGE_DATE[@]=$(PACKAGE_DATE)=" \
 	    < $@.in > $@
 
 # Be sure bbdb-site.el exists early for "(require 'bbdb-site)"
