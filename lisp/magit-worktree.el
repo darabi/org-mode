@@ -1,6 +1,6 @@
 ;;; magit-worktree.el --- worktree support  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2017  The Magit Project Contributors
+;; Copyright (C) 2010-2019  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -29,14 +29,37 @@
 
 (require 'magit)
 
+;;; Options
+
+(defcustom magit-worktree-read-directory-name-function 'read-directory-name
+  "Function used to read a directory for worktree commands.
+This is called with one argument, the prompt, and can be used
+to e.g. use a base directory other than `default-directory'.
+Used by `magit-worktree-checkout' and `magit-worktree-branch'."
+  :package-version '(magit . "2.91.0")
+  :group 'magit-commands
+  :type 'function)
+
 ;;; Commands
+
+;;;###autoload (autoload 'magit-worktree "magit-worktree" nil t)
+(define-transient-command magit-worktree ()
+  "Act on a worktree."
+  :man-page "git-worktree"
+  [["Create new"
+    ("b" "worktree"              magit-worktree-checkout)
+    ("c" "branch and worktree"   magit-worktree-branch)]
+   ["Commands"
+    ("k" "Delete worktree"       magit-worktree-delete)
+    ("g" "Visit worktree"        magit-worktree-status)]])
 
 ;;;###autoload
 (defun magit-worktree-checkout (path branch)
   "Checkout BRANCH in a new worktree at PATH."
   (interactive
-   (let ((branch (magit-read-local-branch "Checkout")))
-     (list (read-directory-name (format "Checkout %s in new worktree: " branch))
+   (let ((branch (magit-read-branch-or-commit "Checkout")))
+     (list (funcall magit-worktree-read-directory-name-function
+                    (format "Checkout %s in new worktree: " branch))
            branch)))
   (magit-run-git "worktree" "add" (expand-file-name path) branch)
   (magit-diff-visit-directory path))
@@ -45,8 +68,9 @@
 (defun magit-worktree-branch (path branch start-point &optional force)
   "Create a new BRANCH and check it out in a new worktree at PATH."
   (interactive
-   `(,(read-directory-name "Create worktree: ")
-     ,@(butlast (magit-branch-read-args "Create and checkout branch"))
+   `(,(funcall magit-worktree-read-directory-name-function
+               "Create worktree: ")
+     ,@(magit-branch-read-args "Create and checkout branch")
      ,current-prefix-arg))
   (magit-run-git "worktree" "add" (if force "-B" "-b")
                  branch (expand-file-name path) start-point)
@@ -59,19 +83,22 @@ The primary worktree cannot be deleted."
    (list (magit-completing-read "Delete worktree"
                                 (cdr (magit-list-worktrees))
                                 nil t nil nil
-                                (magit-section-when (worktree)))))
+                                (magit-section-value-if 'worktree))))
   (if (file-directory-p (expand-file-name ".git" worktree))
       (user-error "Deleting %s would delete the shared .git directory" worktree)
     (let ((primary (file-name-as-directory (caar (magit-list-worktrees)))))
-      (when (if magit-delete-by-moving-to-trash
-                (magit-confirm-files 'trash (list "worktree"))
-              (magit-confirm-files 'delete (list "worktree")))
+      (magit-confirm-files (if magit-delete-by-moving-to-trash 'trash 'delete)
+                           (list "worktree"))
+      (when (file-exists-p worktree)
         (let ((delete-by-moving-to-trash magit-delete-by-moving-to-trash))
-          (delete-directory worktree t magit-delete-by-moving-to-trash))
-        (if (file-exists-p default-directory)
-            (magit-run-git "worktree" "prune")
-          (let ((default-directory primary))
-            (magit-run-git "worktree" "prune")))))))
+          (delete-directory worktree t magit-delete-by-moving-to-trash)))
+      (if (file-exists-p default-directory)
+          (magit-run-git "worktree" "prune")
+        (let ((default-directory primary))
+          (magit-run-git "worktree" "prune"))
+        (when (derived-mode-p 'magit-status-mode)
+          (kill-buffer)
+          (magit-status-setup-buffer primary))))))
 
 (defun magit-worktree-status (worktree)
   "Show the status for the worktree at point.
@@ -80,7 +107,7 @@ minibuffer.  If the worktree at point is the one whose
 status is already being displayed in the current buffer,
 then show it in Dired instead."
   (interactive
-   (list (or (magit-section-when (worktree))
+   (list (or (magit-section-value-if 'worktree)
              (magit-completing-read
               "Show status for worktree"
               (cl-delete (directory-file-name (magit-toplevel))
@@ -105,7 +132,7 @@ If there is only one worktree, then insert nothing."
       (magit-insert-section (worktrees)
         (magit-insert-heading "Worktrees:")
         (let* ((cols
-                (mapcar (-lambda ((path barep commit branch))
+                (mapcar (pcase-lambda (`(,path ,barep ,commit ,branch))
                           (cons (cond
                                  (branch (propertize branch
                                                      'face 'magit-branch-local))
@@ -125,5 +152,6 @@ If there is only one worktree, then insert nothing."
               (insert ?\n))))
         (insert ?\n)))))
 
+;;; _
 (provide 'magit-worktree)
 ;;; magit-worktree.el ends here
