@@ -1,3 +1,232 @@
+2019-06-08  Roland Winkler  <winkler@gnu.org>
+	* bbdb-com.el (bbdb-search-read): When region is active make it
+	the default string to match.
+
+2019-03-09  Stefan Monnier <monnier@iro.umontreal.ca>
+	* bbdb-com.el, bbdb.el: Fix some warnings; plus cosmetic changes
+
+	* bbdb-com.el, bbdb.el: Use #' to quote functions.
+	* bbdb-com.el (bbdb-dial): Clarify backslash escaping in regexp.
+	(bbdb-mail-aliases): η-reduce.
+	(bbdb-mail-aliases): Use abbrev-symbol.
+	(bbdb-dial-number): Use bbdb--dial-default.
+
+	* bbdb.el: Move variable aliases before their target's definition.
+	(bbdb-merge-records-function, bbdb-dial-function):
+	(bbdb-canonicalize-mail-function): Use a non-nil default.
+	(bbdb--dial-default): New function.
+	(bbdb-init-forms): Use functions rather than "forms".
+	(bbdb-initialize): Adjust accordingly.
+
+2018-09-06  Roland Winkler  <winkler@gnu.org>
+	Fix support for Wanderlust.
+	* lisp/bbdb-mua.el (bbdb-mua-mode-alist): Include mime-view-mode.
+	* lisp/bbdb-wl.el (bbdb/wl-header): Use with-current-buffer.
+
+2018-05-02  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-mua.el (bbdb-message-header): Use rmail-get-header.
+	* lisp/bbdb-rmail.el (bbdb/rmail-header): Remove.
+
+2018-03-30  Roland Winkler  <winkler@gnu.org>
+	Unify the handling of new records, new fields and modified fields.
+
+	* bbdb.el (bbdb-check-name): Handle both names and akas.  New
+	optional arg warn.
+	(bbdb-check-mail): New function.
+	(bbdb-register-record): Use bbdb-check-name and bbdb-check-mail.
+	New optional arg warn.
+	(bbdb-change-record): Fix docstring.
+
+	* bbdb.el (bbdb-record-set-field):
+	* bbdb-com.el (bbdb-read-record, bbdb-create-internal):
+	Use bbdb-check-name and bbdb-check-mail.
+
+	* bbdb-com.el (bbdb-record-edit-address): Allow arg address be nil
+	for new addresses.
+	(bbdb-record-edit-phone): Operate only on the phone number that we
+	change.
+	(bbdb-read-record, bbdb-read-field): Use bbdb-record-edit-phone.
+	Always use bbdb-record-set-field.
+
+2018-03-26  Roland Winkler  <winkler@gnu.org>
+	* bbdb.el (bbdb-register-record): Don't be fooled by existing
+	records.
+
+2018-03-17  Vincent Belaïche  <vincentb1@users.sourceforge.net>
+	* lisp/Makefile.am (abs_target): Make absolute path for
+	bbdb-loaddefs.el MSWindows aware.
+
+2018-03-17  Roland Winkler  <winkler@gnu.org>
+	* bbdb.el (bbdb-register-record): New function renamed from
+	bbdb-hash-record.
+	(bbdb-parse-records, bbdb-change-record): Use it.
+
+2018-03-17  Roland Winkler  <winkler@gnu.org>
+	* bbdb-com.el (bbdb-create-internal): Bug fix.  Support old
+	calling sequence with warning.
+
+2018-03-02  Stefan Monnier <monnier@iro.umontreal.ca>
+	* bbdb.el: Add missing "Maintainer:" header
+
+2018-01-06  Roland Winkler  <winkler@gnu.org>
+	* configure.ac: Increase version number to 3.2.
+
+2018-01-06  Roland Winkler  <winkler@gnu.org>
+	* bbdb-tex.el (bbdb-tex-alist, bbdb-tex-address-layout): Declare
+	defcustom type.
+
+2018-01-06  Roland Winkler  <winkler@gnu.org>
+	* bbdb-vm-aux.el: Don't require VM when compiled.
+
+2018-01-06  Stefan Monnier <monnier@iro.umontreal.ca>
+	* bbdb-vm.el: Don't require VM when compiled.
+
+	Trim the list of required packages from VM.
+
+	* bbdb-gnus.el (bbdb-insinuate-gnus):
+	* bbdb-vm.el (bbdb-insinuate-vm): Use defalias.
+
+2018-01-06  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-gnus.el, lisp/bbdb-gnus-aux.el: Split from
+	lisp/bbdb-gnus.el.
+	* lisp/bbdb-vm.el, lisp/bbdb-vm-aux.el: Split from
+	lisp/bbdb-vm.el.
+	* lisp/Makefile.am, lisp/makefile-temp: Update accordingly.
+
+2017-12-24  Roland Winkler  <winkler@gnu.org>
+	* README: Update for elpa.git.
+
+2017-11-17  Stefan Monnier <monnier@iro.umontreal.ca>
+	Prepare BBDB for elpa.git.
+	* lisp/bbdb-anniv.el, lisp/bbdb-com.el, lisp/bbdb-ispell.el:
+	* lisp/bbdb-message.el, lisp/bbdb-mhe.el, lisp/bbdb-migrate.el:
+	* lisp/bbdb-mu4e.el, lisp/bbdb-mua.el, lisp/bbdb-pgp.el:
+	* lisp/bbdb-rmail.el, lisp/bbdb-site.el.in, lisp/bbdb-snarf.el:
+	* lisp/bbdb-tex.el, lisp/bbdb-wl.el, lisp/bbdb.el: Update
+	copyright notice.  Follow conventions for comments.  Use
+	declare-function.  Provide arg WHEN for
+	define-obsolete-function-alias and define-obsolete-variable-alias.
+	* lisp/bbdb-site.el.in (bbdb-version-date): Remove.
+	(bbdb-tex-path): Use more flexible default.
+	* lisp/bbdb.el (bbdb-parse-records): Use function bbdb-version.
+	(bbdb-version): Use version header if variable bbdb-version is not
+	set sensibly.
+	* README, NEWS, TODO, tex/bbdb.sty, doc/bbdb.texi: Update
+	copyright notice.
+
+2017-10-17  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb.el (bbdb-parse-records): Bug fix, hash record after
+	checking for duplicates.
+
+2017-10-11  Roland Winkler  <winkler@gnu.org>
+	* configure.ac: Use it.
+	* lisp/bbdb.el: Mention new mailing list bbdb-user@nongnu.org.
+
+2017-10-11  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb.el (bbdb-parse-records): Query before migrating BBDB
+	to new format.
+	(bbdb-delete-record-internal, bbdb-insert-record-internal)
+	(bbdb-overwrite-record-internal): Barf if buffer is read-only.
+
+2017-10-11  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-com.el (bbdb-search, bbdb-split-maybe): Fix docstring.
+	(bbdb-read-record): Fix calling sequence for calls to set record.
+
+2017-08-09  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-migrate.el (bbdb-migrate-uuid-xfield): New variable.
+
+2017-08-09  Roland Winkler  <winkler@gnu.org>
+	New field uuid.  Make creation-date and timestamp immutable.
+	* lisp/bbdb.el (bbdb-create-hook, bbdb-change-hook): Use
+	defcustom.
+	(bbdb-merge-records-function): New variable.
+	(bbdb-layout-alist): Omit uuid.
+	(bbdb-xfields-sort-order, bbdb-merge-xfield-function-alist):
+	Ignore creation-date and timestamp.
+	(bbdb-file-format): Bump to 9.
+	(bbdb-record-type): Include uuid, creation-date and timestamp.
+	(bbdb-uuid-table): New variable.
+	(bbdb-timestamp, bbdb-creation-date): Declare obsolete.
+	(bbdb-uuid): New function.
+	(bbdb-hash-record): Hash uuid.
+	(bbdb-record-field, bbdb-record-set-field, bbdb-buffer)
+	(bbdb-display-record-one-line, bbdb-display-record-multi-line)
+	(bbdb-display-record): Handle uuid, creation-date and timestamp.
+	(bbdb-change-record): Use uuid.
+	* lisp/bbdb-com.el (bbdb-search): Use keywords for args.  Handle
+	uuid, creation-date and timestamp.  New option :bool.
+	(bbdb, bbdb-search-name, bbdb-search-organization)
+	(bbdb-search-address, bbdb-search-mail, bbdb-search-phone)
+	(bbdb-search-xfields, bbdb-mail-aliases, bbdb-get-mail-aliases):
+	Change accordingly.
+	(bbdb-compare-records): Compare any fields.
+	(bbdb-timestamp-older, bbdb-timestamp-newer, bbdb-creation-older)
+	(bbdb-creation-newer): Fix interactive spec.
+	(bbdb-creation-no-change): Use bbdb-record-timestamp.
+	(bbdb-read-record): Use bbdb-empty-record.
+	(bbdb-create): Fix call of bbdb-change-record.
+	(bbdb-split-maybe): New function.
+	(bbdb-create-internal): Use keywords for args.
+	(bbdb-edit-field, bbdb-edit-foo, bbdb-merge-records): Handle uuid,
+	creation-date and timestamp.
+	(bbdb-delete-records): Ignore records not known to BBDB.
+	* lisp/bbdb-snarf.el (bbdb-snarf)
+	* lisp/bbdb-mua.el (bbdb-annotate-message): Fix call of
+	bbdb-change-record.
+	* lisp/bbdb-migrate.el (bbdb-migration-features): Remove.
+	(bbdb-peel-the-onion): Merge with bbdb-migrate.
+	(bbdb-migrate): Handle format 9.
+	(bbdb-migrate-alist): Rename from bbdb-migration-spec.
+	(bbdb-migrate-record-lambda): Merge with bbdb-migrate-lambda.
+	(bbdb-migrate-lambda): Rename from bbdb-migrate-versions-lambda.
+	(bbdb-migrate-postcode-to-string): Rename from
+	bbdb-migrate-postcodes-to-strings.  Simplify.
+	(bbdb-migrate-dates): Rename from bbdb-migrate-change-dates.
+	Simplify.
+	(bbdb-migrate-add-country): Rename from
+	bbdb-migrate-add-country-field.
+	(bbdb-undocumented-variables): Handle byte-obsolete-variable.
+
+2017-07-25  Roland Winkler  <winkler@gnu.org>
+	* Makefile.am: Fix rule BBDB_ELPA_FILES. (Bug#51563)
+
+2017-07-25  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-tex.el: Improve documentation.
+
+2017-07-25  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-tex.el (bbdb-tex): Bug fix. (Bug#51564)
+
+2017-07-21  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb.el (bbdb-split): Fix previous patch.
+
+2017-07-21  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb.el (bbdb-split): Use arg TRIM of split-string with
+	emacs-version >= 24.4.
+
+2017-07-19  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-tex.el (bbdb-tex): Allow empty space when calling
+	\usepackage.
+
+2017-07-19  Roland Winkler  <winkler@gnu.org>
+	* tex/bbdb.sty: Use \RequirePackage.
+
+2017-07-19  Roland Winkler  <winkler@gnu.org>
+	* lisp/bbdb-tex.el (bbdb-tex-alist): Improve docstring.
+
+2017-07-03  Roland Winkler  <winkler@gnu.org>
+	Use LaTeX for TeXing BBDB.
+	* lisp/bbdb-tex.el: Replacement for lisp/bbdb-print.el.
+	* lisp/bbdb-site.el.in (bbdb-tex-path): Renamed from
+	bbdb-print-tex-path.  Allow new value t.
+	* lisp/bbdb.el (bbdb-utilities-tex): Renamed from
+	bbdb-utilities-print.
+	(bbdb-separator-alist): New element tex-name.  Fix docstring.
+	* lisp/makefile-temp, lisp/Makefile.am: Use bbdb-tex.
+	* tex/bbdb-print-brief.tex, tex/bbdb-cols.tex, tex/bbdb-print.tex:
+	Removed.
+	* tex/bbdb.sty: New file.
+	* tex/Makefile.am: Update accordingly.
+
 2017-01-31  Roland Winkler  <winkler@gnu.org>
 	* README: Really discontinue support for GNU Emacs 23.
 
@@ -2199,7 +2428,7 @@
 ;; coding: utf-8
 ;; End:
 
-  Copyright (C) 2010-2017 Roland Winkler <winkler@gnu.org>
+  Copyright (C) 2010-2017 Free Software Foundation, Inc.
 
   This file is part of the Insidious Big Brother Database (aka BBDB),
 
