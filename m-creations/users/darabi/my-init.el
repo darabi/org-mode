@@ -1343,4 +1343,8 @@ Content-Type: text/plain; charset=utf-8")
 
 (require 'mc-licence)
 
+(require 'mc-doom-theme)
+
+(load-theme 'doom-sourcerer t)
+
 (provide 'my-init)
