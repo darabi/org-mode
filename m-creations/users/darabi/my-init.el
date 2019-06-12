@@ -636,60 +636,17 @@ performed, then slime-complete-symbol is called"
 
 ;;; Javascript
 
-;; JS2 mode https://github.com/mooz/js2-mode
-(autoload 'js2-mode "js2-mode.el" nil t)
-(add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
-
-;; for the flycheck validations, you need
-;; npm install -g eslint eslint-plugin-angular eslint-config-angular babel-eslint
-;;
-;; on emacs 24, you also need to install the package let-alist from melpa
-;; either with M-x package-list-packages, or C-u M-x package-install let-alist
-;;
-(add-hook 'js2-mode-hook
-          (lambda () (setq-default js2-basic-offset 2
-                                   js2-indent-switch-body t
-                                   js2-auto-indent-p t
-                                   js2-global-externs '("angular")
-                                   js2-indent-on-enter-key t
-                                   flycheck-disabled-checkers '(javascript-jshint)
-                                   flycheck-checkers '(javascript-eslint)
-                                   flycheck-eslintrc "~/.eslintrc")
-                  (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
-                  (flycheck-mode)))
-
-(set-variable 'js2-mode-hook '(lambda ()
-                               (setq-default js2-basic-offset 2
-                                js2-indent-switch-body t
-                                js2-auto-indent-p t
-                                js2-global-externs '("angular")
-                                js2-indent-on-enter-key t
-                                flycheck-disabled-checkers '(javascript-jshint)
-                                flycheck-checkers '(javascript-eslint)
-                                flycheck-eslintrc "~/.eslintrc")
-                               (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
-                               (flycheck-mode)))
-
-(set-variable 'js2-jsx-mode-hook '(lambda ()
-                                    (setq-local sgml-basic-offset js2-basic-offset)))
-
-(add-hook 'flycheck-mode-hook '(lambda ()
-                                 (require 'flycheck-js)
-                                 (setq js2-strict-missing-semi-warning nil)
-                                 (setq js2-missing-semi-one-line-override t)
-                                 (mc-use-js-executables-from-node-modules)))
-
- ;; Tern http://ternjs.net
-;; (install with npm install -g tern)
-;; if not present in PATH, don't add it to the load path/js2 hook
-(let ((path (replace-regexp-in-string "/bin/tern[\n \t]*$" "" (shell-command-to-string "which tern"))))
-  (unless (eq 0 (length path))
-    ;; tern config files are json
-    (add-to-list 'auto-mode-alist '("\\.tern-config\\'" . js-mode))
-    (add-to-list 'auto-mode-alist '("\\.tern-project\\'" . js-mode))
-    (add-to-list 'load-path (concat path "/lib/node_modules/tern/emacs"))
-    (autoload 'tern-mode "tern.el" nil t)
-    (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
+;; ;; Tern http://ternjs.net
+;; ;; (install with npm install -g tern)
+;; ;; if not present in PATH, don't add it to the load path/js2 hook
+;; (let ((path (replace-regexp-in-string "/bin/tern[\n \t]*$" "" (shell-command-to-string "which tern"))))
+;;   (unless (eq 0 (length path))
+;;     ;; tern config files are json
+;;     (add-to-list 'auto-mode-alist '("\\.tern-config\\'" . js-mode))
+;;     (add-to-list 'auto-mode-alist '("\\.tern-project\\'" . js-mode))
+;;     (add-to-list 'load-path (concat path "/lib/node_modules/tern/emacs"))
+;;     (autoload 'tern-mode "tern.el" nil t)
+;;     (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1346,5 +1303,19 @@ Content-Type: text/plain; charset=utf-8")
 (require 'mc-doom-theme)
 
 (load-theme 'doom-sourcerer t)
+
+;; expand-region https://github.com/magnars/expand-region.el
+(require 'expand-region)
+
+(defun my-shrink-region ()
+  (interactive)
+  (er/expand-region -1))
+
+(global-set-key (kbd "C-'") 'er/expand-region)
+(global-set-key (kbd "C-;") 'my-shrink-region)
+
+;; projectile
+(require 'projectile)
+(setq projectile-project-search-path '("~/common-lisp/holz24"))
 
 (provide 'my-init)
