@@ -728,8 +728,9 @@ performed, then slime-complete-symbol is called"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; planner global key bindings
-(global-set-key [f12] 'plan)
-(global-set-key [f11] 'planner-create-task-from-buffer)
+(global-set-key [f12] 'treemacs)
+(global-set-key (kbd "<XF86Explorer>") 'treemacs)
+;; (global-set-key [f11] 'planner-create-task-from-buffer)
 
 ;;; BBDB
 (global-set-key [?\s-b] 'bbdb)
