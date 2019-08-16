@@ -212,11 +212,11 @@
 (dwim/add-slime-impl-image "qap-server")
 (dwim/add-slime-impl-image "ayacandas2")
 (dwim/add-slime-impl-image "restful-objects")
-(dwim/add-slime-impl-image "ayacandas-server")
 (dwim/add-slime-impl-image "sftp-downloader")
 (dwim/add-slime-impl-image "cxml")
 (dwim/add-slime-impl-image "bernini")
 (dwim/add-slime-impl-image "holz24")
+(dwim/add-slime-impl-image "ayacandas-redesign")
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
@@ -230,13 +230,9 @@
 
 ; (setf slime-default-lisp 'installed-sbcl)
 
-; (setf slime-default-lisp 'web-server)
-
 (setf slime-default-lisp 'holz24)
 
-;; (setf slime-default-lisp 'quasi-quote)
-
-; (setf slime-default-lisp 'restful-objects)
+; (setf slime-default-lisp 'ayacandas-redesign)
 
 (add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
 
