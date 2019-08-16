@@ -165,5 +165,8 @@
                                              '("--python" "python3")))
                                (jedi:setup)))
 
+;; magit usage always starts with magit-status, so add an autoload
+(autoload 'magit-status "magit" "Magit" t)
+
 ;; load the user's my-init as the last action
 (require 'my-init "my-init" t)
