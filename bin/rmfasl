@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ $# < 1 ]]; then
+    printf "\nUsage:\trmfasl regexp [ regexp2 regexp3 ]\n\n"
+    printf "\tThe directory ~/.cache/common-lisp is searched for the given regexp(s)\n"
+    printf "\tand all matching directories which contain compiled lisp .fasl files\n"
+    printf "\tare removed.\n\n"
+    exit 1
+fi
+
+for i in $*; do
+    # the /.*?/ part is there to make sure that matches only happen at least 4 dirs deep. this way there are fewer false positives.
+    find ~/.cache/common-lisp/  -type d -regex "/.*?/.*?/.*?/.*?/.*$i.*" -print -prune -exec rm --recursive '{}' \;
+done

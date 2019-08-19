@@ -67,7 +67,9 @@ echo "*** "`date`" Finished building development image for ${DWIM_SYSTEM_NAME_SU
 # let's quit the shell part before the shell interpreter runs on the lisp stuff below
 kill -INT $$
 
-# and from here follows the lisp part that gets "called" above |#
+# and from here follows the lisp part that gets "called" above
+
+|#
 
 (in-package :cl-user)
 
