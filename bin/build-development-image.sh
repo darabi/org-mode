@@ -37,6 +37,8 @@ if [ -z $LISP ] ; then
   LISP=sbcl
 fi
 
+export SBCL_HOME=${SBCL_HOME:-/usr/lib/sbcl}
+
 export DWIM_SYSTEM_NAME_SUBSTRING=$1
 DWIM_MAXIMUM_MEMORY_SIZE=2048
 
