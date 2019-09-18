@@ -153,6 +153,11 @@
 
 (setq indium-chrome-executable "chromium-browser")
 
+;; json-mode https://github.com/joshwnj/json-mode
+(autoload 'json-mode "json-mode.el" nil t)
+(add-to-list 'auto-mode-alist '("\\.json\\'" . json-mode))
+
+
 ;; jedi for python programming
 (autoload 'jedi:setup "jedi" "Python autocompletion for Emacs" t)
 

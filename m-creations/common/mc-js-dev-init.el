@@ -50,7 +50,9 @@
   (add-to-list 'interpreter-mode-alist (cons "node" 'js2-mode))
 
   (flycheck-mode +1)
-  (tide-setup)
+  ;; if the file ends in .json, don't set up tide (json-mode extends js2-mode)
+  (unless (eq 0 (search "nosj." (nreverse buffer-file-name)))
+    (tide-setup))
   (eldoc-mode +1)
   (tide-hl-identifier-mode +1)
   (company-mode +1)
