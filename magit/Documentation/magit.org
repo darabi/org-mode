@@ -8,7 +8,7 @@
 #+TEXINFO_DIR_CATEGORY: Emacs
 #+TEXINFO_DIR_TITLE: Magit: (magit).
 #+TEXINFO_DIR_DESC: Using Git from Emacs with Magit.
-#+SUBTITLE: for version 2.90.1 (v2.90.1-670-g01efbb2de+1)
+#+SUBTITLE: for version 2.90.1 (v2.90.1-776-g2bebacf71+1)
 
 #+TEXINFO_DEFFN: t
 #+OPTIONS: H:4 num:3 toc:2
@@ -25,7 +25,7 @@ directly from within Emacs.  While many fine Git clients exist, only
 Magit and Git itself deserve to be called porcelains.
 
 #+TEXINFO: @noindent
-This manual is for Magit version 2.90.1 (v2.90.1-670-g01efbb2de+1).
+This manual is for Magit version 2.90.1 (v2.90.1-776-g2bebacf71+1).
 
 #+BEGIN_QUOTE
 Copyright (C) 2015-2019 Jonas Bernoulli <jonas@bernoul.li>
@@ -966,11 +966,23 @@ Any of the functions listed below can be used as members of this hook.
   revision buffer, provided it is already being displayed in another
   window of the same frame.
 
+- Function: magit-status-maybe-update-stash-buffer
+
+  When moving inside a status buffer, then this function updates the
+  stash buffer, provided it is already being displayed in another
+  window of the same frame.
+
 - Function: magit-status-maybe-update-blob-buffer
 
   When moving inside a status buffer and another window of the same
   frame displays a blob buffer, then this function instead displays
   the blob buffer for the commit at point in that window.
+
+- Function: magit-stashes-maybe-update-stash-buffer
+
+  When moving inside a buffer listing stashes, then this function
+  updates the stash buffer, provided it is already being displayed
+  in another window of the same frame.
 
 - User Option: magit-update-other-window-delay
 
@@ -1844,7 +1856,7 @@ switch to a shell.
 
 - User Option: magit-shell-command-verbose-prompt
 
-  Whether the prompt, used by the the above commands when reading a
+  Whether the prompt, used by the above commands when reading a
   shell command, shows the directory in which it will be run.
 
 These suffix commands start external gui tools.
@@ -2137,7 +2149,6 @@ The following functions can also be added to the above hook:
 - Function: magit-insert-ignored-files
 
   Insert a tree of ignored files.
-
   Its possible to limit the logs in the current buffer to a certain
   directory using ~D = f <DIRECTORY> RET g~.  If you do that, then that
   that also affects this command.
@@ -2145,6 +2156,20 @@ The following functions can also be added to the above hook:
   The log filter can be used to limit to multiple files.  In that case
   this function only respects the first of the files and only if it is
   a directory.
+
+- Function: magit-insert-skip-worktree-files
+
+  Insert a tree of skip-worktree files.
+  If the first element of ~magit-buffer-diff-files~ is a
+  directory, then limit the list to files below that.  The value
+  of that variable can be set using ~D -- DIRECTORY RET g~.
+
+- Function: magit-insert-assumed-unchanged-files
+
+  Insert a tree of files that are assumed to be unchanged.
+  If the first element of ~magit-buffer-diff-files~ is a
+  directory, then limit the list to files below that.  The value
+  of that variable can be set using ~D -- DIRECTORY RET g~.
 
 - Function: magit-insert-unpulled-or-recent-commits
 
@@ -2396,6 +2421,36 @@ The following functions can be added to the above option:
 - Function: magit-repolist-column-version
 
   This function inserts a description of the repository's ~HEAD~ revision.
+
+- Function: magit-repolist-column-branch
+
+  This function inserts the name of the current branch.
+
+- Function: magit-repolist-column-upstream
+
+  This function inserts the name of the upstream branch of the current
+  branch.
+
+- Function: magit-repolist-column-branches
+
+  This function inserts the number of branches.
+
+- Function: magit-repolist-column-stashes
+
+  This function inserts the number of stashes.
+
+- Function: magit-repolist-column-flag
+
+  This function inserts a flag as specified by
+  ~magit-repolist-column-flag-alist~.
+
+  By default this indicates whether there are uncommitted changes.
+
+  - ~N~ if there is at least one untracked file.
+  - ~U~ if there is at least one unstaged file.
+  - ~S~ if there is at least one staged file.
+
+  Only the first one of these that applies is shown.
 
 - Function: magit-repolist-column-unpulled-from-upstream
 
@@ -3017,7 +3072,7 @@ Files and Blobs from a Diff]] for more information and the key bindings.
   section.  Otherwise, jump to the diffstat section or a child
   thereof.
 
-The next two commands are not specific to Magit-Diff mdoe (or and
+The next two commands are not specific to Magit-Diff mode (or and
 Magit buffer for that matter), but it might be worth pointing out
 that they are available here too.
 
@@ -3096,18 +3151,18 @@ that they are available here too.
 
 - User Option: magit-diff-highlight-indentation
 
-  Highlight the "wrong" indentation style.  Used only when
-  ~magit-diff-paint-whitespace~ is non-nil.
+  This option controls whether to highlight the indentaion in case it
+  used the "wrong" indentation style.  Indentation is only highlighted
+  if ~magit-diff-paint-whitespace~ is also non-nil.
 
-  The value is a list of cons cells.  The car is a regular expression,
-  and the cdr is the value that applies to repositories whose
-  directory matches the regular expression.  If more than one element
-  matches, then the *last* element in the list applies.  The default
-  value should therefore come first in the list.
+  The value is an alist of the form ~((REGEXP . INDENT)...)~.  The path
+  to the current repository is matched against each element in reverse
+  order.  Therefore if a REGEXP matches, then earlier elements are not
+  tried.
 
-  If the value is ~tabs~, highlight indentation with tabs.  If the value
-  is an integer, highlight indentation with at least that many spaces.
-  Otherwise, highlight neither.
+  If the used INDENT is ~tabs~, highlight indentation with tabs.  If
+  INDENT is an integer, highlight indentation with at least that many
+  spaces.  Otherwise, highlight neither.
 
 - User Option: magit-diff-hide-trailing-cr-characters
 
@@ -3164,7 +3219,7 @@ that they are available here too.
   both images.  If ~author~ or ~committer~, then insert only the
   respective image.
 
-  If you have customized the option ~magit-revision-header-format~
+  If you have customized the option ~magit-revision-headers-format~
   and want to insert the images then you might also have to specify
   where to do so.  In that case the value has to be a cons-cell of
   two regular expressions.  The car specifies where to insert the
@@ -3447,6 +3502,11 @@ should also change the others to keep things aligned.  The following
 
 - User Option: magit-refs-filter-alist
 
+  The purpose of this option is to forgo displaying certain refs
+  based on their name.  If you want to not display any refs of a
+  certain type, then you should remove the appropriate function
+  from ~magit-refs-sections-hook~ instead.
+
   This alist controls which tags and branches are omitted from being
   displayed in ~magit-refs-mode~ buffers.  If it is ~nil~, then all refs
   are displayed (subject to ~magit-refs-sections-hook~).
@@ -3458,9 +3518,9 @@ should also change the others to keep things aligned.  The following
 
   A key can either be a regular expression that the refname has to
   match, or a function that takes the refname as only argument and
-  returns a boolean.  Contrary to how they are displayed in the
-  buffer, for comparison each tag begins with "tags/" and each remote
-  branch with "<remote>/".
+  returns a boolean.  A remote branch such as "origin/master" is
+  displayed as just "master", however for this comparison the
+  former is used.
 
 - Key: RET, magit-visit-ref
 
@@ -6330,7 +6390,6 @@ add them to the transient.
   Inside ~magit-diff-mode~ or ~magit-revision-mode~ buffers, ~C-x C-w~ is
   also bound to this command.
 
-FIXME
 It is also possible to save a plain patch file by using ~C-x C-w~ inside
 a ~magit-diff-mode~ or ~magit-revision-mode~ buffer.
 
@@ -7072,8 +7131,8 @@ binding for ~magit-file-dispatch~.
 
   This command shows the log for the file of blob that the current
   buffer visits.  Renames are followed when a prefix argument is used
-  or when ~--follow~ is part of ~magit-log-arguments~.  When the
-  region is active, the log is restricted to the selected line range.
+  or when ~--follow~ is an active log argument.  When the region is
+  active, the log is restricted to the selected line range.
 
 - Key: C-c M-g t, magit-log-trace-definition
 
@@ -7476,29 +7535,18 @@ performance.
 
 **** MacOS Performance
 
-On macOS Emacs currently creates child processes using ~fork~.  It
-appears that this also copies GUI resources.  The result is that
-forking takes about 30 times as long on Darwin than on Linux.  And
-because Magit starts many ~git~ processes even when doing simple things,
-that makes quite a difference.
+Before Emacs 26.1 child processes were created using ~fork~ on macOS.
+That needlessly copied GUI resources, which is expensive.  The result
+was that forking took about 30 times as long on Darwin than on Linux,
+and because Magit starts many ~git~ processes that made quite a
+difference.
 
-On the ~master~ branch Emacs now uses ~vfork~ when possible, like this was
-already done on Linux, and now child creation only takes about twice
-as long on Darwin.  See [fn:mac1] for more information.
-
-Nobody knows when the changes on the ~master~ branch will be released as
-~26.1~, but it is still a long way off.  You might want to get your
-hands on this change before then.  The easiest way to get a patched
-Emacs is to install the ~emacs-plus~ formula [fn:mac2] using ~homebrew~.
-The change has been backported, so you get it not only when using
-~--HEAD~, but also when using ~--devel~ or when installing the latest
-release (by not using a version argument).
-
-Alternatively you can apply the backport [fn:mac3] manually.
+So make sure that you are using at least Emacs 26.1, in which case the
+faster ~vfork~ will be used.  (The creation of child processes still
+takes about twice as long on Darwin compared to Linux.)  See [fn:mac1]
+for more information.
 
 [fn:mac1] https://lists.gnu.org/archive/html/bug-gnu-emacs/2017-04/msg00201.html
-[fn:mac2] https://github.com/d12frosted/homebrew-emacs-plus
-[fn:mac3] https://gist.githubusercontent.com/aaronjensen/f45894ddf431ecbff78b1bcf533d3e6b/raw/6a5cd7f57341aba673234348d8b0d2e776f86719/Emacs-25-OS-X-use-vfork.patch
 
 * Plumbing
 ** _ :ignore:
@@ -8644,6 +8692,7 @@ General Public License for more details.
 # Local Variables:
 # eval: (require 'magit-utils nil t)
 # eval: (require 'org-man     nil t)
+# eval: (require 'ol-man      nil t)
 # eval: (require 'ox-extra    nil t)
 # eval: (require 'ox-texinfo+ nil t)
 # eval: (and (featurep 'ox-extra) (ox-extras-activate '(ignore-headlines)))

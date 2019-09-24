@@ -519,6 +519,11 @@ which visits the thing at point using `browse-url'."
   (interactive)
   (user-error "There is no thing at point that could be browsed"))
 
+(defvar bug-reference-map)
+(with-eval-after-load 'bug-reference
+  (define-key bug-reference-map [remap magit-visit-thing]
+    'bug-reference-push-button))
+
 (easy-menu-define magit-mode-menu magit-mode-map
   "Magit menu"
   '("Magit"
@@ -587,6 +592,10 @@ Magit is documented in info node `(magit)'."
   (setq truncate-lines t)
   (setq buffer-read-only t)
   (setq-local line-move-visual t) ; see #1771
+  ;; Turn off syntactic font locking, but not by setting
+  ;; `font-lock-defaults' because that would enable font locking, and
+  ;; not all magit plugins may be ready for that (see #3950).
+  (setq-local font-lock-syntactic-face-function #'ignore)
   (setq show-trailing-whitespace nil)
   (setq list-buffers-directory (abbreviate-file-name default-directory))
   (hack-dir-local-variables-non-file-buffer)
@@ -1126,8 +1135,10 @@ Run hooks `magit-pre-refresh-hook' and `magit-post-refresh-hook'."
           (when magit-refresh-verbose
             (message "Refreshing magit..."))
           (magit-run-hook-with-benchmark 'magit-pre-refresh-hook)
-          (when (derived-mode-p 'magit-mode)
-            (magit-refresh-buffer))
+          (cond ((derived-mode-p 'magit-mode)
+                 (magit-refresh-buffer))
+                ((derived-mode-p 'tabulated-list-mode)
+                 (revert-buffer)))
           (--when-let (and magit-refresh-status-buffer
                            (not (derived-mode-p 'magit-status-mode))
                            (magit-get-mode-buffer 'magit-status-mode))

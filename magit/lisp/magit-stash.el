@@ -262,12 +262,12 @@ When the region is active offer to drop all contained stashes."
 ;;;###autoload
 (defun magit-stash-branch-here (stash branch)
   "Create and checkout a new BRANCH and apply STASH.
-The branch is created using `magit-branch', using the current
-branch or `HEAD' as the string-point."
+The branch is created using `magit-branch-and-checkout', using the
+current branch or `HEAD' as the start-point."
   (interactive (list (magit-read-stash "Branch stash")
                      (magit-read-string-ns "Branch name")))
   (let ((inhibit-magit-refresh t))
-    (magit-branch-create branch (or (magit-get-current-branch) "HEAD")))
+    (magit-branch-and-checkout branch (or (magit-get-current-branch) "HEAD")))
   (magit-stash-apply stash))
 
 ;;;###autoload
@@ -388,7 +388,7 @@ instead of \"Stashes:\"."
                               autostash))
                         "\0")))
             (magit-insert-section (stash autostash)
-              (insert (propertize "AUTOSTASH" 'face 'magit-hash))
+              (insert (propertize "AUTOSTASH" 'font-lock-face 'magit-hash))
               (insert " " msg "\n")
               (save-excursion
                 (backward-char)
@@ -429,6 +429,33 @@ instead of \"Stashes:\"."
 (cl-defmethod magit-buffer-value (&context (major-mode magit-stashes-mode))
   magit-buffer-refname)
 
+(defvar magit--update-stash-buffer nil)
+
+(defun magit-stashes-maybe-update-stash-buffer (&optional _)
+  "When moving in the stashes buffer, update the stash buffer.
+If there is no stash buffer in the same frame, then do nothing."
+  (when (derived-mode-p 'magit-stashes-mode)
+    (magit--maybe-update-stash-buffer)))
+
+(defun magit--maybe-update-stash-buffer ()
+  (when-let ((stash  (magit-section-value-if 'stash))
+             (buffer (magit-get-mode-buffer 'magit-stash-mode nil t)))
+    (if magit--update-stash-buffer
+        (setq magit--update-stash-buffer (list stash buffer))
+      (setq magit--update-stash-buffer (list stash buffer))
+      (run-with-idle-timer
+       magit-update-other-window-delay nil
+       (let ((args (with-current-buffer buffer
+                     (let ((magit-direct-use-buffer-arguments 'selected))
+                       (magit-show-commit--arguments)))))
+         (lambda ()
+           (pcase-let ((`(,stash ,buf) magit--update-stash-buffer))
+             (setq magit--update-stash-buffer nil)
+             (when (buffer-live-p buf)
+               (let ((magit-display-buffer-noselect t))
+                 (apply #'magit-stash-show stash args))))
+           (setq magit--update-stash-buffer nil)))))))
+
 ;;; Show Stash
 
 ;;;###autoload
@@ -458,8 +485,9 @@ instead of \"Stashes:\"."
   (magit-set-header-line-format
    (concat (capitalize magit-buffer-revision) " "
            (propertize (magit-rev-format "%s" magit-buffer-revision)
-                       'face (list :weight 'normal :foreground
-                                   (face-attribute 'default :foreground)))))
+                       'font-lock-face
+                       (list :weight 'normal :foreground
+                             (face-attribute 'default :foreground)))))
   (setq magit-buffer-revision-hash (magit-rev-parse magit-buffer-revision))
   (magit-insert-section (stash)
     (magit-run-section-hook 'magit-stash-sections-hook)))

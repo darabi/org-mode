@@ -36,6 +36,10 @@
 
 ** Changes since v2.90.0
 
+- Replaced ~magit-repolist-column-dirty~ with ~magit-repolist-column-flag~
+  which allows specifying arbitrary flags and predicates in custom order
+  using ~magit-repolist-column-flag-alist~.  #3936 #3937
+
 - It isn't always obvious that a section can be expanded, especially
   to users who are just getting started with Magit.  Mainly to make
   it easier for those users, expandable and collapsable sections now
@@ -203,10 +207,16 @@
   the respective commit.  Previously it did that for all commits
   except the ~HEAD~ commit.  This made it impossible to visit the ~HEAD~
   commit using this or a related command and also was inconsistent.
-  ~C-RET~ (~magit-diff-visit-worktree~) should be used to visit the file
-  in the working tree for any commit.  Setting the new option
-  ~magit-diff-visit-avoid-head-blob~ to a non-nil value restores the
-  old behavior of ~magit-diff-visit-file~.  #3848
+
+  Likewise ~RET~ on an uncommitted removal now visits ~HEAD~, the last
+  commit that still had those lines.  Previously it visited the file
+  in the working tree, making it difficult to blame the previous
+  version of modified lines.
+
+  Now ~C-RET~ (~magit-diff-visit-worktree~) has to be used to visit the
+  file in the working tree for any commit or uncommitted removals.
+  Setting the new option ~magit-diff-visit-avoid-head-blob~ to a non-nil
+  value restores the old behavior of ~magit-diff-visit-file~.  #3848
 
 - ~magit-diff-visit-worktree~ now does a much better job at jumping to
   the correct location in the file.  c9e5425cd
@@ -248,6 +258,39 @@
 - When invoked with two prefix arguments, then ~magit-mode-burry-buffer~
   now also kills all other Magit buffers associated with the current
   repository.  #3863
+
+- ~magit-branch-or-commit-at-point~ was taught about Forge pull-requests.
+  9447edd12
+
+- When merging a branch that corresponds to a Forge pull-request, then
+  the commit message is modified to contain the pull-request number.
+  15331d7c0
+
+- For consistency ~magit-file-rename~ now also renames buffers that
+  visit untracked files.  #3916
+
+- Additional history simplification arguments were added to the log
+  transients.  Because only a minority of users will use those, they
+  were put on levels that are not show by default.  8f8a2f1cf
+
+- Added new commands ~magit-assume-unchanged, ~magit-no-assume-unchanged~,
+  ~magit-jump-to-skip-worktree~ and ~magit-jump-to-assume-unchanged~, and
+  section inserter ~magit-insert-assume-unchanged-files~.  2d0de8614 ff
+
+- Magit buffers are now compatible with ~whitespace-mode~ (and other
+  modes which use font-lock).  #3840
+
+- Added new command ~magit-status-here~ available from file-visiting
+  buffers at ~C-c M-g g~.  This command tries to go to the position in
+  the status buffer that corresponds to the position in the current
+  file-visiting buffer.  Setting ~magit-status-goto-file-position~ to
+  a non-nil value causes ~magit-status~ to behave the same way.  #3930
+
+- The buffer that shows a stash is now updated automatically when
+  moving through a list of stashes if the user added the new
+  ~magit-status-maybe-update-stash-buffer~ and/or
+  ~magit-stashes-maybe-update-stash-buffer~ to
+  ~magit-section-movement-hook~.  #3943
 
 ** Fixes since v2.90.0
 
@@ -346,15 +389,42 @@
 - The default value for ~magit-view-git-manual-method~ was treated as
   invalid.  #3873
 
-- Various bug fixes to ~magit-branch-delete~ (3e73ff19d),
+- Unlike other ~magit-*-files~ functions, ~magit-ignored-files~ returned
+  paths relative to the current directory instead of the top-level of
+  the repository.  6d3f12d58
+
+- Staging a hunk applied the change to the wrong location in rare
+  cases where repetitive diff context prevented ~git apply~ from
+  finding the correct location.  #3924
+
+- Staging a hunk with no context now aborts, as staging a region
+  within such a hunk already did, to avoid unintended and confusing
+  results.  #3924
+
+- ~magit-stash-branch-here~ applied the stash without checking out the
+  new branch.
+
+- Various bug fixes to
+  ~magit-branch-delete~ (3e73ff19d),
   ~magit--{upstream,pushbranch}-suffix-predicate~ (0ce7fbbc2),
-  ~magit-patch-create~ (470272a0f), ~magit--cherry-spinoff-read-args~
-  (add276810), ~magit-refs--insert-cherry-commits~ (3b37e6dc1),
+  ~magit-patch-create~ (470272a0f),
+  ~magit--cherry-spinoff-read-args~ (add276810),
+  ~magit-refs--insert-cherry-commits~ (3b37e6dc1),
   ~magit--{pushbranch,upstream}-suffix-predicate~ (cef3b1217),
   ~magit-diff-insert-file-section~ (01cf0c165),
   ~magit-insert-unpushed-to-upstream-or-recent~ (02445d6e3),
-  ~magit-ref-equal~ (46862d9d2), ~magit-ref-fullname~ (66b85daea),
-  ~magit-insert-unpulled-from-upstream~ (0363e9bac), ~magit-git-version~
-  (0abc761f5), ~auto-revert-buffers--buffer-list-filter~ (713bd64bf),
-  ~magit-insert-revision-gravatar~ (1f7e84c26) and
-  ~magit-process-unset-mode-line~ (457a685e5).
+  ~magit-ref-equal~ (46862d9d2),
+  ~magit-ref-fullname~ (66b85daea),
+  ~magit-insert-unpulled-from-upstream~ (0363e9bac),
+  ~magit-git-version~ (0abc761f5),
+  ~auto-revert-buffers--buffer-list-filter~ (713bd64bf),
+  ~magit-insert-revision-gravatar~ (1f7e84c26),
+  ~magit-process-unset-mode-line~ (457a685e5),
+  ~magit-ido-completing-read~ (f52ab7977),
+  ~magit-file-untrack~ (0984d77fb),
+  ~magit-ref-p~ (8b33bc7c7),
+  ~git-commit-setup~ (675b75ded),
+  ~magit-{,no-}skip-worktree~ (34d6ac27d),
+
+This release also contains other minor improvements, bug fixes, typo
+fixes, and documentation fixes.

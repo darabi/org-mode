@@ -182,16 +182,21 @@ change the verbosity of this column."
 (defcustom magit-refs-filter-alist nil
   "Alist controlling which refs are omitted from `magit-refs-mode' buffers.
 
+The purpose of this option is to forgo displaying certain refs
+based on their name.  If you want to not display any refs of a
+certain type, then you should remove the appropriate function
+from `magit-refs-sections-hook' instead.
+
 All keys are tried in order until one matches.  Then its value
 is used and subsequent elements are ignored.  If the value is
 non-nil, then the reference is displayed, otherwise it is not.
 If no element matches, then the reference is displayed.
 
-A key can either be a regular expression that the refname has
-to match, or a function that takes the refname as only argument
-and returns a boolean.  Contrary to how they are displayed in
-the buffer, for comparison each tag begins with \"tags/\" and
-each remote branch with \"<remote>/\"."
+A key can either be a regular expression that the refname has to
+match, or a function that takes the refname as only argument and
+returns a boolean.  A remote branch such as \"origin/master\" is
+displayed as just \"master\", however for this comparison the
+former is used."
   :package-version '(magit . "2.12.0")
   :group 'magit-refs
   :type '(alist :key-type   (choice  :tag "Key" regexp function)
@@ -521,7 +526,7 @@ line is inserted at all."
               (magit-insert-section (tag tag t)
                 (magit-insert-heading
                   (magit-refs--format-focus-column tag 'tag)
-                  (propertize tag 'face 'magit-tag)
+                  (propertize tag 'font-lock-face 'magit-tag)
                   (make-string (max 1 (- magit-refs-primary-column-width
                                          (length tag)))
                                ?\s)
@@ -539,8 +544,9 @@ line is inserted at all."
       (magit-insert-heading
         (let ((pull (magit-get "remote" remote "url"))
               (push (magit-get "remote" remote "pushurl")))
-          (format (propertize "Remote %s (%s):" 'face 'magit-section-heading)
-                  (propertize remote 'face 'magit-branch-remote)
+          (format (propertize "Remote %s (%s):"
+                              'font-lock-face 'magit-section-heading)
+                  (propertize remote 'font-lock-face 'magit-branch-remote)
                   (concat pull (and pull push ", ") push))))
       (let (head)
         (dolist (line (magit-git-lines "for-each-ref" "--format=\
@@ -639,47 +645,49 @@ line is inserted at all."
               (if branch
                   (magit-refs--propertize-branch
                    branch ref (and headp 'magit-branch-current))
-                (propertize "(detached)" 'face 'font-lock-warning-face)))
+                (magit--propertize-face "(detached)"
+                                        'font-lock-warning-face)))
              (u:ahead  (and u:track
                             (string-match "ahead \\([0-9]+\\)" u:track)
-                            (propertize
+                            (magit--propertize-face
                              (concat (and magit-refs-pad-commit-counts " ")
                                      (match-string 1 u:track)
                                      ">")
-                             'face 'magit-dimmed)))
+                             'magit-dimmed)))
              (u:behind (and u:track
                             (string-match "behind \\([0-9]+\\)" u:track)
-                            (propertize
+                            (magit--propertize-face
                              (concat "<"
                                      (match-string 1 u:track)
                                      (and magit-refs-pad-commit-counts " "))
-                             'face 'magit-dimmed)))
+                             'magit-dimmed)))
              (p:ahead  (and pushp p:track
                             (string-match "ahead \\([0-9]+\\)" p:track)
-                            (propertize
+                            (magit--propertize-face
                              (concat (match-string 1 p:track)
                                      ">"
                                      (and magit-refs-pad-commit-counts " "))
-                             'face 'magit-branch-remote)))
+                             'magit-branch-remote)))
              (p:behind (and pushp p:track
                             (string-match "behind \\([0-9]+\\)" p:track)
-                            (propertize
+                            (magit--propertize-face
                              (concat "<"
                                      (match-string 1 p:track)
                                      (and magit-refs-pad-commit-counts " "))
-                             'face 'magit-dimmed))))
+                             'magit-dimmed))))
         (list (1+ (length (concat branch-desc u:ahead p:ahead u:behind)))
               branch
               (magit-refs--format-focus-column branch headp)
               branch-desc u:ahead p:ahead u:behind
               (and upstream
                    (concat (if (equal u:track "[gone]")
-                               (propertize upstream 'face 'error)
+                               (magit--propertize-face upstream 'error)
                              (magit-refs--propertize-branch upstream u:ref))
                            " "))
               (and pushp
                    (concat p:behind
-                           (propertize push 'face 'magit-branch-remote)
+                           (magit--propertize-face
+                            push 'magit-branch-remote)
                            " "))
               (and msg (magit-log-propertize-keywords nil msg)))))))
 
@@ -693,26 +701,27 @@ line is inserted at all."
      (cond ((or (equal ref focus)
                 (and (eq type t)
                      (equal focus "HEAD")))
-            (propertize (concat (if (equal focus "HEAD") "@" "*")
-                                (make-string (1- width) ?\s))
-                        'face 'magit-section-heading))
+            (magit--propertize-face (concat (if (equal focus "HEAD") "@" "*")
+                                            (make-string (1- width) ?\s))
+                                    'magit-section-heading))
            ((if (eq type 'tag)
                 (eq magit-refs-show-commit-count 'all)
               magit-refs-show-commit-count)
             (pcase-let ((`(,behind ,ahead)
                          (magit-rev-diff-count magit-buffer-upstream ref)))
-              (propertize
+              (magit--propertize-face
                (cond ((> ahead  0) (concat "<" (number-to-string ahead)))
                      ((> behind 0) (concat (number-to-string behind) ">"))
                      (t "="))
-               'face 'magit-dimmed)))
+               'magit-dimmed)))
            (t "")))))
 
 (defun magit-refs--propertize-branch (branch ref &optional head-face)
   (let ((face (cdr (cl-find-if (pcase-lambda (`(,re . ,_))
                                  (string-match-p re ref))
                                magit-ref-namespaces))))
-    (propertize branch 'face (if head-face (list face head-face) face))))
+    (magit--propertize-face
+     branch (if head-face (list face head-face) face))))
 
 (defun magit-refs--insert-refname-p (refname)
   (--if-let (-first (pcase-lambda (`(,key . ,_))
