@@ -114,7 +114,7 @@ ASYNC_MELPA_SNAPSHOT       = 20180527
 DASH_MELPA_SNAPSHOT        = 20180910
 GIT_COMMIT_MELPA_SNAPSHOT  = 20181104
 LIBGIT_MELPA_SNAPSHOT      = 0
-TRANSIENT_MELPA_SNAPSHOT   = 20190528
+TRANSIENT_MELPA_SNAPSHOT   = 20190812
 WITH_EDITOR_MELPA_SNAPSHOT = 20181103
 
 EMACS_VERSION = 25.1
@@ -167,7 +167,7 @@ ifeq ($(SYSTYPE), windows-nt)
   CYGPATH := $(shell cygpath --version 2>/dev/null)
 endif
 
-LOAD_PATH = -L $(TOP)/lisp
+LOAD_PATH = -L $(TOP)lisp
 
 # When making changes here, then don't forget to adjust "Makefile",
 # ".travis.yml", ".github/ISSUE_TEMPLATE/bug_report.md",

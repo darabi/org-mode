@@ -308,11 +308,11 @@ points at it) otherwise."
                      (find-file file)
                      (when blame-type
                        (magit-blame--pre-blame-setup blame-type)
-                       (magit-blame--run)))))
+                       (magit-blame--run (magit-blame-arguments))))))
               (find-file file)
               (when blame-type
                 (magit-blame--pre-blame-setup blame-type)
-                (magit-blame--run)))))))))
+                (magit-blame--run (magit-blame-arguments))))))))))
 
 (put 'magit-edit-line-commit 'disabled t)
 
@@ -349,7 +349,7 @@ use `magit-rebase-edit-command' instead of this command."
   "Change the author and committer dates of the commits since REV.
 
 Ask the user for the first reachable commit whose dates should
-be changed.  The read the new date for that commit.  The initial
+be changed.  Then read the new date for that commit.  The initial
 minibuffer input and the previous history element offer good
 values.  The next commit will be created one minute later and so
 on.

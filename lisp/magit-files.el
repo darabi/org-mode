@@ -85,9 +85,7 @@ the line and column corresponding to that location."
       (user-error "Nothing selected"))))
 
 (defun magit-find-file--internal (rev file fn)
-  (let ((buf  (if (equal rev "{worktree}")
-                  (find-file-noselect (expand-file-name file (magit-toplevel)))
-                (magit-find-file-noselect rev file)))
+  (let ((buf (magit-find-file-noselect rev file))
         line col)
     (when-let ((visited-file (magit-file-relative-name)))
       (setq line (line-number-at-pos))
@@ -124,31 +122,34 @@ FILE must be relative to the top directory of the repository."
 REV is a revision or one of \"{worktree}\" or \"{index}\".
 FILE must be relative to the top directory of the repository.
 Non-nil REVERT means to revert the buffer.  If `ask-revert',
-then only after asking."
-  (let ((topdir (magit-toplevel)))
-    (when (file-name-absolute-p file)
-      (setq file (file-relative-name file topdir)))
-    (with-current-buffer (magit-get-revision-buffer-create rev file)
-      (when (or (not magit-buffer-file-name)
-                (if (eq revert 'ask-revert)
-                    (y-or-n-p (format "%s already exists; revert it? "
-                                      (buffer-name))))
-                revert)
-        (setq magit-buffer-revision
-              (if (equal rev "{index}")
-                  "{index}"
-                (magit-rev-format "%H" rev)))
-        (setq magit-buffer-refname rev)
-        (setq magit-buffer-file-name (expand-file-name file topdir))
-        (setq default-directory
-              (let ((dir (file-name-directory magit-buffer-file-name)))
-                (if (file-exists-p dir) dir topdir)))
-        (setq-local revert-buffer-function #'magit-revert-rev-file-buffer)
-        (revert-buffer t t)
-        (run-hooks (if (equal rev "{index}")
-                       'magit-find-index-hook
-                     'magit-find-file-hook)))
-      (current-buffer))))
+then only after asking.  A non-nil value for REVERT is ignored if REV is
+\"{worktree}\"."
+  (if (equal rev "{worktree}")
+      (find-file-noselect (expand-file-name file (magit-toplevel)))
+    (let ((topdir (magit-toplevel)))
+      (when (file-name-absolute-p file)
+        (setq file (file-relative-name file topdir)))
+      (with-current-buffer (magit-get-revision-buffer-create rev file)
+        (when (or (not magit-buffer-file-name)
+                  (if (eq revert 'ask-revert)
+                      (y-or-n-p (format "%s already exists; revert it? "
+                                        (buffer-name))))
+                  revert)
+          (setq magit-buffer-revision
+                (if (equal rev "{index}")
+                    "{index}"
+                  (magit-rev-format "%H" rev)))
+          (setq magit-buffer-refname rev)
+          (setq magit-buffer-file-name (expand-file-name file topdir))
+          (setq default-directory
+                (let ((dir (file-name-directory magit-buffer-file-name)))
+                  (if (file-exists-p dir) dir topdir)))
+          (setq-local revert-buffer-function #'magit-revert-rev-file-buffer)
+          (revert-buffer t t)
+          (run-hooks (if (equal rev "{index}")
+                         'magit-find-index-hook
+                       'magit-find-file-hook)))
+        (current-buffer)))))
 
 (defun magit-get-revision-buffer-create (rev file)
   (magit-get-revision-buffer rev file t))
@@ -298,7 +299,8 @@ directory, while reading the FILENAME."
     ("c" "Commit"     magit-commit)
     ("e" "Edit line"  magit-edit-line-commit)]
    [("D" "Diff..."    magit-diff)
-    ("d" "Diff"       magit-diff-buffer-file)]
+    ("d" "Diff"       magit-diff-buffer-file)
+    ("g" "Status"     magit-status-here)]
    [("L" "Log..."     magit-log)
     ("l" "Log"        magit-log-buffer-file)
     ("t" "Trace"      magit-log-trace-definition)]
@@ -310,8 +312,8 @@ directory, while reading the FILENAME."
     ("q" "Quit blame" magit-blame-quit)]
    [("p" "Prev blob"  magit-blob-previous)
     ("n" "Next blob"  magit-blob-next)
-    ("g" "Goto blob"  magit-find-file)
-    ("w" "Goto file"  magit-blob-visit-file)]
+    ("v" "Goto blob"  magit-find-file)
+    ("V" "Goto file"  magit-blob-visit-file)]
    [(5 "C-c r" "Rename file"   magit-file-rename)
     (5 "C-c d" "Delete file"   magit-file-delete)
     (5 "C-c u" "Untrack file"  magit-file-untrack)
@@ -345,7 +347,7 @@ Currently this only adds the following key bindings.
 ;; variable but does not cause the mode function to be called, and we
 ;; cannot use `:initialize' to call that explicitly because the option
 ;; is defined before the functions, so we have to do it here.
-(cl-eval-when (load)
+(cl-eval-when (load eval)
   (when global-magit-file-mode
     (global-magit-file-mode 1)))
 
@@ -444,25 +446,25 @@ If FILE isn't tracked in Git, fallback to using `rename-file'."
                                    (and dir (expand-file-name dir)))))
      (list (expand-file-name file (magit-toplevel))
            (expand-file-name newname))))
-  (if (magit-file-tracked-p (magit-convert-filename-for-git file))
-      (let ((oldbuf (get-file-buffer file)))
-        (when (and oldbuf (buffer-modified-p oldbuf))
-          (user-error "Save %s before moving it" file))
-        (when (file-exists-p newname)
-          (user-error "%s already exists" newname))
-        (magit-run-git "mv"
-                       (magit-convert-filename-for-git file)
-                       (magit-convert-filename-for-git newname))
-        (when oldbuf
-          (with-current-buffer oldbuf
-            (let ((buffer-read-only buffer-read-only))
-              (set-visited-file-name newname))
-            (if (fboundp 'vc-refresh-state)
-                (vc-refresh-state)
-              (with-no-warnings
-                (vc-find-file-hook))))))
-    (rename-file file newname current-prefix-arg)
-    (magit-refresh)))
+  (let ((oldbuf (get-file-buffer file)))
+    (when (and oldbuf (buffer-modified-p oldbuf))
+      (user-error "Save %s before moving it" file))
+    (when (file-exists-p newname)
+      (user-error "%s already exists" newname))
+    (if (magit-file-tracked-p (magit-convert-filename-for-git file))
+        (magit-call-git "mv"
+                        (magit-convert-filename-for-git file)
+                        (magit-convert-filename-for-git newname))
+      (rename-file file newname current-prefix-arg))
+    (when oldbuf
+      (with-current-buffer oldbuf
+        (let ((buffer-read-only buffer-read-only))
+          (set-visited-file-name newname nil t))
+        (if (fboundp 'vc-refresh-state)
+            (vc-refresh-state)
+          (with-no-warnings
+            (vc-find-file-hook))))))
+  (magit-refresh))
 
 (defun magit-file-untrack (files &optional force)
   "Untrack the selected FILES or one file read in the minibuffer.

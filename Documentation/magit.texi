@@ -31,7 +31,7 @@ General Public License for more details.
 @finalout
 @titlepage
 @title Magit User Manual
-@subtitle for version 2.90.1 (v2.90.1-670-g01efbb2de+1)
+@subtitle for version 2.90.1 (v2.90.1-776-g2bebacf71+1)
 @author Jonas Bernoulli
 @page
 @vskip 0pt plus 1filll
@@ -53,7 +53,7 @@ directly from within Emacs.  While many fine Git clients exist, only
 Magit and Git itself deserve to be called porcelains.
 
 @noindent
-This manual is for Magit version 2.90.1 (v2.90.1-670-g01efbb2de+1).
+This manual is for Magit version 2.90.1 (v2.90.1-776-g2bebacf71+1).
 
 @quotation
 Copyright (C) 2015-2019 Jonas Bernoulli <jonas@@bernoul.li>
@@ -1409,11 +1409,25 @@ revision buffer, provided it is already being displayed in another
 window of the same frame.
 @end defun
 
+@defun magit-status-maybe-update-stash-buffer
+
+When moving inside a status buffer, then this function updates the
+stash buffer, provided it is already being displayed in another
+window of the same frame.
+@end defun
+
 @defun magit-status-maybe-update-blob-buffer
 
 When moving inside a status buffer and another window of the same
 frame displays a blob buffer, then this function instead displays
 the blob buffer for the commit at point in that window.
+@end defun
+
+@defun magit-stashes-maybe-update-stash-buffer
+
+When moving inside a buffer listing stashes, then this function
+updates the stash buffer, provided it is already being displayed
+in another window of the same frame.
 @end defun
 
 @defopt magit-update-other-window-delay
@@ -2514,7 +2528,7 @@ in the top-level directory of the current working tree instead.
 
 @defopt magit-shell-command-verbose-prompt
 
-Whether the prompt, used by the the above commands when reading a
+Whether the prompt, used by the above commands when reading a
 shell command, shows the directory in which it will be run.
 @end defopt
 
@@ -2898,7 +2912,6 @@ Insert a tree of tracked files.
 @defun magit-insert-ignored-files
 
 Insert a tree of ignored files.
-
 Its possible to limit the logs in the current buffer to a certain
 directory using @code{D = f <DIRECTORY> RET g}.  If you do that, then that
 that also affects this command.
@@ -2906,6 +2919,22 @@ that also affects this command.
 The log filter can be used to limit to multiple files.  In that case
 this function only respects the first of the files and only if it is
 a directory.
+@end defun
+
+@defun magit-insert-skip-worktree-files
+
+Insert a tree of skip-worktree files.
+If the first element of @code{magit-buffer-diff-files} is a
+directory, then limit the list to files below that.  The value
+of that variable can be set using @code{D -- DIRECTORY RET g}.
+@end defun
+
+@defun magit-insert-assumed-unchanged-files
+
+Insert a tree of files that are assumed to be unchanged.
+If the first element of @code{magit-buffer-diff-files} is a
+directory, then limit the list to files below that.  The value
+of that variable can be set using @code{D -- DIRECTORY RET g}.
 @end defun
 
 @defun magit-insert-unpulled-or-recent-commits
@@ -3205,6 +3234,48 @@ This function inserts the absolute path of the repository.
 @defun magit-repolist-column-version
 
 This function inserts a description of the repository's @code{HEAD} revision.
+@end defun
+
+@defun magit-repolist-column-branch
+
+This function inserts the name of the current branch.
+@end defun
+
+@defun magit-repolist-column-upstream
+
+This function inserts the name of the upstream branch of the current
+branch.
+@end defun
+
+@defun magit-repolist-column-branches
+
+This function inserts the number of branches.
+@end defun
+
+@defun magit-repolist-column-stashes
+
+This function inserts the number of stashes.
+@end defun
+
+@defun magit-repolist-column-flag
+
+This function inserts a flag as specified by
+@code{magit-repolist-column-flag-alist}.
+
+By default this indicates whether there are uncommitted changes.
+
+@itemize
+@item
+@code{N} if there is at least one untracked file.
+
+@item
+@code{U} if there is at least one unstaged file.
+
+@item
+@code{S} if there is at least one staged file.
+@end itemize
+
+Only the first one of these that applies is shown.
 @end defun
 
 @defun magit-repolist-column-unpulled-from-upstream
@@ -4099,7 +4170,7 @@ section.  Otherwise, jump to the diffstat section or a child
 thereof.
 @end table
 
-The next two commands are not specific to Magit-Diff mdoe (or and
+The next two commands are not specific to Magit-Diff mode (or and
 Magit buffer for that matter), but it might be worth pointing out
 that they are available here too.
 
@@ -4221,18 +4292,18 @@ only when @code{magit-diff-paint-whitespace} is non-nil.
 
 @defopt magit-diff-highlight-indentation
 
-Highlight the "wrong" indentation style.  Used only when
-@code{magit-diff-paint-whitespace} is non-nil.
+This option controls whether to highlight the indentaion in case it
+used the "wrong" indentation style.  Indentation is only highlighted
+if @code{magit-diff-paint-whitespace} is also non-nil.
 
-The value is a list of cons cells.  The car is a regular expression,
-and the cdr is the value that applies to repositories whose
-directory matches the regular expression.  If more than one element
-matches, then the @strong{last} element in the list applies.  The default
-value should therefore come first in the list.
+The value is an alist of the form @code{((REGEXP . INDENT)...)}.  The path
+to the current repository is matched against each element in reverse
+order.  Therefore if a REGEXP matches, then earlier elements are not
+tried.
 
-If the value is @code{tabs}, highlight indentation with tabs.  If the value
-is an integer, highlight indentation with at least that many spaces.
-Otherwise, highlight neither.
+If the used INDENT is @code{tabs}, highlight indentation with tabs.  If
+INDENT is an integer, highlight indentation with at least that many
+spaces.  Otherwise, highlight neither.
 @end defopt
 
 @defopt magit-diff-hide-trailing-cr-characters
@@ -4304,7 +4375,7 @@ If @code{nil}, then don't insert any gravatar images.  If @code{t}, then insert
 both images.  If @code{author} or @code{committer}, then insert only the
 respective image.
 
-If you have customized the option @code{magit-revision-header-format}
+If you have customized the option @code{magit-revision-headers-format}
 and want to insert the images then you might also have to specify
 where to do so.  In that case the value has to be a cons-cell of
 two regular expressions.  The car specifies where to insert the
@@ -4683,6 +4754,11 @@ information.
 
 @defopt magit-refs-filter-alist
 
+The purpose of this option is to forgo displaying certain refs
+based on their name.  If you want to not display any refs of a
+certain type, then you should remove the appropriate function
+from @code{magit-refs-sections-hook} instead.
+
 This alist controls which tags and branches are omitted from being
 displayed in @code{magit-refs-mode} buffers.  If it is @code{nil}, then all refs
 are displayed (subject to @code{magit-refs-sections-hook}).
@@ -4694,9 +4770,9 @@ matches, then the reference is displayed.
 
 A key can either be a regular expression that the refname has to
 match, or a function that takes the refname as only argument and
-returns a boolean.  Contrary to how they are displayed in the
-buffer, for comparison each tag begins with "tags/" and each remote
-branch with "<remote>/".
+returns a boolean.  A remote branch such as "origin/master" is
+displayed as just "master", however for this comparison the
+former is used.
 @end defopt
 
 @table @asis
@@ -8603,7 +8679,6 @@ Inside @code{magit-diff-mode} or @code{magit-revision-mode} buffers, @code{C-x C
 also bound to this command.
 @end table
 
-FIXME
 It is also possible to save a plain patch file by using @code{C-x C-w} inside
 a @code{magit-diff-mode} or @code{magit-revision-mode} buffer.
 
@@ -9621,8 +9696,8 @@ file(s) is set to the visited file.
 
 This command shows the log for the file of blob that the current
 buffer visits.  Renames are followed when a prefix argument is used
-or when @code{--follow} is part of @code{magit-log-arguments}.  When the
-region is active, the log is restricted to the selected line range.
+or when @code{--follow} is an active log argument.  When the region is
+active, the log is restricted to the selected line range.
 
 @kindex C-c M-g t
 @cindex magit-log-trace-definition
@@ -10084,25 +10159,16 @@ performance.
 @node MacOS Performance
 @unnumberedsubsubsec MacOS Performance
 
-On macOS Emacs currently creates child processes using @code{fork}.  It
-appears that this also copies GUI resources.  The result is that
-forking takes about 30 times as long on Darwin than on Linux.  And
-because Magit starts many @code{git} processes even when doing simple things,
-that makes quite a difference.
+Before Emacs 26.1 child processes were created using @code{fork} on macOS@.
+That needlessly copied GUI resources, which is expensive.  The result
+was that forking took about 30 times as long on Darwin than on Linux,
+and because Magit starts many @code{git} processes that made quite a
+difference.
 
-On the @code{master} branch Emacs now uses @code{vfork} when possible, like this was
-already done on Linux, and now child creation only takes about twice
-as long on Darwin.  See @footnote{@uref{https://lists.gnu.org/archive/html/bug-gnu-emacs/2017-04/msg00201.html}} for more information.
-
-Nobody knows when the changes on the @code{master} branch will be released as
-@code{26.1}, but it is still a long way off.  You might want to get your
-hands on this change before then.  The easiest way to get a patched
-Emacs is to install the @code{emacs-plus} formula @footnote{@uref{https://github.com/d12frosted/homebrew-emacs-plus}} using @code{homebrew}.
-The change has been backported, so you get it not only when using
-@code{--HEAD}, but also when using @code{--devel} or when installing the latest
-release (by not using a version argument).
-
-Alternatively you can apply the backport @footnote{@uref{https://gist.githubusercontent.com/aaronjensen/f45894ddf431ecbff78b1bcf533d3e6b/raw/6a5cd7f57341aba673234348d8b0d2e776f86719/Emacs-25-OS-X-use-vfork.patch}} manually.
+So make sure that you are using at least Emacs 26.1, in which case the
+faster @code{vfork} will be used.  (The creation of child processes still
+takes about twice as long on Darwin compared to Linux.)  See @footnote{@uref{https://lists.gnu.org/archive/html/bug-gnu-emacs/2017-04/msg00201.html}}
+for more information.
 
 @node Plumbing
 @chapter Plumbing

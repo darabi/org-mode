@@ -34,6 +34,7 @@
 (require 'eieio)
 
 (eval-when-compile
+  (require 'benchmark)
   (require 'subr-x))
 
 (require 'magit-utils)
@@ -44,6 +45,7 @@
 (declare-function magit-repository-local-set "magit-mode"
                   (key value &optional repository))
 (defvar magit-keep-region-overlay)
+(defvar magit-refresh-verbose)
 
 ;;; Options
 
@@ -70,10 +72,12 @@ That function in turn is used by all section movement commands."
   :type 'hook
   :options '(magit-hunk-set-window-start
              magit-status-maybe-update-revision-buffer
+             magit-status-maybe-update-stash-buffer
              magit-status-maybe-update-blob-buffer
              magit-log-maybe-update-revision-buffer
              magit-log-maybe-update-blob-buffer
-             magit-log-maybe-show-more-commits))
+             magit-log-maybe-show-more-commits
+             magit-stashes-maybe-update-stash-buffer))
 
 (defcustom magit-section-highlight-hook
   '(magit-diff-highlight
@@ -479,6 +483,17 @@ With a prefix argument also expand it." heading)
   "Show the body of the current section."
   (interactive (list (magit-current-section)))
   (oset section hidden nil)
+  (magit-section--maybe-wash section)
+  (when-let ((beg (oref section content)))
+    (remove-overlays beg (oref section end) 'invisible t))
+  (magit-section-maybe-update-visibility-indicator section)
+  (magit-section-maybe-cache-visibility section)
+  (dolist (child (oref section children))
+    (if (oref child hidden)
+        (magit-section-hide child)
+      (magit-section-show child))))
+
+(defun magit-section--maybe-wash (section)
   (when-let ((washer (oref section washer)))
     (oset section washer nil)
     (let ((inhibit-read-only t)
@@ -491,15 +506,7 @@ With a prefix argument also expand it." heading)
           (oset section content (point-marker))
           (funcall washer)
           (oset section end (point-marker)))))
-    (magit-section-update-highlight))
-  (when-let ((beg (oref section content)))
-    (remove-overlays beg (oref section end) 'invisible t))
-  (magit-section-maybe-update-visibility-indicator section)
-  (magit-section-maybe-cache-visibility section)
-  (dolist (child (oref section children))
-    (if (oref child hidden)
-        (magit-section-hide child)
-      (magit-section-show child))))
+    (magit-section-update-highlight)))
 
 (defun magit-section-hide (section)
   "Hide the body of the current section."
@@ -1076,9 +1083,12 @@ insert a newline character if necessary."
   (declare (indent defun))
   (when args
     (let ((heading (apply #'concat args)))
-      (insert (if (text-property-not-all 0 (length heading) 'face nil heading)
+      (insert (if (or (text-property-not-all 0 (length heading)
+                                             'font-lock-face nil heading)
+                      (text-property-not-all 0 (length heading)
+                                             'face nil heading))
                   heading
-                (propertize heading 'face 'magit-section-heading)))))
+                (propertize heading 'font-lock-face 'magit-section-heading)))))
   (unless (bolp)
     (insert ?\n))
   (magit-maybe-make-margin-overlay)
@@ -1182,9 +1192,7 @@ evaluated its BODY.  Admittedly that's a bit of a hack."
         (unless (eq magit-section-highlighted-section section)
           (setq magit-section-highlighted-section
                 (and (not (oref section hidden))
-                     section))))
-      (when (version< emacs-version "25.1")
-        (setq deactivate-mark nil)))
+                     section)))))
     (magit-section-maybe-paint-visibility-ellipses)))
 
 (defun magit-section-highlight (section selection)
@@ -1241,7 +1249,7 @@ invisible."
                           magit-diff-hunk-heading-selection)))
     (setq face (list :foreground (face-foreground face))))
   (let ((ov (make-overlay start end nil t)))
-    (overlay-put ov 'face face)
+    (overlay-put ov 'font-lock-face face)
     (overlay-put ov 'evaporate t)
     (push ov magit-section-highlight-overlays)
     ov))
@@ -1406,11 +1414,12 @@ invisible."
           (overlay-put
            ov 'after-string
            (propertize
-            (car magit-section-visibility-indicator) 'face
+            (car magit-section-visibility-indicator) 'font-lock-face
             (let ((pos (overlay-start ov)))
-              (delq nil (nconc (--map (overlay-get it 'face)
+              (delq nil (nconc (--map (overlay-get it 'font-lock-face)
                                       (overlays-at pos))
-                               (list (get-char-property pos 'face))))))))))))
+                               (list (get-char-property
+                                      pos 'font-lock-face))))))))))))
 
 (defun magit-section-maybe-remove-visibility-indicator (section)
   (when (and magit-section-visibility-indicator
@@ -1631,7 +1640,10 @@ again use `remove-hook'."
     (dolist (entry entries)
       (let ((magit--current-section-hook (cons (list hook entry)
                                                magit--current-section-hook)))
-        (apply entry args)))))
+        (if magit-refresh-verbose
+            (message "  %-50s %s" entry
+                     (benchmark-elapse (apply entry args)))
+          (apply entry args))))))
 
 ;;; _
 (provide 'magit-section)
