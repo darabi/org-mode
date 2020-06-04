@@ -100,6 +100,8 @@
 
 (when (and window-system (not (eq (window-system) 'w32)))
   (require 'exec-path-from-shell)
+  (setq exec-path-from-shell-variables
+        '("PATH" "MANPATH" "NLS_LANG"))
   (exec-path-from-shell-initialize))
 
 ;;; dockerfile-mode
