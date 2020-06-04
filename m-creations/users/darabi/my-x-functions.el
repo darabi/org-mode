@@ -50,13 +50,14 @@
 width thresholds. Note that the fonts must either be present in system font folders
 or in ~/.fonts"
   (interactive)
-  (let ((maxwidth (xrandr-max-width)))
+  (let ((maxwidth (x-display-pixel-width)))
     ;; (message "maxwidth %s" maxwidth)
     (case maxwidth
       (1280 (set-frame-font "Consolas-11" t))
       (1440 (set-frame-font "Inconsolata-11" t))
       (1680 (set-frame-font "Inconsolata-11" t))
       (1920 (set-frame-font "Consolas-11" t))
+      (2560 (set-frame-font "Inconsolata-12" t))
       (3200 (set-frame-font "Inconsolata-12" t))
       (3840 (set-frame-font "Inconsolata-12" t))
       (0 (set-frame-font "Inconsolata-10.5" t)))))
