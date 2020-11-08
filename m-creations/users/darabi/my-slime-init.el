@@ -203,6 +203,7 @@
 (dwim/add-slime-impl-image "hu.dwim.reader")
 (dwim/add-slime-impl-image "hu.dwim.web-server")
 (dwim/add-slime-impl-image "hu.dwim.presentation")
+(dwim/add-slime-impl-image "hu.dwim.meta-model")
 (dwim/add-slime-impl-image "hu.dwim.zlib")
 (dwim/add-slime-impl-image "rodin")
 (dwim/add-slime-impl-image "rodin.peaches")
@@ -218,6 +219,7 @@
 (dwim/add-slime-impl-image "holz24")
 (dwim/add-slime-impl-image "ayacandas-redesign")
 
+
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
 (add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl")))
@@ -230,7 +232,9 @@
 
 ; (setf slime-default-lisp 'installed-sbcl)
 
-(setf slime-default-lisp 'holz24)
+; (setf slime-default-lisp 'holz24)
+(setf slime-default-lisp 'bernini)
+(setf slime-default-lisp 'meta-model)
 
 ; (setf slime-default-lisp 'ayacandas-redesign)
 

@@ -53,7 +53,7 @@
 ;; http://wttools.sourceforge.net/emacs-stuff/emacs.html
 ;;
 ;; load personal-funcs which contains my-color-theme etc.
-;;(load-file "~/.emacs.d/site-lisp/personal-funcs.el")
+;; (load-file "~/.emacs.d/site-lisp/personal-funcs.el")
 (require 'personal-funcs)
 
 (autoload 'w3m-browse-url "w3m" "Ask a WWW browser to show a URL." t)
@@ -64,78 +64,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;;; GLOBAL KEYS
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(global-set-key "\C-xm" 'browse-url-at-point)
-(global-set-key [f10] 'menu-bar-open)
-
-;; cf. personal-funcs.el
-;;
-;; I find it annoying when backward-kill-word eats up half of the
-;; previous line!
-(global-set-key [C-backspace] 'kd-backward-kill-whitespace-or-word);
-(global-set-key [M-backspace] 'kd-backward-kill-whitespace-or-word);
-(global-set-key [?\C-\d] 'kd-backward-kill-whitespace-or-word);
-
-;; whitespace-cleanup is often badly needed
-(global-set-key "\C-cw" 'whitespace-cleanup)
-
-; this is the original setting
-; (global-set-key [(control backspace)] 'backward-kill-word)
-
-;;;; Key binding for switching to next and previous buffer
-(global-set-key '[C-tab] 'bs-cycle-next)
-(global-set-key [S-tab] 'bs-cycle-previous)
-(global-set-key [C-iso-lefttab] 'bs-cycle-previous)
-
-;;;; Comment regions
-;;; Well, it is good to have the same keybinding for commenting out
-;;; region in all modes.
-(global-set-key [?\C-c ?c] 'comment-region)
-(global-set-key [?\C-c ?u] 'uncomment-region)
-
-;;;; Movement in screen and other terminals
-;; but in screen sessions, we need this
-(global-set-key "\M-[1;5B"    'forward-paragraph)  ; Ctrl+down   => forward para
-(global-set-key "\M-[1;5A"    'backward-paragraph) ; Ctrl+up     => backward para
-(global-set-key "\M-[1;5C"    'forward-word)       ; Ctrl+right  => forward word
-(global-set-key "\M-[1;5D"    'backward-word)      ; Ctrl+left   => backward word
-
-;; and in rxvt, these:
-; rxvt's keycodes for C-<left> and C-<right> are M-O d and M-O c,
-(global-set-key [(meta O) (a)] 'backward-paragraph)
-(global-set-key [(meta O) (b)] 'forward-paragraph)
-(global-set-key [(meta O) (c)] 'forward-word)
-(global-set-key [(meta O) (d)] 'backward-word)
-
-;;;; Scrolling the other window
-;; we need an interactive function for global-set-key (cf. below)
-(defun kd-scroll-other-window-up (arg)
-  (interactive "p")
-  (scroll-other-window '-))
-
-(global-set-key "\M-[5;3~"  'kd-scroll-other-window-up) ; M-<prior> (pg up)
-(global-set-key "\M-[6;3~"  'scroll-other-window)      ; M-<next> (pg dn)
-
-(global-set-key (kbd "C-,") 'copy-primary-selection)
-(global-set-key (kbd "C-.") 'yank-clipboard-selection)
-(global-set-key [(control insert)] 'kill-primary-selection)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Color theme
-;; CUSTOM FACES are replaced by color-theme-darabi-[x|term]
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(eval-after-load "color-theme"
-  '(progn
-    (color-theme-initialize)
-    (my-color-theme)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;;; changes added by custom
+;;;; set a dedicated custom file so it doesn't mess with my ~/.emacs
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -155,28 +84,6 @@
  '(vc-follow-symlinks t)
  '(x-select-enable-clipboard t))
 
-;;;; Globally enable features
-
-(put 'upcase-region 'disabled nil)
-(put 'scroll-left 'disabled nil)
-(put 'downcase-region 'disabled nil)
-
-;; stolen from
-;; http://wttools.sourceforge.net/emacs-stuff/emacs.html
-;;
-;; load personal-funcs which contains my-color-theme etc.
-;;(load-file "~/.emacs.d/site-lisp/personal-funcs.el")
-(require 'personal-funcs)
-
-;;(setq browse-url-firefox-program "/usr/local/bin/Icecat32")
-(setq browse-url-firefox-program "firefox")
-
-(autoload 'w3m-browse-url "w3m" "Ask a WWW browser to show a URL." t)
-(if (getenv "DISPLAY")
-    (setq browse-url-browser-function '(("http" . browse-url-firefox)
-                                        ("file" . browse-url-firefox)))
-    (setq browse-url-browser-function 'w3m-browse-url))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; GLOBAL KEYS
@@ -203,6 +110,10 @@
 (global-set-key '[C-tab] 'bs-cycle-next)
 (global-set-key [S-tab] 'bs-cycle-previous)
 (global-set-key [C-iso-lefttab] 'bs-cycle-previous)
+
+;; enlarge shrink a window horizontally
+(global-set-key (kbd "C-}") 'enlarge-window-horizontally)
+(global-set-key (kbd "C-{") 'shrink-window-horizontally)
 
 ;;;; Comment regions
 ;;; Well, it is good to have the same keybinding for commenting out
@@ -237,6 +148,9 @@
 (global-set-key "\M-[5;3~"  'kd-scroll-other-window-up) ; M-<prior> (pg up)
 (global-set-key "\M-[6;3~"  'scroll-other-window)      ; M-<next> (pg dn)
 
+(global-set-key (kbd "C-,") 'copy-primary-selection)
+(global-set-key (kbd "C-.") 'yank-clipboard-selection)
+(global-set-key [(control insert)] 'kill-primary-selection)
 
 (global-set-key (kbd "C-b") 'undo)
 (global-set-key (kbd "M-b") 'redo)
@@ -247,6 +161,7 @@
 ;; C-o is normally bound to open-line which inserts a newline
 ;; at point and stays there
 (global-set-key (kbd "C-o") 'other-window)
+(global-set-key (kbd "C-S-o") (lambda () (interactive) (other-window -1)))
 (define-key Buffer-menu-mode-map (kbd "C-o") 'other-window)
 
 (global-set-key (kbd "C-p") 'dwim-kill-this-buffer-and-window)
@@ -268,73 +183,80 @@
 ;; (global-set-key [(control e)] 'delete-window)
 (global-set-key [(control shift e)] 'delete-other-windows)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; Color theme
-;; CUSTOM FACES are replaced by color-theme-darabi-[x|term]
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(eval-after-load "color-theme"
-  '(progn
-    (color-theme-initialize)
-    (my-color-theme)))
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;;; Color theme
+;; ;; CUSTOM FACES are replaced by color-theme-darabi-[x|term]
+;; ;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (eval-after-load "color-theme"
+;;   '(progn
+;;     (color-theme-initialize)
+;;     (my-color-theme)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; LaTeX and friends
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;;; LaTeX and friends
+;; ;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(push '("\\.tex$" . LaTeX-mode) auto-mode-alist)
+;; (push '("\\.tex$" . LaTeX-mode) auto-mode-alist)
 
-(add-hook 'LaTeX-mode-hook (lambda ()
-                             (local-set-key "\C-x\C-j" 'okular-jump-to-line)
-                             (setq LaTeX-command-style '(("" "%(PDF)%(latex) -synctex=1 %S%(PDFout)")))
-                             (add-to-list 'TeX-output-view-style '("^pdf$" "." "okular --unique %s.pdf"))
-                             (setq TeX-view-program-list '(("Okular" "okular --unique %s.pdf")))
-                             (setq TeX-view-program-selection '((output-pdf "Okular") (output-dvi "Okular")))
-                             (setq TeX-master 'dwim)
-                             (TeX-PDF-mode)
-                             (require 'okular-search)))
+;; (add-hook 'LaTeX-mode-hook (lambda ()
+;;                              (local-set-key "\C-x\C-j" 'okular-jump-to-line)
+;;                              (setq LaTeX-command-style '(("" "%(PDF)%(latex) -synctex=1 %S%(PDFout)")))
+;;                              (add-to-list 'TeX-output-view-style '("^pdf$" "." "okular --unique %s.pdf"))
+;;                              (setq TeX-view-program-list '(("Okular" "okular --unique %s.pdf")))
+;;                              (setq TeX-view-program-selection '((output-pdf "Okular") (output-dvi "Okular")))
+;;                              (setq TeX-master 'dwim)
+;;                              (TeX-PDF-mode)
+;;                              (require 'okular-search)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; ORG-MODE
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;
+;; ;;; ORG-MODE
+;; ;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;; Loading and paths
+;; ;;;; Loading and paths
 
-(require 'org-install)
-(add-to-list 'auto-mode-alist '("\\.org\\(-mode\\)?$" . org-mode))
+;; (require 'org-install)
+;; (add-to-list 'auto-mode-alist '("\\.org\\(-mode\\)?$" . org-mode))
 
-; you need to apt-get install ditaa to use it
-(setq org-ditaa-jar-path "/usr/bin/ditaa")
+;; ; you need to apt-get install ditaa to use it
+;; (setq org-ditaa-jar-path "/usr/bin/ditaa")
 
-(require 'info)
-(push "~/.emacs.d/site-lisp/org-mode/doc" Info-default-directory-list)
+;; (require 'info)
+;; (push "~/.emacs.d/site-lisp/org-mode/doc" Info-default-directory-list)
 
 (global-set-key "\C-cl" 'org-store-link)
 (global-set-key "\C-ca" 'org-agenda)
 (global-set-key "\C-cb" 'org-iswitchb)
 
 ;; extension by Peter Jones pjones@pmade.com now part of org-mode contrib
-;; cf ~/.emacs.d/site-lisp/org-mode/contrib/lisp/org-invoice.el
+;; cf ~/.emacs.d/site-lisp/org-invoice/org-invoice.el
 (autoload 'org-invoice-report "org-invoice")
 (autoload 'org-dblock-write:invoice "org-invoice")
 
-;; (add-to-list 'load-path "~/vc/org")
-; I prefer return to activate a link
-; this has to be set before org.el is loaded
+;; ;; (add-to-list 'load-path "~/vc/org")
+;; ; I prefer return to activate a link
+;; ; this has to be set before org.el is loaded
 (setq org-return-follows-link t)
 (setq org-log-done t)
 
 (require 'my-org-init "my-org-init" nil)
 
-(require 'org)
-(require 'ox-odt)
+(use-package org)
+(use-package helm-org)
 
-(add-to-list 'auto-mode-alist '("\.org$" . org-mode))
+;; helm-org's tag multi-selection mechanism
+;; https://github.com/emacs-helm/helm-org/issues/3
+(add-to-list 'helm-completing-read-handlers-alist '(org-set-tags-command . helm-org-completing-read-tags))
+
+(require 'org-tempo)
+;; (require 'ox-odt)
+
+;; (add-to-list 'auto-mode-alist '("\.org$" . org-mode))
 
 ;; specifying dirs is much safer, as new files
 ;; are automatically picked up
@@ -361,6 +283,9 @@
 
 (setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
 
+;; sums are shown in hours instead of days (meaning 24 h) and hours
+(setq org-duration-format (quote h:mm))
+
 ;;; org-capture and org-protocol
 
 ;; org-protocol and capturing from Chrome/Firefox
@@ -374,6 +299,9 @@
              "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
         ("L" "Protocol Link" entry (file+headline ,(concat org-directory "/notes.org") "Inbox")
              "* %? [[%:link][%:description]] \nCaptured On: %U")))
+
+;; (add-to-list 'helm-completing-read-handlers-alist '(org-capture . helm-org-completing-read-tags))
+;; (add-to-list 'helm-completing-read-handlers-alist '(org-set-tags . helm-org-completing-read-tags))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -392,7 +320,7 @@
     (toggle-read-only)
     (not-modified)))
 
-;; password-generate.el is in .emacs.d/site-lisp/
+;; password-generate.el is in .emacs.d/site-lisp/personal-funcs
 (autoload 'password-generate "password-generate" "Return a string of LENGTH random characters." t)
 
 (defun my-password-generate ()
@@ -412,10 +340,14 @@
 
 (when (require 'my-x-functions "my-x-functions" nil)
   (save-excursion
-    (unless (eq (window-system) 'w32)
+    (when (eq 'x (window-system))
       (my-set-x-font))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 ;;; Fonts
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun my-lisp-mode-fonts ()
   (font-lock-add-keywords
@@ -425,8 +357,8 @@
 
 (my-lisp-mode-fonts)
 
-;; (font-lock-remove-keywords 'lisp-mode '(("\\(short\\|arg\\)")))
-;; (font-lock-refresh-defaults)
+(font-lock-remove-keywords 'lisp-mode '(("\\(short\\|arg\\)")))
+(font-lock-refresh-defaults)
 
 ;;; Kill ring browsing
 
@@ -510,18 +442,18 @@ performed, then slime-complete-symbol is called"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; SLIME
+;; Slime
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (defun dar-slime-mode-tab ()
-;;   "Calls lisp-indent-line. If point does not change (if no indentation was
-;; performed, then slime-complete-symbol is called"
-;;   (interactive)
-;;   (let ((pos (point)))
-;;     (lisp-indent-line)
-;;     (when (= pos (point))
-;;       (slime-complete-symbol))))
+(defun dar-slime-mode-tab ()
+  "Calls lisp-indent-line. If point does not change (if no indentation was
+performed, then slime-complete-symbol is called"
+  (interactive)
+  (let ((pos (point)))
+    (lisp-indent-line)
+    (when (= pos (point))
+      (slime-complete-symbol))))
 
 
 (define-lisp-mode-tab-fn dar-slime-mode-tab slime-complete-symbol)
@@ -582,6 +514,7 @@ performed, then slime-complete-symbol is called"
 ;;; It is always better to know current line and column number
 (column-number-mode t)
 (line-number-mode t)
+(add-hook 'prog-mode-hook 'linum-mode)
 
 ;;; Make all yes-or-no questions as y-or-n
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -627,44 +560,6 @@ performed, then slime-complete-symbol is called"
 (epa-file-enable)
 (add-to-list 'auto-mode-alist '("\\.gpg\\(~\\|\\.~[0-9a-zA-Z_]+~\\)?\\'" nil epa-file))
 
-;;; sqlplus
-(setenv "ORACLE_HOME" "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server")
-(setq sqlplus-command "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server/bin/sqlplus")
-
-;;; Prime Confluence
-(setq confluence-url "https://confluence.prime-research.local:8443/rpc/xmlrpc")
-
-;;; Javascript
-
-;; ;; Tern http://ternjs.net
-;; ;; (install with npm install -g tern)
-;; ;; if not present in PATH, don't add it to the load path/js2 hook
-;; (let ((path (replace-regexp-in-string "/bin/tern[\n \t]*$" "" (shell-command-to-string "which tern"))))
-;;   (unless (eq 0 (length path))
-;;     ;; tern config files are json
-;;     (add-to-list 'auto-mode-alist '("\\.tern-config\\'" . js-mode))
-;;     (add-to-list 'auto-mode-alist '("\\.tern-project\\'" . js-mode))
-;;     (add-to-list 'load-path (concat path "/lib/node_modules/tern/emacs"))
-;;     (autoload 'tern-mode "tern.el" nil t)
-;;     (add-hook 'js2-mode-hook (lambda () (tern-mode t)))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; changes added by custom
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(custom-set-variables
-  ;; custom-set-variables was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
- '(bbdb-get-only-first-address-p nil)
- ; '(bee-bigloo "/opt/bigloo/bin/bigloo")
- ; '(imap-ssl-program (quote ("openssl s_client -quiet -ssl3 -connect %s:%p" "openssl s_client -quiet -ssl2 -connect %s:%p")))
- ; '(spam-use-bogofilter t)
- '(tool-bar-mode nil)
- '(use-file-dialog nil))
 
 (setq-default
  findr-file-name-regexp-history (list "\\(\\.lisp\\|\\.lsp\\|\\.asd\\|\\.el\\|\\.c\\|\\.h\\|\\.cpp\\|\\.tal\\|\\.css\\|\\.sh\\|\\.lua\\|\\.py\\|\\.go\\)$")
@@ -708,7 +603,10 @@ performed, then slime-complete-symbol is called"
           (defun dwim/global-whitespace-mode-hook ()
             (setq whitespace-global-modes '(ada-mode asm-mode autoconf-mode awk-mode c-mode c++-mode cc-mode change-log-mode cperl-mode electric-nroff-mode emacs-lisp-mode f90-mode fortran-mode html-mode html3-mode java-mode jde-mode ksh-mode latex-mode LaTeX-mode lisp-mode m4-mode makefile-mode modula-2-mode nroff-mode objc-mode pascal-mode perl-mode prolog-mode python-mode scheme-mode sgml-mode sh-mode shell-script-mode simula-mode tcl-mode tex-mode texinfo-mode vrml-mode xml-mode lisp-mode)
                   whitespace-action '(auto-cleanup)
-                  whitespace-style '(face trailing empty tabs))))
+                  whitespace-style '(face trailing empty space-before-tab space-after-tab))))
+
+;; The original whitespace style values; if face is included ... well, then faces are used
+;; (face tabs spaces trailing lines space-before-tab newline indentation empty space-after-tab space-mark tab-mark newline-mark)
 
 (global-whitespace-mode t)
 
@@ -721,27 +619,17 @@ performed, then slime-complete-symbol is called"
 
 (put 'narrow-to-region 'disabled nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; GLOBAL KEYS
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;;; GLOBAL KEYS
+;; ;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; planner global key bindings
 (global-set-key [f12] 'treemacs)
 (global-set-key (kbd "<XF86Explorer>") 'treemacs)
-;; (global-set-key [f11] 'planner-create-task-from-buffer)
 
 ;;; BBDB
 (global-set-key [?\s-b] 'bbdb)
-
-;;; ORG-MODE
-
-;; specifying dirs is much safer, as new files
-;; are automatically picked up
-(setq org-agenda-files '("~/vc/org"
-                         "~/vc/org/work"
-                         "~/vc/org/life"))
 
 (setq org-clock-into-drawer nil)
 
@@ -762,6 +650,182 @@ performed, then slime-complete-symbol is called"
 (add-hook 'org-invoice-heading-hook 'my-invoice-heading-hook)
 
 (setq org-time-clocksum-format '(:hours "%02d" :require-hours t :minutes ":%02d" :require-minutes t))
+
+(require 'cl)
+(require 'org-clock)
+
+;; (defun org-dblock-write:invoice (params)
+;;   (cl-flet ((fmttm (tm) (format-time-string (org-time-stamp-format t t) tm)))
+;;     (let ((file (or (plist-get params :file) (buffer-file-name)))
+;;           (start (seconds-to-time
+;;                   (org-matcher-time (plist-get params :tstart))))
+;;           (end (seconds-to-time (org-matcher-time (plist-get params :tend)))))
+;;       (while (time-less-p start end)
+;;         (let ((next-week (time-add start
+;;                                    (date-to-time "1970-01-08T00:00Z")))
+;;               (week-begin (line-beginning-position))
+;;               (week-minutes 0))
+;;           (insert "\nWeekly Table from " (fmttm start) "\n")
+;;           (insert "| Day of Week | Time |\n|-\n")
+;;           (while (time-less-p start next-week)
+;;             (let* ((next-day (time-add start (date-to-time "1970-01-02T00:00Z")))
+;;                    (minutes
+;;                     (with-current-buffer (find-file-noselect file)
+;;                       (cadr (org-clock-get-table-data
+;;                              file
+;;                              (list :maxlevel 0
+;;                                    :tstart (fmttm start)
+;;                                    :tend (fmttm next-day)))))))
+;;               (insert "|" (format-time-string "%a" start)
+;;                       "|" (format "%d" minutes)
+;;                       "|\n")
+;;               (org-table-align)
+;;               (incf week-minutes minutes)
+;;               (setq start next-day)))
+;;           (when (equal week-minutes 0)
+;;             (delete-region week-begin (line-beginning-position))))))))
+
+(defun org-dblock-write:invoice (params)
+  "Write the standard clocktable."
+  (setq params (org-combine-plists org-clocktable-defaults params))
+  (catch 'exit
+    (let* ((scope (plist-get params :scope))
+	   (files (pcase scope
+		    (`agenda
+		     (org-agenda-files t))
+		    (`agenda-with-archives
+		     (org-add-archive-files (org-agenda-files t)))
+		    (`file-with-archives
+		     (and buffer-file-name
+			  (org-add-archive-files (list buffer-file-name))))
+		    ((or `nil `file `subtree `tree
+			 (and (pred symbolp)
+			      (guard (string-match "\\`tree\\([0-9]+\\)\\'"
+						   (symbol-name scope)))))
+		     (or (buffer-file-name (buffer-base-buffer))
+			 (current-buffer)))
+		    ((pred functionp) (funcall scope))
+		    ((pred consp) scope)
+		    (_ (user-error "Unknown scope: %S" scope))))
+	   (block (plist-get params :block))
+	   (ts (plist-get params :tstart))
+	   (te (plist-get params :tend))
+	   (ws (plist-get params :wstart))
+	   (ms (plist-get params :mstart))
+	   (step (plist-get params :step))
+	   (hide-files (plist-get params :hidefiles))
+	   (formatter (or (plist-get params :formatter)
+			  org-clock-clocktable-formatter
+			  'org-clocktable-write-default))
+	   cc)
+      ;; Check if we need to do steps
+      (when block
+	;; Get the range text for the header
+	(setq cc (org-clock-special-range block nil t ws ms)
+	      ts (car cc)
+	      te (nth 1 cc)))
+      (when step
+	;; Write many tables, in steps
+	(unless (or block (and ts te))
+	  (error "Clocktable `:step' can only be used with `:block' or `:tstart,:end'"))
+	(org-clocktable-steps params)
+	(throw 'exit nil))
+
+      (org-agenda-prepare-buffers (if (consp files) files (list files)))
+
+      (let ((origin (point))
+	    (tables
+	     (if (consp files)
+		 (mapcar (lambda (file)
+			   (with-current-buffer (find-buffer-visiting file)
+			     (save-excursion
+			       (save-restriction
+				 (org-clock-get-table-data file params)))))
+			 files)
+	       ;; Get the right restriction for the scope.
+	       (save-restriction
+		 (cond
+		  ((not scope))	     ;use the restriction as it is now
+		  ((eq scope 'file) (widen))
+		  ((eq scope 'subtree) (org-narrow-to-subtree))
+		  ((eq scope 'tree)
+		   (while (org-up-heading-safe))
+		   (org-narrow-to-subtree))
+		  ((and (symbolp scope)
+			(string-match "\\`tree\\([0-9]+\\)\\'"
+				      (symbol-name scope)))
+		   (let ((level (string-to-number
+				 (match-string 1 (symbol-name scope)))))
+		     (catch 'exit
+		       (while (org-up-heading-safe)
+			 (looking-at org-outline-regexp)
+			 (when (<= (org-reduced-level (funcall outline-level))
+				   level)
+			   (throw 'exit nil))))
+		     (org-narrow-to-subtree))))
+		 (list (org-clock-get-table-data nil params)))))
+	    (multifile
+	     ;; Even though `file-with-archives' can consist of
+	     ;; multiple files, we consider this is one extended file
+	     ;; instead.
+	     (and (not hide-files)
+		  (consp files)
+		  (not (eq scope 'file-with-archives)))))
+
+	(funcall formatter
+		 origin
+		 tables
+		 (org-combine-plists params `(:multifile ,multifile)))))))
+
+(defun org-invoice-report (&optional arg)
+  "Update or create a table containing a report about clocked time.
+
+If point is inside an existing clocktable block, update it.
+Otherwise, insert a new one.
+
+The new table inherits its properties from the variable
+`org-clock-clocktable-default-properties'.  The scope of the
+clocktable, when not specified in the previous variable, is
+`subtree' when the function is called from within a subtree, and
+`file' elsewhere.
+
+When called with a prefix argument, move to the first clock table
+in the buffer and update it."
+  (interactive "P")
+  (org-clock-remove-overlays)
+  (when arg
+    (org-find-dblock "invoice")
+    (org-show-entry))
+  (pcase (org-in-clocktable-p)
+    (`nil
+     (org-create-dblock
+      (org-combine-plists
+       (list :scope (if (org-before-first-heading-p) 'file 'subtree))
+       org-clock-clocktable-default-properties
+       '(:name "invoice"))))
+    (start (goto-char start)))
+  (org-update-dblock))
+
+(org-dynamic-block-define "invoice" #'org-invoice-report)
+
+;; (defun org-set-tags-command-multiple (orig &optional arg)
+;;   (cl-letf (((symbol-function #'completing-read)
+;;              (lambda (prompt collection &optional predicate require-match initial-input
+;;                              hist def inherit-input-method)
+;;                (when initial-input
+;;                  (setq initial-input
+;;                        (replace-regexp-in-string
+;;                         ":" ","
+;;                         (replace-regexp-in-string
+;;                          "\\`:" "" initial-input))))
+;;                (let ((res (completing-read-multiple
+;;                            prompt collection predicate require-match initial-input
+;;                            hist def inherit-input-method)))
+;;                  (mapconcat #'identity res ":")))))
+;;     (let ((current-prefix-arg arg))
+;;       (call-interactively orig))))
+
+; (advice-add #'org-set-tags-command :around #'org-set-tags-command-multiple)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -853,7 +917,7 @@ Content-Type: text/plain; charset=utf-8")
 
 (require 'ido)
 
-(setq ido-everywhere t
+(setq ;; ido-everywhere t
       ido-enable-flex-matching t
       ido-max-directory-size 100000)
 
@@ -908,12 +972,12 @@ Content-Type: text/plain; charset=utf-8")
 
 ;; text/calendar (vcalendar) support for gnus
 
-;; http://groups.google.com/group/gnu.emacs.gnus/browse_thread/thread/93471c1c6f4c785b/058991ad4fb9a58d
-;; also cf. http://ozymandias.dk/emacs/org-import-calendar.el
+;; ;; http://groups.google.com/group/gnu.emacs.gnus/browse_thread/thread/93471c1c6f4c785b/058991ad4fb9a58d
+;; ;; also cf. http://ozymandias.dk/emacs/org-import-calendar.el
 
-(add-to-list 'mm-inlined-types "text/calendar")
-(add-to-list 'mm-automatic-display "text/calendar")
-(add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
+;; (add-to-list 'mm-inlined-types "text/calendar")
+;; (add-to-list 'mm-automatic-display "text/calendar")
+;; (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
 
 (require 'icalendar)
 (require 'boxquote)
@@ -944,70 +1008,30 @@ Content-Type: text/plain; charset=utf-8")
 ;; BBDB stuff END
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Mail
+;; ;;; Mail
 
-;; allow for searching of imap folders
-; (require 'nnir)
-
-
-;;    Jack Vinson <jvinson@cheux.ecs.umass.edu> writes:
-;;    For multiple signature files, I advise the message-insert-signature
-;;    function to set message-signature-file to a random file from my
-;;    signature directory: (I have files that look like sig1 sig2 etc in
-;;    that directory).
-;; random insertion of .signature file
-;; Thanks to Glenn R Coombs: glenn@prl.philips.co.uk
-;; (defvar grc-signature-dir   "~/.sig/")
-;; (defvar grc-signature-base  "sig")
-
-;; (defadvice message-insert-signature (before random-mail-sig-ag act comp)
-;;   "Change the value of message-signature-file each time
-;; `message-insert-signature' is called."
-;;   (let ((files (file-name-all-completions
-;;                 grc-signature-base (expand-file-name grc-signature-dir))))
-;;     (if files (let ((file (nth (random (length files)) files)))
-;;                 (setq message-signature-file (concat grc-signature-dir file))
-;;                 ))))
+;; ;; allow for searching of imap folders
+;; ; (require 'nnir)
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; LISP
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;    Jack Vinson <jvinson@cheux.ecs.umass.edu> writes:
+;; ;;    For multiple signature files, I advise the message-insert-signature
+;; ;;    function to set message-signature-file to a random file from my
+;; ;;    signature directory: (I have files that look like sig1 sig2 etc in
+;; ;;    that directory).
+;; ;; random insertion of .signature file
+;; ;; Thanks to Glenn R Coombs: glenn@prl.philips.co.uk
+;; ;; (defvar grc-signature-dir   "~/.sig/")
+;; ;; (defvar grc-signature-base  "sig")
 
-;; The SBCL binary and command-line arguments
-;; this one doesn't print the SBCL greeting
-;; (setq inferior-lisp-program "sbcl --dynamic-space-size 256 --noinform")
-(setq inferior-lisp-program "sbcl --dynamic-space-size 512")
-;;(setq inferior-lisp-program "/home/darabi/bin/ploom")
-
-;; I would like to activate stella immediately
-;; but this leads to an error from swank, because *load-path* is nil
-;;(setq inferior-lisp-program "powerloom")
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; SLIME
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun slime-powerloom ()
-  "start slime with an sbcl image containing powerloom"
-  (interactive)
-  (let ((inferior-lisp-program "/home/darabi/bin/powerloom"))
-    (slime)))
-
-(defun slime-clim ()
-  "start slime with an sbcl image containing current mcclim"
-  (interactive)
-  (let ((inferior-lisp-program "/home/darabi/wrk/lisp/mcclim/current/sbcl-clim"))
-    (slime)))
-
-; (slime-setup :autodoc t :typeout-frame t)
-; (slime-setup '(slime-fancy slime-asdf slime-tramp))
-
-;; (push "~/.emacs.d/site-lisp/slime/doc" Info-default-directory-list)
+;; ;; (defadvice message-insert-signature (before random-mail-sig-ag act comp)
+;; ;;   "Change the value of message-signature-file each time
+;; ;; `message-insert-signature' is called."
+;; ;;   (let ((files (file-name-all-completions
+;; ;;                 grc-signature-base (expand-file-name grc-signature-dir))))
+;; ;;     (if files (let ((file (nth (random (length files)) files)))
+;; ;;                 (setq message-signature-file (concat grc-signature-dir file))
+;; ;;                 ))))
 
 ;; ;;; namazu full text search engine is disabled because I didn't have enough time to experiment with it
 
@@ -1020,9 +1044,6 @@ Content-Type: text/plain; charset=utf-8")
 ;; (setq namazu-default-dir "~/.cache/namazu/chat")
 ;; ;; show the newest entries first
 ;; (setq namazu-argument '("-H" "--late"))
-
-;;; never split the window vertically
-(setq split-width-threshold 1000)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; MozRepl
@@ -1094,62 +1115,6 @@ Content-Type: text/plain; charset=utf-8")
       erc-log-file-coding-system 'utf-8
       erc-generate-log-file-name-function 'erc-generate-log-file-name-with-date)
 
-;;;
-;;; Jabber
-;;;
-
-(autoload 'jabber-connect "jabber"
-  "Jabber Client"
-  t)
-
-;; sefroyek
-(setq tanpad-gw1 "84.47.228.121")
-;; datak
-(setq tanpad-gw2 "109.162.158.231")
-
-(setq jabber-invalid-certificate-servers (list "ivr.tanpad.com" tanpad-gw1 tanpad-gw2))
-
-(setq jabber-account-list '(("kambiz@m-creations.net"
-                             (:network-server . dev.m-creations.net)
-                             (:port . 5222)
-                             (:connection-type . ssl))
-                            ("darabi@jabber.org"
-                             (:port . 5222)
-                             (:connection-type . ssl))))
-
-(defun my-jabber-switch-account ()
-  (interactive)
-  (require 'jabber)
-  (let* ((accounts
-          '(("chalmers" ("jabber.cd.chalmers.se" nil "USERNAME"))
-            ("80" ("jabber80.com" 80 "USERNAME"))))
-         (acc (cadr (assoc (completing-read "Account: " accounts nil t) accounts)))
-         (server (nth 0 acc))
-         (user (nth 2 acc))
-         (port (nth 1 acc)))
-    (message "%s %s %s" server user port)
-    (when server
-      (message "Switching to %s..." server)
-      (jabber-disconnect)
-      (setq jabber-server server
-            jabber-port port
-            jabber-username user)
-      (jabber-connect))))
-
-(defun libnotify-jabber-notify (from buf text proposed-alert)
-  "(jabber.el hook) Notify of new Jabber chat messages via libnotify"
-  (when (or jabber-message-alert-same-buffer
-            (not (memq (selected-window) (get-buffer-window-list buf))))
-    (if (jabber-muc-sender-p from)
-        (erc-global-notify 'pal (format "(PM) %s"
-                                        (jabber-jid-displayname (jabber-jid-user from)))
-                           (format "%s: %s" (jabber-jid-resource from) text)))
-    (erc-global-notify 'pal (format "%s" (jabber-jid-displayname from))
-                       text)))
-
-(add-hook 'jabber-alert-message-hooks 'libnotify-jabber-notify)
-
-
 ;;; DWIM
 
 ;; (setf slime-default-lisp 'fluvium)
@@ -1174,20 +1139,6 @@ Content-Type: text/plain; charset=utf-8")
 ;;; We use left and right guillemet for quasi-quoted strings
 (global-set-key [?\C-<] 'insert-left-guillemet)
 (global-set-key [?\C->] 'insert-right-guillemet)
-
-;;; Trac
-
-(autoload 'trac-wiki "trac-wiki" "Trac wiki editing entry-point." t)
-
-(eval-after-load "trac-wiki"
-  '(progn
-    (trac-wiki-define-multiple-projects
-     '("tanpad" "paybox" "procom" "voicecash" "java" "mdoc")
-     "https://trac.tanpad.com/" t)))
-
-;;; sqlplus
-(setenv "ORACLE_HOME" "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server")
-(setq sqlplus-command "/usr/lib/oracle/xe/app/oracle/product/10.2.0/server/bin/sqlplus")
 
 ;; sql
 (add-hook 'sql-interactive-mode-hook
@@ -1301,9 +1252,16 @@ Content-Type: text/plain; charset=utf-8")
 
 (require 'mc-licence)
 
-(require 'mc-doom-theme)
+;; (require 'mc-doom-theme)
+;; (load-theme 'doom-sourcerer t)
 
-(load-theme 'doom-sourcerer t)
+(require 'sanityinc-tomorrow-eighties-theme)
+(load-theme 'sanityinc-tomorrow-eighties t)
+
+;; light background
+;; (require 'sanityinc-tomorrow-day)
+;; (load-theme 'sanityinc-tomorrow-day t)
+
 
 ;; expand-region https://github.com/magnars/expand-region.el
 (require 'expand-region)
@@ -1316,7 +1274,13 @@ Content-Type: text/plain; charset=utf-8")
 (global-set-key (kbd "C-;") 'my-shrink-region)
 
 ;; projectile
-(require 'projectile)
-(setq projectile-project-search-path '("~/common-lisp/holz24"))
+;; (require 'projectile)
+;; (setq projectile-project-search-path '("~/common-lisp/holz24"))
+
+;; Heidelpay JIRA
+(setq jiralib-url "https://jira.hpchd.loc")
+
+(require 'default-text-scale)
+(default-text-scale-mode)
 
 (provide 'my-init)

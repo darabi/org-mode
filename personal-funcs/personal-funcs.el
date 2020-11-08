@@ -25,7 +25,7 @@
 ;;    I will try to complete these lack if possible.
 ;;
 
-(require 'color-theme)
+;; (require 'color-theme)
 
 ;;; I prefer to delete whole line regardless where cursor is
 ;;; Define function doing this

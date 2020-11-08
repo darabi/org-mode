@@ -1,1 +1,0 @@
-This file prevents normal-top-level-add-subdirs-to-load-path from adding this directory to the load path.

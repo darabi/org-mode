@@ -159,6 +159,8 @@
 (autoload 'json-mode "json-mode.el" nil t)
 (add-to-list 'auto-mode-alist '("\\.json\\'" . json-mode))
 
+;; Java mode with Language Server Protocol (LSP) lsp-java (https://emacs-lsp.github.io/lsp-java/)
+(autoload 'java-mode "mc-java-dev-init.el" nil t)
 
 ;; jedi for python programming
 (autoload 'jedi:setup "jedi" "Python autocompletion for Emacs" t)
