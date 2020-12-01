@@ -1020,14 +1020,14 @@ The processing is done in the extent of the toplevel restart."
   (log-event "dispatch-event: ~s~%" event)
   (or (run-hook-until-success *event-hook* connection event)
       (dcase event
-        ((:emacs-rex form package thread-id continuation-id)
+        ((:emacs-rex form package thread-id id)
          (let ((thread (thread-for-evaluation connection thread-id)))
            (cond (thread
                   (add-active-thread connection thread)
-                  (send-event thread `(:emacs-rex ,form ,package ,continuation-id)))
+                  (send-event thread `(:emacs-rex ,form ,package ,id)))
                  (t
                   (encode-message
-                   (list :invalid-rpc continuation-id
+                   (list :invalid-rpc id
                          (format nil "Thread not found: ~s" thread-id))
                    (current-socket-io))))))
         ((:return thread &rest args)

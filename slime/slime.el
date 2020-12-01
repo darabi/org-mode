@@ -3,7 +3,7 @@
 ;; URL: https://github.com/slime/slime
 ;; Package-Requires: ((cl-lib "0.5") (macrostep "0.9"))
 ;; Keywords: languages, lisp, slime
-;; Version: 2.23
+;; Version: 2.24
 
 ;;;; License and Commentary
 
@@ -2212,10 +2212,9 @@ Debugged requests are ignored."
           ((:emacs-rex form package thread continuation)
            (when (and (slime-use-sigint-for-interrupt) (slime-busy-p))
              (slime-display-oneliner "; pipelined request... %S" form))
-           (let ((continuation-id (cl-incf (slime-continuation-counter))))
-             (slime-send `(:emacs-rex ,form ,package ,thread ,continuation-id))
-             (push (cons continuation-id continuation)
-                   (slime-rex-continuations))
+           (let ((id (cl-incf (slime-continuation-counter))))
+             (slime-send `(:emacs-rex ,form ,package ,thread ,id))
+             (push (cons id continuation) (slime-rex-continuations))
              (slime--recompute-modelines)))
           ((:return value id)
            (let ((rec (assq id (slime-rex-continuations))))
