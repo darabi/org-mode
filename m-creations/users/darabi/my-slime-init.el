@@ -238,7 +238,7 @@
 
 ; (setf slime-default-lisp 'ayacandas-redesign)
 
-(add-to-list 'slime-lisp-implementations `(sbcl-system ("/home/darabi/.cim/bin/sbcl-system")))
+(add-to-list 'slime-lisp-implementations `(sbcl-system ("sbcl" "--dynamic-space-size 1400 --control-stack-size 16")))
 
 (setq slime-compilation-slime-maybe-show-compilation-log t)
 

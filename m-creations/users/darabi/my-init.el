@@ -103,6 +103,9 @@
 ;; whitespace-cleanup is often badly needed
 (global-set-key "\C-cw" 'whitespace-cleanup)
 
+;; string-insert-rectange
+(global-set-key "\C-ci" 'string-insert-rectangle)
+
 ; this is the original setting
 ; (global-set-key [(control backspace)] 'backward-kill-word)
 
@@ -183,6 +186,8 @@
 ;; (global-set-key [(control e)] 'delete-window)
 (global-set-key [(control shift e)] 'delete-other-windows)
 
+;; string-insert-rectangle
+
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ;;
 ;; ;;; Color theme
@@ -247,11 +252,9 @@
 (require 'my-org-init "my-org-init" nil)
 
 (use-package org)
+(use-package helm)
 (use-package helm-org)
 
-;; helm-org's tag multi-selection mechanism
-;; https://github.com/emacs-helm/helm-org/issues/3
-(add-to-list 'helm-completing-read-handlers-alist '(org-set-tags-command . helm-org-completing-read-tags))
 
 (require 'org-tempo)
 ;; (require 'ox-odt)
@@ -302,6 +305,14 @@
 
 ;; (add-to-list 'helm-completing-read-handlers-alist '(org-capture . helm-org-completing-read-tags))
 ;; (add-to-list 'helm-completing-read-handlers-alist '(org-set-tags . helm-org-completing-read-tags))
+
+;; helm-org's tag multi-selection mechanism
+;; https://github.com/emacs-helm/helm-org/issues/3
+
+(add-hook 'org-mode-hook
+  (lambda ()
+    (add-to-list 'helm-completing-read-handlers-alist
+                 '(org-set-tags-command . helm-org-completing-read-tags))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
