@@ -8,6 +8,7 @@
 
 (require 'dwim-util)
 (require 'slime)
+(require 'slime-repl)
 
 (defun add-emacs.d-swank-to-asdf-source-registry ()
   (let ((conf "~/.config/common-lisp/source-registry.conf.d/10-m-creations-emacs.d-swank.conf"))

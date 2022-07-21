@@ -54,7 +54,7 @@
                     "pi" "rho" "sigma" "tau" "upsilon" "phi" "chi" "psi" "omega"))
       (when (> (length name) 3)
         (hu.dwim.syntax-sugar.install-substitute-pattern
-         (concatenate 'string "[ 	\n()]\\(" name "\\)[ 	\n()]")
+         (concatenate 'string "[     \n()]\\(" name "\\)[    \n()]")
          (elt (string char-code) 0)))
       (incf char-code))))
 
