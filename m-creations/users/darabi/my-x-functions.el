@@ -57,10 +57,12 @@ or in ~/.fonts"
       (1440 (set-frame-font "Inconsolata-11" t))
       (1680 (set-frame-font "Inconsolata-11" t))
       (1920 (set-frame-font "Consolas-11" t))
-      (2560 (set-frame-font "Inconsolata-12" t))
+      (2560 (set-frame-font "Inconsolata-16" t))
       (3200 (set-frame-font "Inconsolata-12" t))
       (3840 (set-frame-font "Inconsolata-12" t))
       (0 (set-frame-font "Inconsolata-10.5" t)))))
+
+(my-set-x-font)
 
 (defun my-presentation-font (font-size)
   "Sets the color-theme to light background and the font to the argument font-size (default 21)"

@@ -1,7 +1,6 @@
 (message "Loading my-init from %s" (buffer-file-name))
 
 (setq calendar-week-start-day 1)
-(setq org-time-stamp-custom-formats (quote ("<%a %Y-%m-%d>" "<%Y-%m-%d>" "<%Y-%m-%d %H:%M>")))
 
 (setq show-paren-delay 0)
 (show-paren-mode)
@@ -249,12 +248,10 @@
 (setq org-return-follows-link t)
 (setq org-log-done t)
 
-(require 'my-org-init "my-org-init" nil)
-
 (use-package org)
 (use-package helm)
-(use-package helm-org)
-
+(use-package helm-org
+  :config (require 'my-org-init "my-org-init" nil))
 
 (require 'org-tempo)
 ;; (require 'ox-odt)
@@ -310,9 +307,11 @@
 ;; https://github.com/emacs-helm/helm-org/issues/3
 
 (add-hook 'org-mode-hook
-  (lambda ()
-    (add-to-list 'helm-completing-read-handlers-alist
-                 '(org-set-tags-command . helm-org-completing-read-tags))))
+          (lambda ()
+            (require 'helm-org)
+            (helm-mode)
+            (add-to-list 'helm-completing-read-handlers-alist
+                         '(org-set-tags-command . helm-org-completing-read-tags))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -782,14 +781,14 @@ performed, then slime-complete-symbol is called"
 	     (and (not hide-files)
 		  (consp files)
 		  (not (eq scope 'file-with-archives)))))
-
+        (message "Calling formatter %s with tables %s" formatter tables)
 	(funcall formatter
 		 origin
 		 tables
 		 (org-combine-plists params `(:multifile ,multifile)))))))
 
-(defun org-invoice-report (&optional arg)
-  "Update or create a table containing a report about clocked time.
+(defun my-org-invoice-report (&optional arg)
+  "Update or create an org table containing a report about clocked time.
 
 If point is inside an existing clocktable block, update it.
 Otherwise, insert a new one.
@@ -803,6 +802,7 @@ clocktable, when not specified in the previous variable, is
 When called with a prefix argument, move to the first clock table
 in the buffer and update it."
   (interactive "P")
+  (error "Was ist los?")
   (org-clock-remove-overlays)
   (when arg
     (org-find-dblock "invoice")
@@ -817,7 +817,7 @@ in the buffer and update it."
     (start (goto-char start)))
   (org-update-dblock))
 
-(org-dynamic-block-define "invoice" #'org-invoice-report)
+(org-dynamic-block-define "invoice" #'my-org-invoice-report)
 
 ;; (defun org-set-tags-command-multiple (orig &optional arg)
 ;;   (cl-letf (((symbol-function #'completing-read)
@@ -1081,6 +1081,7 @@ Content-Type: text/plain; charset=utf-8")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ERC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'notifications)
 
 (defun erc-global-notify (match-type nick message)
   "Notify when a message is received."
@@ -1089,13 +1090,13 @@ Content-Type: text/plain; charset=utf-8")
    :body message
    :app-name "ERC"
    :timeout -1
-   :app-icon "/usr/share/notify-osd/icons/gnome/scalable/status/notification-message-im.svg"
+   :app-icon "/usr/share/notify-osd/icons/hicolor/scalable/status/notification-message-im.svg"
    :urgency 'low
 
    ;; this a freedesktop sound
    :sound-name "message-new-instant"
    ;; which is at this location in Debian
-   ;; :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+   :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
 
    ;; :resident t interferes with sounds, which might be a bug
    :resident nil))
@@ -1116,15 +1117,29 @@ Content-Type: text/plain; charset=utf-8")
             (add-hook 'erc-text-matched-hook 'erc-global-notify)))
 
 ;; ;; Some basic settings for erc package
-(setq erc-server "irc.eu.freenode.net"
-      erc-port 6667
-      erc-nick "kami"
+(setq erc-server "irc.libera.chat"
+      ;; port 6697 is for erc-tls, 6667 without tls
+      erc-port 6697
+      erc-nick "kami_"
       erc-pals '("attila_lendvai" "levy" "levente_meszaros")
       erc-save-buffer-on-part t
       erc-log-channels t
       erc-log-channels-directory "~/.irclogs"
       erc-log-file-coding-system 'utf-8
       erc-generate-log-file-name-function 'erc-generate-log-file-name-with-date)
+
+(defun my-erc ()
+  "Connect to IRC."
+  (interactive)
+  (erc-tls :server "irc.oftc.net" :port 6697
+           :nick "kambiz" :full-name "kambiz"
+           ;; :client-certificate '("~/.ssl/oftc.net.kambiz.key"
+           ;;                      "~/.ssl/oftc.net.kambiz..crt")
+           )
+  (erc-tls :server "irc.libera.chat" :port 6697
+           :nick "kamileon" :full-name "kamileon")
+  (setq erc-autojoin-channels-alist '(("irc.libera.chat" ) ;; "#emacs" "#screen" "#ion")
+                                      ("irc.oftc.net" )))) ;; "#debian"))))
 
 ;;; DWIM
 

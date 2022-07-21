@@ -92,7 +92,7 @@
                "* TODO Respond to %:from on %:subject\n%U\n%a\n" :clock-in t :clock-resume t :immediate-finish t)
               ("n" "note" entry (file "~/git/org/refile.org")
                "* %? :NOTE:\n%U\n%a\n" :clock-in t :clock-resume t)
-              ("j" "Journal" entry (file+datetree "~/git/org/diary.org")
+              ("j" "Journal" entry (file+olp+datetree "~/git/org/diary.org")
                "* %?\n%U\n" :clock-in t :clock-resume t)
               ("w" "org-protocol" entry (file "~/git/org/refile.org")
                "* TODO Review %c\n%U\n" :immediate-finish t)
@@ -366,6 +366,55 @@ With a small modification of org-clock-sum, we add a property
 :org-clock-invoice-data to the heading text, and here we collect
 that information. See ``ORG-CLOCK-SUM``"
   (message "my-invoice-heading-hook is called with %s" org-invoice-current-item)
-  (push (cons 'timelist (get-text-property (point) :org-clock-invoice-data)) org-invoice-current-item))
+  ;;(push (cons 'timelist (get-text-property (point) :org-clock-timelist)) org-invoice-current-item)
+  )
+
+(require 'cl)
+(require 'org-clock)
+(defun org-dblock-write:spreadsheet (params)
+  (cl-flet ((fmttm (tm) (format-time-string (org-time-stamp-format t t) tm)))
+    (let ((file (or (plist-get params :file) (buffer-file-name)))
+          (start (seconds-to-time
+                  (org-matcher-time (plist-get params :tstart))))
+          (end (seconds-to-time (org-matcher-time (plist-get params :tend)))))
+      (while (time-less-p start end)
+        (let ((next-week (time-add start
+                                   (date-to-time "1970-01-08T00:00Z")))
+              (week-begin (line-beginning-position))
+              (week-minutes 0))
+          (insert "\nWeekly Table from " (fmttm start) "\n")
+          (insert "| Day of Week | Time |\n|-\n")
+          (while (time-less-p start next-week)
+            (let* ((next-day (time-add start (date-to-time "1970-01-02T00:00Z")))
+                   (minutes
+                    (with-current-buffer (find-file-noselect file)
+                      (message "table-data: %s" (org-clock-get-table-data
+                             file
+                             (list :maxlevel 8
+                                   :tstart (fmttm start)
+                                   :tend (fmttm next-day)
+				   )))
+                      (cadr (org-clock-get-table-data
+                             file
+                             (list :maxlevel 0
+                                   :tstart (fmttm start)
+                                   :tend (fmttm next-day)))))))
+              (insert "|" (format-time-string "%a" start)
+                      "|" (format "%d" minutes)
+                      "|\n")
+              (org-table-align)
+              (incf week-minutes minutes)
+              (setq start next-day)))
+          (when (equal week-minutes 0)
+            (delete-region week-begin (line-beginning-position))))))))
+
+;; when matching multiple tags (e.g. 'bash+loop') helm gets in the way
+(add-hook 'helm-mode-hook (lambda () (add-to-list 'helm-completing-read-handlers-alist '(org-match-sparse-tree))))
+
+;; open these extensions with the system viewer instead of docviewer
+(add-to-list 'org-file-apps '("\\.xls\\'" . system))
+(add-to-list 'org-file-apps '("\\.odt\\'" . system))
+(add-to-list 'org-file-apps '("\\.ods\\'" . system))
+(add-to-list 'org-file-apps '("\\.pdf\\'" . system))
 
 (provide 'my-org-init)

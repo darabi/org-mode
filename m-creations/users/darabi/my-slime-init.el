@@ -10,9 +10,9 @@
 (setq-default
  interprogram-cut-function (when (display-graphic-p) 'gui-select-text))
 
-(setq slime-docker-implementations '((sbcl ("--eval" "(ql:quickload :swank)" "--eval" "(progn (swank-loader:init) (setf swank::*loopback-interface* \"0.0.0.0\") (swank:create-server))")
+(setq slime-docker-implementations `((sbcl ("--eval" "(ql:quickload :swank)" "--eval" "(progn (swank-loader:init) (setf swank::*loopback-interface* \"0.0.0.0\") (swank:create-server))")
                                            :image-name "mcreations/sbcl"
-                                           :image-tag "1.4.1-mc-2017-10-23")))
+                                           :image-tag ,mc-sbcl-docker-tag)))
 
 (dwim-define-lisp-key (kbd "C-c M-C-c") 'slime-eval-defun :elisp nil)
 
@@ -218,11 +218,19 @@
 (dwim/add-slime-impl-image "bernini")
 (dwim/add-slime-impl-image "holz24")
 (dwim/add-slime-impl-image "ayacandas-redesign")
+(dwim/add-slime-impl-image "radio-dash")
+(dwim/add-slime-impl-image "dwim-react")
+(dwim/add-slime-impl-image "cffi")
 
 
 (add-to-list 'slime-lisp-implementations `(acl10 ("/home/darabi/.cim/bin/alisp")))
 
 (add-to-list 'slime-lisp-implementations `(sbcl-cim ("/home/darabi/.cim/bin/sbcl")))
+
+(add-to-list 'slime-lisp-implementations `(ccl ("/home/darabi/opt/ccl-1.12/ccl")))
+
+(add-to-list 'slime-lisp-implementations `(aya ("/common-lisp/aya/build/bin/ayacandas.dev")))
+
 (defun my-slime-add-arg (lisp &rest args)
   (let* ((impl (slime-lookup-lisp-implementation slime-lisp-implementations lisp))
          (arglist (plist-get impl :program-args)))
@@ -233,12 +241,13 @@
 ; (setf slime-default-lisp 'installed-sbcl)
 
 ; (setf slime-default-lisp 'holz24)
-(setf slime-default-lisp 'bernini)
-(setf slime-default-lisp 'meta-model)
-
+; (setf slime-default-lisp 'bernini)
+; (setf slime-default-lisp 'meta-model)
 ; (setf slime-default-lisp 'ayacandas-redesign)
 
-(add-to-list 'slime-lisp-implementations `(sbcl-system ("sbcl" "--dynamic-space-size 1400 --control-stack-size 16")))
+(setf slime-default-lisp 'presentation)
+
+(add-to-list 'slime-lisp-implementations `(sbcl-system ("sbcl" "--dynamic-space-size 2000 --control-stack-size 32")))
 
 (setq slime-compilation-slime-maybe-show-compilation-log t)
 
