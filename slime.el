@@ -3,7 +3,7 @@
 ;; URL: https://github.com/slime/slime
 ;; Package-Requires: ((cl-lib "0.5") (macrostep "0.9"))
 ;; Keywords: languages, lisp, slime
-;; Version: 2.26.1
+;; Version: 2.27
 
 ;;;; License and Commentary
 
@@ -63,8 +63,6 @@
   ;; For emacs 23, look for bundled version
   (require 'cl-lib "lib/cl-lib"))
 
-(eval-when-compile (require 'cl)) ; defsetf, lexical-let
-
 (eval-and-compile
   (if (< emacs-major-version 23)
       (error "Slime requires an Emacs version of 23, or above")))
@@ -78,6 +76,7 @@
 (require 'arc-mode)
 (require 'etags)
 (require 'compile)
+(require 'gv)
 
 (eval-when-compile
   (require 'apropos)
@@ -673,9 +672,9 @@ If BOTHP is true also add bindings with control modifier."
 (define-minor-mode slime-editing-mode
   "Minor mode which makes slime-editing-map available.
 \\{slime-editing-map}"
-  nil
-  nil
-  slime-editing-map)
+  :init-value nil
+  :lighter nil
+  :keymap slime-editing-map)
 
 
 ;;;; Framework'ey bits
@@ -859,8 +858,7 @@ PROP is the name of a text property."
     (list (previous-single-char-property-change end prop) end)))
 
 (defun slime-curry (fun &rest args)
-  "Partially apply FUN to ARGS.  The result is a new function.
-This idiom is preferred over `lexical-let'."
+  "Partially apply FUN to ARGS.  The result is a new function."
   `(lambda (&rest more) (apply ',fun (append ',args more))))
 
 (defun slime-rcurry (fun &rest args)
@@ -921,7 +919,9 @@ MODE is the name of a major mode which will be enabled.
 
 (define-minor-mode slime-popup-buffer-mode
   "Mode for displaying read only stuff"
-  nil nil nil
+  :init-value nil
+  :lighter nil
+  :keymap nil
   (setq buffer-read-only t))
 
 (add-to-list 'minor-mode-alist
@@ -1777,7 +1777,7 @@ the binding for `slime-connection'."
        (defun ,varname (&optional process)
          (slime-with-connection-buffer (process) ,real-var))
        ;; Setf
-       (defsetf ,varname (&optional process) (store)
+       (gv-define-setter ,varname (store &optional process)
          `(slime-with-connection-buffer (,process)
             (setq (\, (quote (\, real-var))) (\, store))))
        '(\, varname))))
@@ -2040,10 +2040,10 @@ Note: don't use backquote syntax for SEXP, because various Emacs
 versions cannot deal with that."
   (declare (indent 2))
   (let ((result (cl-gensym)))
-    `(lexical-let ,(cl-loop for var in saved-vars
-                            collect (cl-etypecase var
-                                      (symbol (list var var))
-                                      (cons var)))
+    `(let ,(cl-loop for var in saved-vars
+                    collect (cl-etypecase var
+                              (symbol (list var var))
+                              (cons var)))
        (slime-dispatch-event
         (list :emacs-rex ,sexp ,package ,thread
               (lambda (,result)
@@ -3638,8 +3638,8 @@ for the most recently enclosed macro or function."
   "History list of expressions read from the minibuffer.")
 
 (defun slime-minibuffer-setup-hook ()
-  (cons (lexical-let ((package (slime-current-package))
-                      (connection (slime-connection)))
+  (cons (let ((package (slime-current-package))
+              (connection (slime-connection)))
           (lambda ()
             (setq slime-buffer-package package)
             (setq slime-buffer-connection connection)
@@ -4170,8 +4170,8 @@ in Lisp when committed with \\[slime-edit-value-commit]."
                                              (slime-current-package))
 				     (slime-sexp-at-point))))
   (slime-eval-async `(swank:value-for-editing ,form-string)
-    (lexical-let ((form-string form-string)
-                  (package (slime-current-package)))
+    (let ((form-string form-string)
+          (package (slime-current-package)))
       (lambda (result)
         (slime-edit-value-callback form-string result
                                    package)))))
@@ -4182,9 +4182,9 @@ in Lisp when committed with \\[slime-edit-value-commit]."
 
 (define-minor-mode slime-edit-value-mode
   "Mode for editing a Lisp value."
-  nil
-  " Edit-Value"
-  '(("\C-c\C-c" . slime-edit-value-commit)))
+  :init-value nil
+  :lighter " Edit-Value"
+  :keymap '(("\C-c\C-c" . slime-edit-value-commit)))
 
 (defun slime-edit-value-callback (form-string current-value package)
   (let* ((name (generate-new-buffer-name (format "*Edit %s*" form-string)))
@@ -4209,7 +4209,7 @@ in Lisp when committed with \\[slime-edit-value-commit]."
   (if (null slime-edit-form-string)
       (error "Not editing a value.")
     (let ((value (buffer-substring-no-properties (point-min) (point-max))))
-      (lexical-let ((buffer (current-buffer)))
+      (let ((buffer (current-buffer)))
         (slime-eval-async `(swank:commit-edited-value ,slime-edit-form-string
                                                       ,value)
           (lambda (_)
@@ -4865,9 +4865,9 @@ When displaying XREF information, this goes to the previous reference."
 
 (define-minor-mode slime-macroexpansion-minor-mode
   "SLIME mode for macroexpansion"
-  nil
-  " Macroexpand"
-  '(("g" . slime-macroexpand-again)))
+  :init-value nil
+  :lighter " Macroexpand"
+  :keymap '(("g" . slime-macroexpand-again)))
 
 (cl-macrolet ((remap (from to)
                      `(dolist (mapping
@@ -4938,11 +4938,10 @@ NB: Does not affect slime-eval-macroexpand-expression"
   (interactive)
   (let* ((bounds (or (slime-bounds-of-sexp-at-point)
                      (user-error "No sexp at point"))))
-    (lexical-let* ((start (copy-marker (car bounds)))
-                   (end (copy-marker (cdr bounds)))
-                   (point (point))
-                   (package (slime-current-package))
-                   (buffer (current-buffer)))
+    (let* ((start (copy-marker (car bounds)))
+           (end (copy-marker (cdr bounds)))
+           (point (point))
+           (buffer (current-buffer)))
       (slime-eval-async
           `(,expander ,(buffer-substring-no-properties start end))
         (lambda (expansion)
@@ -5350,7 +5349,7 @@ If LEVEL isn't the same as in the buffer reinitialize the buffer."
   (dolist (window (window-list))
     (when (window-parameter window 'sldb-last-window)
       (set-window-parameter window 'sldb-last-window nil)))
-  (set-window-parameter (selected-window) 'sldb-last-window t))
+  (set-window-parameter window 'sldb-last-window t))
 
 (defun sldb-exit (thread _level &optional stepping)
   "Exit from the debug level LEVEL."
@@ -6109,7 +6108,7 @@ was called originally."
   (interactive "P")
   (slime-eval-async
       `(swank:frame-source-location ,(sldb-frame-number-at-point))
-    (lexical-let ((policy (slime-compute-policy raw-prefix-arg)))
+    (let ((policy (slime-compute-policy raw-prefix-arg)))
       (lambda (source-location)
         (slime-dcase source-location
           ((:error message)
@@ -6708,7 +6707,7 @@ The `*' variable will be bound to the inspected object."
 (defun slime-inspector-reinspect ()
   (interactive)
   (slime-eval-async `(swank:inspector-reinspect)
-    (lexical-let ((point (slime-inspector-position)))
+    (let ((point (slime-inspector-position)))
       (lambda (parts)
         (slime-open-inspector parts point)))))
 
@@ -7508,7 +7507,7 @@ and skips comments."
                       (:and #'cl-every)
                       (:or #'cl-some)
                       (:not
-                       (lexical-let ((feature-expression e))
+                       (let ((feature-expression e))
                          (lambda (f l)
                            (cond
                             ((slime-length= l 0) t)
@@ -7684,7 +7683,8 @@ See `slime-output-target-to-marker'."
 (defun slime--compile-hotspots ()
   (mapc (lambda (sym)
           (cond ((fboundp sym)
-                 (unless (byte-code-function-p (symbol-function sym))
+                 (unless (or (byte-code-function-p (symbol-function sym))
+                             (subrp (symbol-function sym)))
                    (slime--byte-compile sym)))
                 (t (error "%S is not fbound" sym))))
         '(slime-alistify

@@ -107,7 +107,16 @@
 ;;;; Misc
 
 (defimplementation arglist (symbol)
-  (handler-case (excl:arglist symbol)
+  (handler-case
+      (let ((lambda-expression (ignore-errors
+                                (function-lambda-expression
+                                 (symbol-function symbol)))))
+        ;; LAMBDA-EXPRESSION, if available, has the default values of
+        ;; optional and keyword arguments of compiled functions while
+        ;; EXCL:ARGLIST doesn't.
+        (if lambda-expression
+            (second lambda-expression)
+            (excl:arglist symbol)))
     (simple-error () :not-available)))
 
 (defimplementation macroexpand-all (form &optional env)
@@ -1084,3 +1093,9 @@ to do this, this factors in the length of the inserted header itself."
 
 (defimplementation wrapped-p (spec indicator)
   (getf (excl:fwrap-order (process-fspec-for-allegro spec)) indicator))
+
+;;;; Packages
+
+#+package-local-nicknames
+(defimplementation package-local-nicknames (package)
+  (excl:package-local-nicknames package))
