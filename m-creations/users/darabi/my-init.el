@@ -1084,22 +1084,25 @@ Content-Type: text/plain; charset=utf-8")
 (require 'notifications)
 
 (defun erc-global-notify (match-type nick message)
-  "Notify when a message is received."
-  (notifications-notify
-   :title nick
-   :body message
-   :app-name "ERC"
-   :timeout -1
-   :app-icon "/usr/share/notify-osd/icons/hicolor/scalable/status/notification-message-im.svg"
-   :urgency 'low
+  (message "ERC (%s) %s" nick message))
 
-   ;; this a freedesktop sound
-   :sound-name "message-new-instant"
-   ;; which is at this location in Debian
-   :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+;; (defun erc-global-notify (match-type nick message)
+;;   "Notify when a message is received."
+;;   (notifications-notify
+;;    :title nick
+;;    :body message
+;;    :app-name "ERC"
+;;    :timeout -1
+;;    :app-icon "/usr/share/notify-osd/icons/hicolor/scalable/status/notification-message-im.svg"
+;;    :urgency 'low
 
-   ;; :resident t interferes with sounds, which might be a bug
-   :resident nil))
+;;    ;; this a freedesktop sound
+;;    :sound-name "message-new-instant"
+;;    ;; which is at this location in Debian
+;;    :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+
+;;    ;; :resident t interferes with sounds, which might be a bug
+;;    :resident nil))
 
 (add-hook 'erc-mode-hook
           '(lambda ()

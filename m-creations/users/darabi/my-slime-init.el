@@ -245,7 +245,7 @@
 ; (setf slime-default-lisp 'meta-model)
 ; (setf slime-default-lisp 'ayacandas-redesign)
 
-(setf slime-default-lisp 'presentation)
+(setf slime-default-lisp 'sbcl-system)
 
 (add-to-list 'slime-lisp-implementations `(sbcl-system ("sbcl" "--dynamic-space-size 2000 --control-stack-size 32")))
 
