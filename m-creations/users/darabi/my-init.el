@@ -838,316 +838,316 @@ in the buffer and update it."
 
 ; (advice-add #'org-set-tags-command :around #'org-set-tags-command-multiple)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;; BBDB
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; this is needed by lookout.el (outlook bbdb importer)
-(require 'bbdb)
-;; (require 'bbdb-hooks)
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;;; BBDB
+;; ;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; this is needed by lookout.el (outlook bbdb importer)
+;; (require 'bbdb)
+;; ;; (require 'bbdb-hooks)
 
-;; (setq lookout-bbdb-mapping-table 'lookout-bbdb-mapping-table-outlook-german)
+;; ;; (setq lookout-bbdb-mapping-table 'lookout-bbdb-mapping-table-outlook-german)
 
-; don't try to parse the phone number
-(setq bbdb-phone-style nil)
+;; ; don't try to parse the phone number
+;; (setq bbdb-phone-style nil)
 
-(setq bbdb-file-coding-system 'utf-8)
+;; (setq bbdb-file-coding-system 'utf-8)
 
-;; initialise bbdb gnus support
-(require 'bbdb-gnus)
-(bbdb-insinuate-gnus)
+;; ;; initialise bbdb gnus support
+;; (require 'bbdb-gnus)
+;; (bbdb-insinuate-gnus)
 
-;; Bcc myself on all my outgoing mail...  That's not ideal, but it
-;; will do for the moment.
-;; this one is for gnus:
-(setq message-default-headers
-"From: Kambiz Darabi <darabi@m-creations.com>
-Bcc: Myself <darabi@m-creations.int>
-Content-Type: text/plain; charset=utf-8")
+;; ;; Bcc myself on all my outgoing mail...  That's not ideal, but it
+;; ;; will do for the moment.
+;; ;; this one is for gnus:
+;; (setq message-default-headers
+;; "From: Kambiz Darabi <darabi@m-creations.com>
+;; Bcc: Myself <darabi@m-creations.int>
+;; Content-Type: text/plain; charset=utf-8")
 
-;; and this one for mail sent out of bbdb
-(setq mail-default-headers (concat message-default-headers "\n"))
+;; ;; and this one for mail sent out of bbdb
+;; (setq mail-default-headers (concat message-default-headers "\n"))
 
-(setq message-forward-before-signature nil)
-(setq message-signature-separator "")
-(setq message-signature-insert-empty-line t)
+;; (setq message-forward-before-signature nil)
+;; (setq message-signature-separator "")
+;; (setq message-signature-insert-empty-line t)
 
-(setq message-signature nil)
-(setq message-forward-before-signature nil)
-(setq message-signature-separator "")
-(setq message-signature-insert-empty-line t)
+;; (setq message-signature nil)
+;; (setq message-forward-before-signature nil)
+;; (setq message-signature-separator "")
+;; (setq message-signature-insert-empty-line t)
 
-(add-hook 'message-mode-hook
-          '(lambda ()
-             (setq comment-empty-lines t)
-             (define-key message-mode-map [(control c) (control meta c)]
-               'my-message-send-and-org-gnus-store-link)))
+;; (add-hook 'message-mode-hook
+;;           '(lambda ()
+;;              (setq comment-empty-lines t)
+;;              (define-key message-mode-map [(control c) (control meta c)]
+;;                'my-message-send-and-org-gnus-store-link)))
 
-; How to more easily deal with new people from a company for which
-; I've already got a lot of people with the same address info.  To
-; be submitted to the bbdb mailing list some day.
-
-
-;;; pre BBDB3 functions: must be ported to bbdb 3
-
-;; (defvar bbdb-omit-fields-on-duplicate '(pilot-id))
-
-;; (defun bbdb-duplicate-and-edit-record (record newname)
-;;   "Duplicates the current record, prompting for a new value for name."
-;;   (interactive (list (bbdb-get-record "Record to start from: ")
-;;                      (read-string "New Name: ")))
-;;   (let ((omit-fields bbdb-omit-fields-on-duplicate)
-;;         (newnotes (bbdb-record-raw-notes record)))
-;;     (while omit-fields
-;;       (setq newnotes (remove (assoc (car omit-fields) newnotes) newnotes))
-;;       (setq omit-fields (cdr omit-fields)))
-;;     (bbdb-create-internal newname (bbdb-record-company record)
-;;                           (bbdb-record-net record)
-;;                           (bbdb-record-addresses record)
-;;                           (bbdb-record-phones record)
-;;                           newnotes)))
-
-;; ;;;; bbdb-vard-export
-;; (require 'bbdb-vcard-export)
-
-;; (mapc (lambda (e) (push e bbdb-vcard-translation-table))
-;;       '(("Telefon geschäftlich" . "work")
-;;         ("Mobiltelefon" . "cell")
-;;         ("Fax geschäftlich" . "fax")
-;;         ("Address 1" . "PREF")
-;;         ("Address 2" . "PREF")
-;;         ("Office" . "WORK")
-;;         ("Post" . "PREF")
-;;         ("nil" . "")
-;;         (nil . "")))
+;; ; How to more easily deal with new people from a company for which
+;; ; I've already got a lot of people with the same address info.  To
+;; ; be submitted to the bbdb mailing list some day.
 
 
-;;;;;;
-;;; IDO setup
+;; ;;; pre BBDB3 functions: must be ported to bbdb 3
 
-(require 'ido)
+;; ;; (defvar bbdb-omit-fields-on-duplicate '(pilot-id))
 
-(setq ;; ido-everywhere t
-      ido-enable-flex-matching t
-      ido-max-directory-size 100000)
+;; ;; (defun bbdb-duplicate-and-edit-record (record newname)
+;; ;;   "Duplicates the current record, prompting for a new value for name."
+;; ;;   (interactive (list (bbdb-get-record "Record to start from: ")
+;; ;;                      (read-string "New Name: ")))
+;; ;;   (let ((omit-fields bbdb-omit-fields-on-duplicate)
+;; ;;         (newnotes (bbdb-record-raw-notes record)))
+;; ;;     (while omit-fields
+;; ;;       (setq newnotes (remove (assoc (car omit-fields) newnotes) newnotes))
+;; ;;       (setq omit-fields (cdr omit-fields)))
+;; ;;     (bbdb-create-internal newname (bbdb-record-company record)
+;; ;;                           (bbdb-record-net record)
+;; ;;                           (bbdb-record-addresses record)
+;; ;;                           (bbdb-record-phones record)
+;; ;;                           newnotes)))
 
-;;; just like execute-extended-command bound to M-x but uses ido lookup
-(setq ido-execute-extended-command-cache nil)
-(defun ido-execute-extended-command ()
-  (interactive)
-  (call-interactively
-   (intern
-    (ido-completing-read
-     "M-x "
-     (progn
-       (unless ido-execute-extended-command-cache
-         (mapatoms (lambda (s)
-                     (when (commandp s)
-                       (setq ido-execute-extended-command-cache
-                             (cons (symbol-name s) ido-execute-extended-command-cache))))))
-       ido-execute-extended-command-cache)))))
+;; ;; ;;;; bbdb-vard-export
+;; ;; (require 'bbdb-vcard-export)
 
-(defun dwim-redefine-ido-key (key function)
-  (define-key ido-common-completion-map key function)
-  (dolist (map (list ido-buffer-completion-map
-                     ido-file-completion-map
-                     ido-file-dir-completion-map))
-    (define-key map key nil)))
-
-(add-hook 'ido-define-mode-map-hook
-          (lambda ()
-            (cl-flet ((redef (key function)
-                     (define-key ido-completion-map key function)))
-              (redef (kbd "M-p") 'previous-history-element)
-              (redef (kbd "<up>") 'previous-history-element)
-              (redef (kbd "M-n") 'next-history-element)
-              (redef (kbd "<down>") 'next-history-element))))
-
-(ido-mode 1)
-
-(defun my-attach-directory-images ()
-  "Attach all jpeg images in a directory to the current mail message"
-  (interactive)
-  (let ((dir (ido-read-directory-name "Welches Verzeichnis? " "~/Pictures" nil t "appt")))
-    (dolist (f (directory-files dir t "\\(\\.jpg\\|\\.JPG\\)" nil))
-      (mml-attach-file f "image/jpeg" nil "attachment"))))
-
-;; setup easypga encryption support
-(require 'epa-file)
-(epa-file-enable)
-(add-to-list 'auto-mode-alist '("\\.gpg\\(~\\|\\.~[0-9a-zA-Z_]+~\\)?\\'" nil epa-file))
-
-;; s/mime does not use the system certificates by default
-(setq smime-certificate-directory "/etc/ssl/certs")
-
-;; text/calendar (vcalendar) support for gnus
-
-;; ;; http://groups.google.com/group/gnu.emacs.gnus/browse_thread/thread/93471c1c6f4c785b/058991ad4fb9a58d
-;; ;; also cf. http://ozymandias.dk/emacs/org-import-calendar.el
-
-;; (add-to-list 'mm-inlined-types "text/calendar")
-;; (add-to-list 'mm-automatic-display "text/calendar")
-;; (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
-
-(require 'icalendar)
-(require 'boxquote)
-
-(defun mm-inline-text-calendar (handle)
-  (with-temp-buffer
-      (mm-insert-part handle)
-      (save-window-excursion
-        (setq text (lala (icalendar--read-element nil nil)))))
-  (boxquote-text text)
-  (mm-insert-inline handle "\n"))
-
-(defun lala (temp)
-  (setq elems '(ORGANIZER ATTENDEE SUMMARY DTSTART DTEND DESCRIPTION)
-        e (car (icalendar--all-events temp)))
-  (let (value)
-    (dolist (el elems)
-      (setq value (format (concat "%s: %s\n" value)
-                          el
-                          (icalendar--get-event-property e el))))
-    (replace-regexp-in-string "\\\\," ","  (replace-regexp-in-string "\\\\n" "\n"  value))))
+;; ;; (mapc (lambda (e) (push e bbdb-vcard-translation-table))
+;; ;;       '(("Telefon geschäftlich" . "work")
+;; ;;         ("Mobiltelefon" . "cell")
+;; ;;         ("Fax geschäftlich" . "fax")
+;; ;;         ("Address 1" . "PREF")
+;; ;;         ("Address 2" . "PREF")
+;; ;;         ("Office" . "WORK")
+;; ;;         ("Post" . "PREF")
+;; ;;         ("nil" . "")
+;; ;;         (nil . "")))
 
 
-(setq bbdb-time-internal-format "%Y-%m-%dT%T%z")
+;; ;;;;;;
+;; ;;; IDO setup
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; BBDB stuff END
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (require 'ido)
 
-;; ;;; Mail
+;; (setq ;; ido-everywhere t
+;;       ido-enable-flex-matching t
+;;       ido-max-directory-size 100000)
 
-;; ;; allow for searching of imap folders
-;; ; (require 'nnir)
+;; ;;; just like execute-extended-command bound to M-x but uses ido lookup
+;; (setq ido-execute-extended-command-cache nil)
+;; (defun ido-execute-extended-command ()
+;;   (interactive)
+;;   (call-interactively
+;;    (intern
+;;     (ido-completing-read
+;;      "M-x "
+;;      (progn
+;;        (unless ido-execute-extended-command-cache
+;;          (mapatoms (lambda (s)
+;;                      (when (commandp s)
+;;                        (setq ido-execute-extended-command-cache
+;;                              (cons (symbol-name s) ido-execute-extended-command-cache))))))
+;;        ido-execute-extended-command-cache)))))
+
+;; (defun dwim-redefine-ido-key (key function)
+;;   (define-key ido-common-completion-map key function)
+;;   (dolist (map (list ido-buffer-completion-map
+;;                      ido-file-completion-map
+;;                      ido-file-dir-completion-map))
+;;     (define-key map key nil)))
+
+;; (add-hook 'ido-define-mode-map-hook
+;;           (lambda ()
+;;             (cl-flet ((redef (key function)
+;;                      (define-key ido-completion-map key function)))
+;;               (redef (kbd "M-p") 'previous-history-element)
+;;               (redef (kbd "<up>") 'previous-history-element)
+;;               (redef (kbd "M-n") 'next-history-element)
+;;               (redef (kbd "<down>") 'next-history-element))))
+
+;; (ido-mode 1)
+
+;; (defun my-attach-directory-images ()
+;;   "Attach all jpeg images in a directory to the current mail message"
+;;   (interactive)
+;;   (let ((dir (ido-read-directory-name "Welches Verzeichnis? " "~/Pictures" nil t "appt")))
+;;     (dolist (f (directory-files dir t "\\(\\.jpg\\|\\.JPG\\)" nil))
+;;       (mml-attach-file f "image/jpeg" nil "attachment"))))
+
+;; ;; setup easypga encryption support
+;; (require 'epa-file)
+;; (epa-file-enable)
+;; (add-to-list 'auto-mode-alist '("\\.gpg\\(~\\|\\.~[0-9a-zA-Z_]+~\\)?\\'" nil epa-file))
+
+;; ;; s/mime does not use the system certificates by default
+;; (setq smime-certificate-directory "/etc/ssl/certs")
+
+;; ;; text/calendar (vcalendar) support for gnus
+
+;; ;; ;; http://groups.google.com/group/gnu.emacs.gnus/browse_thread/thread/93471c1c6f4c785b/058991ad4fb9a58d
+;; ;; ;; also cf. http://ozymandias.dk/emacs/org-import-calendar.el
+
+;; ;; (add-to-list 'mm-inlined-types "text/calendar")
+;; ;; (add-to-list 'mm-automatic-display "text/calendar")
+;; ;; (add-to-list 'mm-inline-media-tests '("text/calendar" mm-inline-text-calendar identity))
+
+;; (require 'icalendar)
+;; (require 'boxquote)
+
+;; (defun mm-inline-text-calendar (handle)
+;;   (with-temp-buffer
+;;       (mm-insert-part handle)
+;;       (save-window-excursion
+;;         (setq text (lala (icalendar--read-element nil nil)))))
+;;   (boxquote-text text)
+;;   (mm-insert-inline handle "\n"))
+
+;; (defun lala (temp)
+;;   (setq elems '(ORGANIZER ATTENDEE SUMMARY DTSTART DTEND DESCRIPTION)
+;;         e (car (icalendar--all-events temp)))
+;;   (let (value)
+;;     (dolist (el elems)
+;;       (setq value (format (concat "%s: %s\n" value)
+;;                           el
+;;                           (icalendar--get-event-property e el))))
+;;     (replace-regexp-in-string "\\\\," ","  (replace-regexp-in-string "\\\\n" "\n"  value))))
 
 
-;; ;;    Jack Vinson <jvinson@cheux.ecs.umass.edu> writes:
-;; ;;    For multiple signature files, I advise the message-insert-signature
-;; ;;    function to set message-signature-file to a random file from my
-;; ;;    signature directory: (I have files that look like sig1 sig2 etc in
-;; ;;    that directory).
-;; ;; random insertion of .signature file
-;; ;; Thanks to Glenn R Coombs: glenn@prl.philips.co.uk
-;; ;; (defvar grc-signature-dir   "~/.sig/")
-;; ;; (defvar grc-signature-base  "sig")
+;; (setq bbdb-time-internal-format "%Y-%m-%dT%T%z")
 
-;; ;; (defadvice message-insert-signature (before random-mail-sig-ag act comp)
-;; ;;   "Change the value of message-signature-file each time
-;; ;; `message-insert-signature' is called."
-;; ;;   (let ((files (file-name-all-completions
-;; ;;                 grc-signature-base (expand-file-name grc-signature-dir))))
-;; ;;     (if files (let ((file (nth (random (length files)) files)))
-;; ;;                 (setq message-signature-file (concat grc-signature-dir file))
-;; ;;                 ))))
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;; BBDB stuff END
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ;;; namazu full text search engine is disabled because I didn't have enough time to experiment with it
+;; ;; ;;; Mail
 
-;; (require 'namazu)
+;; ;; ;; allow for searching of imap folders
+;; ;; ; (require 'nnir)
 
-;; (setq namazu-dir-alist
-;;       '(("mail" . "~/.cache/namazu/mail")
-;;         ("chat" . "~/.cache/namazu/chat")))
 
-;; (setq namazu-default-dir "~/.cache/namazu/chat")
-;; ;; show the newest entries first
-;; (setq namazu-argument '("-H" "--late"))
+;; ;; ;;    Jack Vinson <jvinson@cheux.ecs.umass.edu> writes:
+;; ;; ;;    For multiple signature files, I advise the message-insert-signature
+;; ;; ;;    function to set message-signature-file to a random file from my
+;; ;; ;;    signature directory: (I have files that look like sig1 sig2 etc in
+;; ;; ;;    that directory).
+;; ;; ;; random insertion of .signature file
+;; ;; ;; Thanks to Glenn R Coombs: glenn@prl.philips.co.uk
+;; ;; ;; (defvar grc-signature-dir   "~/.sig/")
+;; ;; ;; (defvar grc-signature-base  "sig")
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; MozRepl
-;;
-;; old mozrepl config
-;;
-;; (add-to-list 'auto-mode-alist '("\\.js$" . javascript-mode))
-;; (autoload 'run-mozilla "moz" "Mozilla Minor and Inferior Mozilla Modes" t)
-;; (add-hook 'javascript-mode-hook 'javascript-custom-setup)
-;; (defun javascript-custom-setup ()
-;;   (moz-minor-mode 1))
+;; ;; ;; (defadvice message-insert-signature (before random-mail-sig-ag act comp)
+;; ;; ;;   "Change the value of message-signature-file each time
+;; ;; ;; `message-insert-signature' is called."
+;; ;; ;;   (let ((files (file-name-all-completions
+;; ;; ;;                 grc-signature-base (expand-file-name grc-signature-dir))))
+;; ;; ;;     (if files (let ((file (nth (random (length files)) files)))
+;; ;; ;;                 (setq message-signature-file (concat grc-signature-dir file))
+;; ;; ;;                 ))))
 
-;; now using espresso.el for js files (.emacs.d/site-lisp/mozrepl/espresso.el)
-;; (add-to-list 'auto-mode-alist '("\\.js\\(on\\)?\\'" . espresso-mode))
-;; (autoload 'espresso-mode "espresso" nil t)
+;; ;; ;;; namazu full text search engine is disabled because I didn't have enough time to experiment with it
 
-;; (autoload 'moz-minor-mode "moz" "Mozilla Minor and Inferior Mozilla Modes" t)
+;; ;; (require 'namazu)
 
-;; (add-hook 'espresso-mode-hook 'espresso-custom-setup)
-;; (defun espresso-custom-setup ()
-;;   (moz-minor-mode 1)
-;;   (setq espresso-indent-level 2))
+;; ;; (setq namazu-dir-alist
+;; ;;       '(("mail" . "~/.cache/namazu/mail")
+;; ;;         ("chat" . "~/.cache/namazu/chat")))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; ERC
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(require 'notifications)
+;; ;; (setq namazu-default-dir "~/.cache/namazu/chat")
+;; ;; ;; show the newest entries first
+;; ;; (setq namazu-argument '("-H" "--late"))
 
-(defun erc-global-notify (match-type nick message)
-  (message "ERC (%s) %s" nick message))
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;; MozRepl
+;; ;;
+;; ;; old mozrepl config
+;; ;;
+;; ;; (add-to-list 'auto-mode-alist '("\\.js$" . javascript-mode))
+;; ;; (autoload 'run-mozilla "moz" "Mozilla Minor and Inferior Mozilla Modes" t)
+;; ;; (add-hook 'javascript-mode-hook 'javascript-custom-setup)
+;; ;; (defun javascript-custom-setup ()
+;; ;;   (moz-minor-mode 1))
+
+;; ;; now using espresso.el for js files (.emacs.d/site-lisp/mozrepl/espresso.el)
+;; ;; (add-to-list 'auto-mode-alist '("\\.js\\(on\\)?\\'" . espresso-mode))
+;; ;; (autoload 'espresso-mode "espresso" nil t)
+
+;; ;; (autoload 'moz-minor-mode "moz" "Mozilla Minor and Inferior Mozilla Modes" t)
+
+;; ;; (add-hook 'espresso-mode-hook 'espresso-custom-setup)
+;; ;; (defun espresso-custom-setup ()
+;; ;;   (moz-minor-mode 1)
+;; ;;   (setq espresso-indent-level 2))
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;; ERC
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (require 'notifications)
 
 ;; (defun erc-global-notify (match-type nick message)
-;;   "Notify when a message is received."
-;;   (notifications-notify
-;;    :title nick
-;;    :body message
-;;    :app-name "ERC"
-;;    :timeout -1
-;;    :app-icon "/usr/share/notify-osd/icons/hicolor/scalable/status/notification-message-im.svg"
-;;    :urgency 'low
+;;   (message "ERC (%s) %s" nick message))
 
-;;    ;; this a freedesktop sound
-;;    :sound-name "message-new-instant"
-;;    ;; which is at this location in Debian
-;;    :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+;; ;; (defun erc-global-notify (match-type nick message)
+;; ;;   "Notify when a message is received."
+;; ;;   (notifications-notify
+;; ;;    :title nick
+;; ;;    :body message
+;; ;;    :app-name "ERC"
+;; ;;    :timeout -1
+;; ;;    :app-icon "/usr/share/notify-osd/icons/hicolor/scalable/status/notification-message-im.svg"
+;; ;;    :urgency 'low
 
-;;    ;; :resident t interferes with sounds, which might be a bug
-;;    :resident nil))
+;; ;;    ;; this a freedesktop sound
+;; ;;    :sound-name "message-new-instant"
+;; ;;    ;; which is at this location in Debian
+;; ;;    :sound-file "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
 
-(add-hook 'erc-mode-hook
-          '(lambda ()
-            (require 'erc-log)
-            (erc-log-enable)
-            ;; save log after each message in erc
-            (add-hook 'erc-insert-post-hook 'erc-save-buffer-in-logs)
-            ;; Add current time to every new line
-            (erc-timestamp-mode t)
-            ;; Notify me if someone calls me
-            (erc-match-mode t)
-            ;; notify me about these keywords
-            (setq erc-keywords (append '("kami" "attila" "dwim") erc-pals))
-            (require 'notifications)
-            (add-hook 'erc-text-matched-hook 'erc-global-notify)))
+;; ;;    ;; :resident t interferes with sounds, which might be a bug
+;; ;;    :resident nil))
 
-;; ;; Some basic settings for erc package
-(setq erc-server "irc.libera.chat"
-      ;; port 6697 is for erc-tls, 6667 without tls
-      erc-port 6697
-      erc-nick "kami_"
-      erc-pals '("attila_lendvai" "levy" "levente_meszaros")
-      erc-save-buffer-on-part t
-      erc-log-channels t
-      erc-log-channels-directory "~/.irclogs"
-      erc-log-file-coding-system 'utf-8
-      erc-generate-log-file-name-function 'erc-generate-log-file-name-with-date)
+;; (add-hook 'erc-mode-hook
+;;           '(lambda ()
+;;             (require 'erc-log)
+;;             (erc-log-enable)
+;;             ;; save log after each message in erc
+;;             (add-hook 'erc-insert-post-hook 'erc-save-buffer-in-logs)
+;;             ;; Add current time to every new line
+;;             (erc-timestamp-mode t)
+;;             ;; Notify me if someone calls me
+;;             (erc-match-mode t)
+;;             ;; notify me about these keywords
+;;             (setq erc-keywords (append '("kami" "attila" "dwim") erc-pals))
+;;             (require 'notifications)
+;;             (add-hook 'erc-text-matched-hook 'erc-global-notify)))
 
-(defun my-erc ()
-  "Connect to IRC."
-  (interactive)
-  (erc-tls :server "irc.oftc.net" :port 6697
-           :nick "kambiz" :full-name "kambiz"
-           ;; :client-certificate '("~/.ssl/oftc.net.kambiz.key"
-           ;;                      "~/.ssl/oftc.net.kambiz..crt")
-           )
-  (erc-tls :server "irc.libera.chat" :port 6697
-           :nick "kamileon" :full-name "kamileon")
-  (setq erc-autojoin-channels-alist '(("irc.libera.chat" ) ;; "#emacs" "#screen" "#ion")
-                                      ("irc.oftc.net" )))) ;; "#debian"))))
+;; ;; ;; Some basic settings for erc package
+;; (setq erc-server "irc.libera.chat"
+;;       ;; port 6697 is for erc-tls, 6667 without tls
+;;       erc-port 6697
+;;       erc-nick "kami_"
+;;       erc-pals '("attila_lendvai" "levy" "levente_meszaros")
+;;       erc-save-buffer-on-part t
+;;       erc-log-channels t
+;;       erc-log-channels-directory "~/.irclogs"
+;;       erc-log-file-coding-system 'utf-8
+;;       erc-generate-log-file-name-function 'erc-generate-log-file-name-with-date)
+
+;; (defun my-erc ()
+;;   "Connect to IRC."
+;;   (interactive)
+;;   (erc-tls :server "irc.oftc.net" :port 6697
+;;            :nick "kambiz" :full-name "kambiz"
+;;            ;; :client-certificate '("~/.ssl/oftc.net.kambiz.key"
+;;            ;;                      "~/.ssl/oftc.net.kambiz..crt")
+;;            )
+;;   (erc-tls :server "irc.libera.chat" :port 6697
+;;            :nick "kamileon" :full-name "kamileon")
+;;   (setq erc-autojoin-channels-alist '(("irc.libera.chat" ) ;; "#emacs" "#screen" "#ion")
+;;                                       ("irc.oftc.net" )))) ;; "#debian"))))
 
 ;;; DWIM
 
 ;; (setf slime-default-lisp 'fluvium)
-(setf slime-default-lisp 'web-server)
+(setf slime-default-lisp 'system-sbcl)
 
 ;; undo the changes in dwim init files
 (show-paren-mode t)
@@ -1165,24 +1165,24 @@ Content-Type: text/plain; charset=utf-8")
             ;; dash is not a word delimiter any more
             (modify-syntax-entry ?- "w")))
 
-;;; We use left and right guillemet for quasi-quoted strings
-(global-set-key [?\C-<] 'insert-left-guillemet)
-(global-set-key [?\C->] 'insert-right-guillemet)
+;; ;;; We use left and right guillemet for quasi-quoted strings
+;; (global-set-key [?\C-<] 'insert-left-guillemet)
+;; (global-set-key [?\C->] 'insert-right-guillemet)
 
-;; sql
-(add-hook 'sql-interactive-mode-hook
-          (lambda ()
-            (setq sql-mysql-login-params (append sql-mysql-login-params '(port)))))
+;; ;; sql
+;; (add-hook 'sql-interactive-mode-hook
+;;           (lambda ()
+;;             (setq sql-mysql-login-params (append sql-mysql-login-params '(port)))))
 
-(defun my-sql ()
-  (interactive)
-  (setq sql-mysql-login-params (append sql-mysql-login-params '(port)))
-  (sql-mysql))
+;; (defun my-sql ()
+;;   (interactive)
+;;   (setq sql-mysql-login-params (append sql-mysql-login-params '(port)))
+;;   (sql-mysql))
 
-;;; Confluence
-(setq confluence-url "https://confluence.prime-research.local/rpc/xmlrpc")
-;; (setq gnutls-verify-error '(("confluence.prime-research.local" nil)))
-;; (setq gnutls-log-level 2)
+;; ;;; Confluence
+;; (setq confluence-url "https://confluence.prime-research.local/rpc/xmlrpc")
+;; ;; (setq gnutls-verify-error '(("confluence.prime-research.local" nil)))
+;; ;; (setq gnutls-log-level 2)
 
 ;;; Local Variables
 (setf enable-local-variables t)
@@ -1197,119 +1197,119 @@ Content-Type: text/plain; charset=utf-8")
 (setq package-enable-at-startup nil)
 
 
-(defvar *my-box-tramp-path*
-  "/ssh:darabi@galen:")
+;; (defvar *my-box-tramp-path*
+;;   "/ssh:darabi@galen:")
 
-(defvar *current-tramp-path* nil)
+;; (defvar *current-tramp-path* nil)
 
-(defun connect-to-host (path)
-  (setq *current-tramp-path* path)
-  (setq slime-translate-from-lisp-filename-function
-    (lambda (f)
-      (concat *current-tramp-path* f)))
-  (setq slime-translate-to-lisp-filename-function
-    (lambda (f)
-      (substring f (length *current-tramp-path*))))
-  (slime-connect "localhost" 4005))
+;; (defun connect-to-host (path)
+;;   (setq *current-tramp-path* path)
+;;   (setq slime-translate-from-lisp-filename-function
+;;     (lambda (f)
+;;       (concat *current-tramp-path* f)))
+;;   (setq slime-translate-to-lisp-filename-function
+;;     (lambda (f)
+;;       (substring f (length *current-tramp-path*))))
+;;   (slime-connect "localhost" 4005))
 
-(defun my-box-slime ()
-  (interactive)
-  (connect-to-host *my-box-tramp-path*))
+;; (defun my-box-slime ()
+;;   (interactive)
+;;   (connect-to-host *my-box-tramp-path*))
 
-(defun my-box-homedir ()
-  (interactive)
-  (find-file (concat *server-tramp-path* "/home/darabi/")))
+;; (defun my-box-homedir ()
+;;   (interactive)
+;;   (find-file (concat *server-tramp-path* "/home/darabi/")))
 
-;; http://stackoverflow.com/questions/23924306/arabic-glyphs-in-emacs
-;;
-;; to find your fonts: (dolist (f (font-family-list)) (print f))
-;;
-;; these are also OK for Farsi: "Iranian Sans", "Neirizi"
-;;
-(when window-system (set-fontset-font "fontset-default" '(#x600 . #x6ff) "Droid Arabic Naskh"))
+;; ;; http://stackoverflow.com/questions/23924306/arabic-glyphs-in-emacs
+;; ;;
+;; ;; to find your fonts: (dolist (f (font-family-list)) (print f))
+;; ;;
+;; ;; these are also OK for Farsi: "Iranian Sans", "Neirizi"
+;; ;;
+;; (when window-system (set-fontset-font "fontset-default" '(#x600 . #x6ff) "Droid Arabic Naskh"))
 
-(defun my-sort-maven-dependencies ()
-  (interactive)
-  (save-excursion
-    (beginning-of-buffer)
-    (when (re-search-forward "<dependencies>")
-      (let ((start (point)))
-        (while (and (not (looking-at "dependencies"))
-                    (re-search-forward ">[\n[:space:]]*?<\\([^d]\\)"))
-          (replace-match "><\\1" t nil))
-        (sort-lines nil start (point))
-        (goto-char start)
-        ;; (indent-according-to-mode)
-        (save-excursion
-          (while (re-search-forward "><" nil t)
-            (replace-match ">\n<")))
-        (while (not (eq (point) (point-max)))
-          (forward-line 1)
-          (indent-according-to-mode))))))
+;; (defun my-sort-maven-dependencies ()
+;;   (interactive)
+;;   (save-excursion
+;;     (beginning-of-buffer)
+;;     (when (re-search-forward "<dependencies>")
+;;       (let ((start (point)))
+;;         (while (and (not (looking-at "dependencies"))
+;;                     (re-search-forward ">[\n[:space:]]*?<\\([^d]\\)"))
+;;           (replace-match "><\\1" t nil))
+;;         (sort-lines nil start (point))
+;;         (goto-char start)
+;;         ;; (indent-according-to-mode)
+;;         (save-excursion
+;;           (while (re-search-forward "><" nil t)
+;;             (replace-match ">\n<")))
+;;         (while (not (eq (point) (point-max)))
+;;           (forward-line 1)
+;;           (indent-according-to-mode))))))
 
 
 ;;; Markdown
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 
 
-;; Typescript/Tide
+;; ;; Typescript/Tide
 
-(defun setup-tide-mode ()
-  (interactive)
-  (require 'company)
-  (require 'tide)
-  (tide-setup)
-  (flycheck-mode +1)
-  (setq flycheck-check-syntax-automatically '(save mode-enabled))
-  (eldoc-mode +1)
-  (tide-hl-identifier-mode +1)
-  ;; company is an optional dependency. You have to
-  ;; install it separately via package-install
-  ;; `M-x package-install [ret] company`
-  (company-mode +1))
-
-
-;; formats the buffer before saving
-(defun my-tide-mode-before-save-hook ()
-  (when (eq major-mode 'tide-mode)
-    (tide-format-before-save)))
-
-(add-hook 'typescript-mode-hook #'my-tide-mode-before-save-hook)
-
-;; aligns annotation to the right hand side
-(setq company-tooltip-align-annotations t)
-
-(require 'mc-licence)
-
-;; (require 'mc-doom-theme)
-;; (load-theme 'doom-sourcerer t)
-
-(require 'sanityinc-tomorrow-eighties-theme)
-(load-theme 'sanityinc-tomorrow-eighties t)
-
-;; light background
-;; (require 'sanityinc-tomorrow-day)
-;; (load-theme 'sanityinc-tomorrow-day t)
+;; (defun setup-tide-mode ()
+;;   (interactive)
+;;   (require 'company)
+;;   (require 'tide)
+;;   (tide-setup)
+;;   (flycheck-mode +1)
+;;   (setq flycheck-check-syntax-automatically '(save mode-enabled))
+;;   (eldoc-mode +1)
+;;   (tide-hl-identifier-mode +1)
+;;   ;; company is an optional dependency. You have to
+;;   ;; install it separately via package-install
+;;   ;; `M-x package-install [ret] company`
+;;   (company-mode +1))
 
 
-;; expand-region https://github.com/magnars/expand-region.el
-(require 'expand-region)
+;; ;; formats the buffer before saving
+;; (defun my-tide-mode-before-save-hook ()
+;;   (when (eq major-mode 'tide-mode)
+;;     (tide-format-before-save)))
 
-(defun my-shrink-region ()
-  (interactive)
-  (er/expand-region -1))
+;; (add-hook 'typescript-mode-hook #'my-tide-mode-before-save-hook)
 
-(global-set-key (kbd "C-'") 'er/expand-region)
-(global-set-key (kbd "C-;") 'my-shrink-region)
+;; ;; aligns annotation to the right hand side
+;; (setq company-tooltip-align-annotations t)
 
-;; projectile
-;; (require 'projectile)
-;; (setq projectile-project-search-path '("~/common-lisp/holz24"))
+;; (require 'mc-licence)
 
-;; Heidelpay JIRA
-(setq jiralib-url "https://jira.hpchd.loc")
+;; ;; (require 'mc-doom-theme)
+;; ;; (load-theme 'doom-sourcerer t)
 
-(require 'default-text-scale)
-(default-text-scale-mode)
+;; (require 'sanityinc-tomorrow-eighties-theme)
+;; (load-theme 'sanityinc-tomorrow-eighties t)
+
+;; ;; light background
+;; ;; (require 'sanityinc-tomorrow-day)
+;; ;; (load-theme 'sanityinc-tomorrow-day t)
+
+
+;; ;; expand-region https://github.com/magnars/expand-region.el
+;; (require 'expand-region)
+
+;; (defun my-shrink-region ()
+;;   (interactive)
+;;   (er/expand-region -1))
+
+;; (global-set-key (kbd "C-'") 'er/expand-region)
+;; (global-set-key (kbd "C-;") 'my-shrink-region)
+
+;; ;; projectile
+;; ;; (require 'projectile)
+;; ;; (setq projectile-project-search-path '("~/common-lisp/holz24"))
+
+;; ;; Heidelpay JIRA
+;; (setq jiralib-url "https://jira.hpchd.loc")
+
+;; (require 'default-text-scale)
+;; (default-text-scale-mode)
 
 (provide 'my-init)
