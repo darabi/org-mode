@@ -2,7 +2,7 @@
 
 ; in case of errors during startup
 ; (setq debug-on-error t)
-
+(require 'use-package)
 (require 'warnings)
 
 ; Common Lisp compatibility mode
