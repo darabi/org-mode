@@ -926,7 +926,7 @@ in the buffer and update it."
 ;; ;;;;;;
 ;; ;;; IDO setup
 
-;; (require 'ido)
+(require 'ido)
 
 ;; (setq ;; ido-everywhere t
 ;;       ido-enable-flex-matching t
