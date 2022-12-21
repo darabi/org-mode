@@ -2,7 +2,6 @@
 
 ; in case of errors during startup
 ; (setq debug-on-error t)
-(require 'use-package)
 (require 'warnings)
 
 ; Common Lisp compatibility mode
@@ -15,6 +14,8 @@
 (add-to-list 'load-path (expand-file-name "~/.emacs.d/site-lisp"))
 (let ((default-directory (expand-file-name "~/.emacs.d/site-lisp")))
           (load (expand-file-name "subdirs.el") t t t))
+
+(require 'use-package)
 
 (defun add-to-load-path-if-exists (dirname)
   (let ((dir (expand-file-name dirname)))
