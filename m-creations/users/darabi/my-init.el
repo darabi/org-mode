@@ -948,12 +948,12 @@ in the buffer and update it."
 ;;                              (cons (symbol-name s) ido-execute-extended-command-cache))))))
 ;;        ido-execute-extended-command-cache)))))
 
-;; (defun dwim-redefine-ido-key (key function)
-;;   (define-key ido-common-completion-map key function)
-;;   (dolist (map (list ido-buffer-completion-map
-;;                      ido-file-completion-map
-;;                      ido-file-dir-completion-map))
-;;     (define-key map key nil)))
+(defun dwim-redefine-ido-key (key function)
+  (define-key ido-common-completion-map key function)
+  (dolist (map (list ido-buffer-completion-map
+                     ido-file-completion-map
+                     ido-file-dir-completion-map))
+    (define-key map key nil)))
 
 ;; (add-hook 'ido-define-mode-map-hook
 ;;           (lambda ()
