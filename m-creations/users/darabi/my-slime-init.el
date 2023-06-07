@@ -89,8 +89,25 @@
 
 (dwim-define-lisp-key [(meta shift ?f)] 'dwim-findr-search-sexp)
 
+(defun bury-popped-up-buffers ()
+  (interactive)
+  (let ((buffers-to-bury '("*Help*"
+                           "*Warnings*"
+                           "*grep*"
+                           "*slime-compilation*"
+                           "*slime-inspector*"
+                           "*slime-macroexpansion*"
+                           "*slime-notes*"))
+        (sel (selected-window)))
+    (dolist (w (window-list))
+      (unless (eql w sel)
+        (dolist (name buffers-to-bury)
+          (let ((buf (get-buffer name)))
+            (when (equal buf (window-buffer w))
+              (switch-to-prev-buffer w))))))))
+
 (dwim-define-lisp-key (kbd "M-;") 'paredit-comment-dwim)
-(dwim-define-lisp-key (kbd "C-q") 'indent-sexp)
+(dwim-define-lisp-key (kbd "C-q") 'bury-popped-up-buffers)
 (dwim-define-lisp-key (kbd "M-q") 'slime-reindent-defun)
 (dwim-define-lisp-key (kbd "C-k") 'kill-sexp)
 (dwim-define-lisp-key (kbd "C-M-d") 'slime-repl-delete-from-input-history :buffers nil :elisp nil)

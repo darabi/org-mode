@@ -922,6 +922,9 @@ in the buffer and update it."
 ;; ;;         ("nil" . "")
 ;; ;;         (nil . "")))
 
+;;; Helm setup
+; (require 'helm-ido-like)
+; (helm-ido-like)
 
 ;; ;;;;;;
 ;; ;;; IDO setup
@@ -1279,18 +1282,13 @@ in the buffer and update it."
 ;; ;; aligns annotation to the right hand side
 ;; (setq company-tooltip-align-annotations t)
 
-;; (require 'mc-licence)
+(require 'mc-licence)
 
-;; ;; (require 'mc-doom-theme)
-;; ;; (load-theme 'doom-sourcerer t)
+;; (require 'mc-doom-theme)
+;; (load-theme 'doom-sourcerer t)
 
-;; (require 'sanityinc-tomorrow-eighties-theme)
-;; (load-theme 'sanityinc-tomorrow-eighties t)
-
-;; ;; light background
-;; ;; (require 'sanityinc-tomorrow-day)
-;; ;; (load-theme 'sanityinc-tomorrow-day t)
-
+(require 'sanityinc-tomorrow-eighties-theme)
+(load-theme 'sanityinc-tomorrow-eighties t)
 
 ;; ;; expand-region https://github.com/magnars/expand-region.el
 ;; (require 'expand-region)
