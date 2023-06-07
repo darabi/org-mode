@@ -5,7 +5,7 @@
 (require 'warnings)
 
 ; Common Lisp compatibility mode
-(require 'cl)
+(require 'cl-lib)
 
 ;; By default, emacs loads all installed packages at startup, which is not the best idea
 (setq package-enable-at-startup nil)
@@ -17,6 +17,10 @@
 
 (require 'use-package)
 
+
+;; used in some code which I cannot pinpoint
+(defalias 'cl-mode 'common-lisp-mode)
+
 (defun add-to-load-path-if-exists (dirname)
   (let ((dir (expand-file-name dirname)))
     (when (file-exists-p dir)
@@ -25,11 +29,11 @@
 
 ;; Quicklisp is present? Then use slime either from m-creations dist or from quicklisp (default)
 (setq quicklisp-home (or (getenv "QUICKLISP_HOME")
-                         (when (file-exists-p "~/quicklisp")
-                           "~/quicklisp")))
+                         (when (file-exists-p "/opt/quicklisp") "/opt/quicklisp")
+			 (when (file-exists-p "~/quicklisp" "~/quicklisp"))))
 
 (when quicklisp-home
-  (loop for dist in '("m-creations" "quicklisp")
+  (cl-loop for dist in '("m-creations" "quicklisp")
         do
         (when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
           (setq quicklisp-slime-helper-dist dist)
