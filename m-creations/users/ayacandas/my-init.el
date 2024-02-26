@@ -539,7 +539,7 @@ performed, then slime-complete-symbol is called"
 ;; (autoload 'slime "slime" "Superior Lisp Interaction Mode" t)
 (require 'slime-autoloads)
 
-(setq slime-contribs '(slime-fancy slime-asdf slime-tramp slime-repl slime-compiler-notes-tree))
+(setq slime-contribs '(slime-asdf slime-tramp slime-repl))
 
 (add-hook 'slime-compilation-finished-hook 'slime-maybe-list-compiler-notes)
 

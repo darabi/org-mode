@@ -79,7 +79,6 @@
                          '(:swank-asdf
                            :swank-fancy-inspector
                            :swank-fuzzy
-                           :swank-indentation
                            :swank-presentations
                            :swank-clipboard
                            :swank-sprof
