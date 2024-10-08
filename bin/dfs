@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# on a system with snap there are many file systems which are
+# not of any importance, so filter them out
+
+df "$@" | egrep -v "(^/dev/loop|^shm|^overlay)"

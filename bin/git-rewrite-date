@@ -1,0 +1,43 @@
+#!/bin/bash
+
+usage() {
+    printf "\nUSAGE: $(basename $0) commit \"date input for command 'date -d'\"\n\n"
+    printf "       date input might be something like 'april 24 16:21' or 'may 1 2012 13:04:37'\n\n"
+    printf "       NOTE: the branch you want to rewrite MUST be checked out\n\n"
+}
+
+if [ $# != 2 ] ; then
+    usage
+    exit 1
+fi
+
+commit=$1
+
+if [[ -z "${2// }" ]] ; then
+    printf "\nError: date is empty\n"
+    usage
+    exit 2
+fi
+
+date=$(date -R -d "$2")
+
+tmpfsdir=/run/user/$UID/tmp
+mkdir -p $tmpfsdir
+
+# We should restrict the filter-branch call to a range, as
+# - usually, recent commits are rewritten
+# - even for old commits, the smaller the range, the quicker the rewrite
+#
+# Only if we want to rewrite the first commit (ever), then the range
+# should be omitted.
+firstcommit=$(git log --format=%H --reverse | head -n 1)
+
+range="$commit~1..HEAD"
+
+if [[ "$commit" == "$firstcommit" ]] ; then
+    range=""
+fi
+
+git filter-branch -d $tmpfsdir -f --env-filter "if test \$GIT_COMMIT = '$commit' ; then GIT_AUTHOR_DATE='$date'; GIT_COMMITTER_DATE='$date'; fi" $range
+
+rm -rf $tmpfsdir

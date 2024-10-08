@@ -1,0 +1,15 @@
+#!/bin/bash
+
+usage() {
+    printf "\nUSAGE: $(basename $0)  RELATIVE_PATH_TO_FILE\n\n"
+    printf "       RELATIVE_PATH_TO_FILE is the relative path as seen from the top-level directory of the repo\n\n"
+}
+
+if [ $# != 1 ] ; then
+    usage
+    exit 1
+fi
+
+path=$1
+
+git filter-branch --force --index-filter "git rm --cached --ignore-unmatch $path" --prune-empty --tag-name-filter cat -- --all

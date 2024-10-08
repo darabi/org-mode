@@ -1,0 +1,23 @@
+#!/bin/bash
+
+usage() {
+    printf "\nUSAGE: $(basename $0) commit \"new commit message\"\n\n"
+    printf "       commit - hash of the commit to rewrite\n\n"
+}
+
+if [ $# != 2 ] ; then
+    usage
+    exit 1
+fi
+
+commit=$1
+
+if [[ -z "${2// }" ]] ; then
+    printf "\nError: commit message is empty\n"
+    usage
+    exit 2
+fi
+
+message="$2"
+
+git filter-branch -f --msg-filter "if test \$GIT_COMMIT = '$commit' ; then echo \"$message\"; else cat ; fi"

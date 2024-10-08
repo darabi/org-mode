@@ -1,0 +1,15 @@
+#!/bin/bash
+
+usage() {
+    printf "\nUSAGE: $(basename $0) \"old name regexp\" \"new name\" \"old email regexp\" \"new email\"\n\n"
+}
+
+if [ $# != 4 ] ; then
+    usage
+    exit 1
+fi
+
+git filter-branch -f --tag-name-filter cat --env-filter "GIT_COMMITTER_EMAIL=\`echo \$GIT_COMMITTER_EMAIL | sed -e \"s/$3/$4/g\"\`"
+git filter-branch -f --tag-name-filter cat --env-filter "GIT_AUTHOR_EMAIL=\`echo \$GIT_AUTHOR_EMAIL | sed -e \"s/$3/$4/g\"\`"
+git filter-branch -f --tag-name-filter cat --env-filter "GIT_COMMITTER_NAME=\`echo \$GIT_COMMITTER_NAME | sed -e \"s/$1/$2/g\"\`"
+git filter-branch -f --tag-name-filter cat --env-filter "GIT_AUTHOR_NAME=\`echo \$GIT_AUTHOR_NAME | sed -e \"s/$1/$2/g\"\`"
