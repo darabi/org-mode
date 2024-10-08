@@ -1,0 +1,179 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
+# for examples
+
+# If not running interactively, don't do anything
+[ -z "$PS1" ] && return
+
+# don't put duplicate lines in the history. See bash(1) for more options
+# ... or force ignoredups and ignorespace
+HISTCONTROL=ignoredups:ignorespace
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-*color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+        # We have color support; assume it's compliant with Ecma-48
+        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+        # a case would tend to support setf rather than setaf.)
+        color_prompt=yes
+    else
+        color_prompt=
+    fi
+fi
+
+if [ "$color_prompt" = yes ]; then
+    PS1_NOTITLE='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1_NOTITLE='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+PS1=$PS1_NOTITLE
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
+
+# load my personal completion files too
+for bcfile in ~/.bash_completion.d/* ; do
+    [ -f "$bcfile" ] && . $bcfile
+done
+set +x
+
+if [ -d ~/bin ]; then
+    export PATH=~/bin:$PATH
+fi
+
+if [ -d ~/.cabal/bin ]; then
+    export PATH=~/.cabal/bin:$PATH
+fi
+
+function name-terminal {
+    PS1=$PS1_NOTITLE
+    if [ $# == 1 ] ; then
+        echo -en "\033]2;$1\007"
+    fi
+}
+
+hostbashrc=~/.bashrc.`hostname -f`
+if [ -e $hostbashrc ] ; then
+    . $hostbashrc
+fi
+
+export LANGUAGE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# this one is necessary for Oracle's sqlplus to do the right thing
+export NLS_LANG=AMERICAN_AMERICA.UTF8
+
+export DEBEMAIL=darabi@m-creations.net
+export DEBFULLNAME="Kambiz Darabi"
+
+# less with color support and emacsclient
+export PAGER='less -R'
+export EDITOR=ec
+
+################################################
+# Added by Oracle Instant Client Easy-Install  #
+# On Github @ bit.ly/XoqtcH                    #
+################################################
+# export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib
+# export ORACLE_HOME=/usr/lib/oracle/11.2/client64
+# export TNS_ADMIN=/usr/lib/oracle/11.2/client64/network/admin
+
+# export PATH=/home/darabi/sencha-cmd/4.0.4/Sencha/Cmd/4.0.4.84:$PATH
+# export SENCHA_CMD_3_0_0="/home/darabi/opt/sencha/Sencha/Cmd/5.0.2.270"
+# export PATH=/home/darabi/opt/SenchaSDKTools-2.0.0-beta3:$PATH
+# export SENCHA_SDK_TOOLS_2_0_0_BETA3="/home/darabi/opt/SenchaSDKTools-2.0.0-beta3"
+# export PATH=/home/darabi/opt/sencha/Sencha/Cmd/5.0.2.270:$PATH
+
+export NVM_DIR="/home/darabi/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
+# DWIM
+
+export DWIM_WORKSPACE=~/common-lisp
+
+export QUICKLISP_HOME=~/quicklisp
+export DWIM_DIST=m-creations
+dwimenv_dir=$DWIM_WORKSPACE/hu.dwim.environment
+
+# env in workspace takes precedence
+if [ ! -e $DWIM_WORKSPACE/hu.dwim.environment ] ; then
+    dwimenv_dir=$(dirname $QUICKLISP_HOME/$(cat $QUICKLISP_HOME/dists/$DWIM_DIST/installed/systems/hu.dwim.environment.txt))
+fi
+
+export PATH=$PATH:$dwimenv_dir/bin
+. $dwimenv_dir/bin/environment.sh
+
+export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
+export NVS_HOME="$HOME/.nvs"
+[ -s "$NVS_HOME/nvs.sh" ] && . "$NVS_HOME/nvs.sh"
+
+if [ -d ~/.emacs.d/site-lisp/bin ]; then
+    export PATH="$PATH:~/.emacs.d/site-lisp/bin"
+fi
+
+if [ -d $HOME/go/bin ]; then
+    export PATH="$PATH:$HOME/go/bin"
+fi
+
+PATH="/home/darabi/perl5/bin${PATH:+:${PATH}}"; export PATH;
+PERL5LIB="/home/darabi/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+PERL_LOCAL_LIB_ROOT="/home/darabi/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
+PERL_MB_OPT="--install_base \"/home/darabi/perl5\""; export PERL_MB_OPT;
+PERL_MM_OPT="INSTALL_BASE=/home/darabi/perl5"; export PERL_MM_OPT;
+
+# Liquibase
+export PATH="$PATH:~/opt/liquibase/current"
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# GVM overwrites cd with a slow, buggy 100 liner, only use it if you MUST
+# [[ -s "/home/darabi/.gvm/scripts/gvm" ]] && source "/home/darabi/.gvm/scripts/gvm"
