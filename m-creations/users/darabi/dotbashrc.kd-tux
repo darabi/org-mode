@@ -1,0 +1,240 @@
+# -*- mode: shell-script; sh-basic-offset: 2; indent-tabs-mode: nil -*-
+
+# this file is intended to be sourced by .bashrc
+# so, you can safely use bashisms
+
+CLASSPATH=~/lib/java:$CLASSPATH
+
+function jdk6_ibm() {
+  export JAVA_HOME=/opt/ibm/ibm-jdk-1.6
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk6_sun() {
+  export JAVA_HOME=~/opt/jdk1.6.0_33-x86_64
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk7_sun() {
+  export JAVA_HOME=~/opt/jdk1.7.0_40
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk8_sun() {
+  export JAVA_HOME=~/opt/jdk1.8
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk5_sun() {
+  export JAVA_HOME=/usr/lib/jvm/java-1.5.0-sun
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk10_sun() {
+  export JAVA_HOME=~/opt/jdk1.10
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk11_sun() {
+  export JAVA_HOME=~/opt/jdk11
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk14_openjdk() {
+  export JAVA_HOME=~/opt/jdk14
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk17_oracle() {
+  export JAVA_HOME=~/opt/jdk17
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk17_eclipse() {
+  export JAVA_HOME=~/opt/jdk17-eclipse
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+function jdk21_eclipse() {
+  export JAVA_HOME=~/opt/jdk21-eclipse
+  export PATH=$JAVA_HOME/bin:$PATH
+}
+
+# unlimited stack traces
+# export JAVA_OPTS="-XX:MaxJavaStackTraceDepth=-1"
+
+jdk11_sun
+
+## MAVEN
+##
+#   MAVEN_OPTS - parameters passed to the Java VM when running Maven
+#     e.g. to debug Maven itself, use
+#       set MAVEN_OPTS=-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000
+export MAVEN_OPTS="-Xms512m -Xmx2048m -Xss5m"
+export MVN_HOME=~/opt/maven/current
+export PATH=$MVN_HOME/bin:$PATH
+
+function maven_mcreations() {
+  ln -sf ~/.m2/settings.xml.mcreations ~/.m2/settings.xml
+}
+
+function maven_heidelpay() {
+  ln -sf ~/.m2/settings.xml.heidelpay ~/.m2/settings.xml
+}
+
+function maven_unzer() {
+  ln -sf ~/.m2/settings.xml.unzer ~/.m2/settings.xml
+}
+
+# Gradle
+function gradle4() {
+  export PATH=~/opt/gradle/gradle-4/bin:$PATH
+}
+function gradle5() {
+  export PATH=~/opt/gradle/gradle-5/bin:$PATH
+}
+
+gradle5
+
+# ant
+export ANT_HOME=~/opt/ant
+export PATH=$ANT_HOME/bin:$PATH
+
+# oracle
+
+# export ORACLE_HOME=/opt/oracle/product/11.2.0/server
+
+# Oracle sqlplus client
+# ~/opt/oracle/current contains no bin/ directory and only has sqlplus at that location
+export ORACLE_HOME=~/opt/oracle/current
+export PATH=$ORACLE_HOME:$PATH
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME # should be a real lib dir if there is more than sqlplus in $ORACLE_HOME
+
+# sqlcl (new command line client)
+export PATH=$PATH:~/opt/oracle/sqlcl/bin
+
+function sid_parham() {
+  export ORACLE_SID=parham
+}
+
+function sid_voc() {
+  export ORACLE_SID=dvcvoc
+}
+
+function sid_hpc() {
+  export ORACLE_SID=hpcdev
+}
+
+sid_hpc
+
+function eclipsejuno () {
+  ~/opt/eclipse-4.2-juno-x86_64/eclipse 2>&1 > /dev/null &
+}
+
+function eclipseindigo () {
+  ~/opt/eclipse-3.7-indigo-sr2-x86_64/eclipse 2>&1 > /dev/null &
+}
+
+function eclipsekepler () {
+  ~/opt/eclipse-4.3-kepler-x86_64/eclipse 2>&1 > /dev/null &
+}
+
+
+
+# allegro common lisp
+# export PATH=$PATH:/opt/acl
+
+# bonita BPM
+# export PATH=$PATH:/opt/bonita/current
+
+export USER_FITNESSE_PORT=9090
+
+export EDITOR=emacsclient
+
+## DWIM
+##
+DWIM_WORKSPACE=$HOME/common-lisp
+export DWIM_WORKSPACE
+
+#
+# Phabricator is now installable via apt
+# export PHAB_HOME=~/opt/phabricator
+# export PATH=$PHAB_HOME/arcanist/bin:$PATH
+# . $PHAB_HOME/arcanist/resources/shell/bash-completion
+
+# Haxe
+#
+export ANDROID_SDK=/opt/android-sdk
+export ANDROID_HOME=$ANDROID_SDK
+export ANDROID_NDK=/opt/android-ndk
+
+export PATH=$PATH:$ANDROID_SDK/tools:$ANDROID_SDK/platform-tools:$ANDROID_SDK/emulator
+
+alias emulator-s4-portrait='emulator -avd s4-x86-portrait'
+
+# different lisps
+
+# symbolic link ccl was created there
+# export PATH=~/opt/ccl-1.9:$PATH
+# symbolic link cmucl was created there
+# export PATH=~/opt/cmucl-20e/bin:$PATH
+# there is no script, but ~/bin/abcl uses this env var
+# export ABCL_HOME=~/opt/abcl-bin-1.3.1
+
+# export PATH=~/opt/sencha/cmd:$PATH
+
+# this is old and for Ext 4.x
+# export PATH=~/opt/Sencha/SenchaSDKTools-2.0.0-beta3:$PATH
+# CIM_HOME=/home/darabi/.cim; [ -s "$CIM_HOME/init.sh" ] && . "$CIM_HOME/init.sh"
+
+# Apache Directory Studio LDAP browser
+export PATH=$PATH:~/opt/apache-directory-studio
+
+# OpenShift
+export PATH=$PATH:~/opt/openshift/current
+# Minishift
+export PATH=$PATH:~/opt/minishift/current
+export ISTIO_HOME=~/opt/istio/current
+export PATH=$ISTIO_HOME/bin:$PATH
+
+source /home/darabi/.rvm/scripts/rvm
+
+# -- databases in development
+
+alias psqlvicon='psql -h localhost -d vicon -U vicon'
+alias psqlholz='psql -h localhost -d holz24 -U holz24'
+alias psqlaya='psql -h localhost -d ayacandas -U ayacandas'
+
+# I don't run docker locally any more (with microk8s)
+# load weave DOCKER_HOST variable
+# eval `weave env`
+
+# Go development/Kubernetes development
+export GOPATH="$HOME/go"
+export PATH="${PATH}:${GOPATH}/bin"
+# go get project/name@v0.5.4 needs 'modern' go get functionality
+export GO111MODULE=on
+
+# ko is Google's tool for running go applications in kubernetes clusters
+# https://github.com/google/ko
+export KO_DOCKER_REPO='localhost:32000/mcreations'
+
+alias c=kubectl
+complete -F _complete_alias c
+
+alias k=kubectl
+complete -F _complete_alias k
+
+# # Medulife/Telipro docker build needs these
+# export NUM_SHARDS=3
+# export ENVIRONMENT=e2e
+
+# Slicer 3D Medical Image Processing Software
+export PATH="$PATH:/opt/slicer/current/bin"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/slicer/current/bin"
+
+# OCaml package manager initialisation
+# # opam configuration
+# test -r /home/darabi/.opam/opam-init/init.sh && . /home/darabi/.opam/opam-init/init.sh > /dev/null 2> /dev/null || tru
+e
