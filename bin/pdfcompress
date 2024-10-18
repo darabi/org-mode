@@ -1,0 +1,16 @@
+#!/bin/bash
+
+pdfcompress () {
+    gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook \
+       -dColorImageDownsampleType=/Bicubic -dColorImageResolution=144 \
+       -dGrayImageDownsampleType=/Bicubic -dGrayImageResolution=144 \
+       -dMonoImageDownsampleType=/Bicubic -dMonoImageResolution=144 \
+       -dNOTRANSPARENCY -sOutputFile=`basename $1 .pdf`.c.pdf $1;
+}
+
+for f in ${@}; do
+    if [[ -f $f && $f =~ .*\.pdf ]] ; then
+        echo Compressing $f
+        pdfcompress $f
+    fi
+done

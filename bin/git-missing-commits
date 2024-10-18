@@ -1,0 +1,41 @@
+#!/bin/bash
+
+branch1=$1
+branch2=$2
+
+# show the commits which are present in 'which_side', but absent from the other branch
+which_side=right
+
+b1_oneline=$(mktemp -t git-missing-commits-b1-XXXXXXXX)
+b2_oneline=$(mktemp -t git-missing-commits-b2-XXXXXXXX)
+
+git log --oneline  $branch1 | cut -f 2- -d ' ' | sort -u > $b1_oneline
+git log --oneline  $branch2 | cut -f 2- -d ' ' | sort -u > $b2_oneline
+
+diff_of_logs=$(mktemp -t git-missing-commits-diff-XXXXXXXX)
+
+diff $b1_oneline $b2_oneline > $diff_of_logs
+
+if [ $which_side == "right" ] ; then
+  regex='^>'
+  branch_to_check=$branch2
+else
+  regex='^<'
+  branch_to_check=$branch1
+fi
+
+awk_script=$(mktemp -t git-missing-commits-awk-XXXXXXXX)
+
+# replace the regex characters (and forward slash, because of awk's pattern part)
+egrep $regex $diff_of_logs | cut -f 2- -d ' ' | sed 's/[.[\*^$()+?{|/]/\\&/g' | awk -e ' { printf("/[0-9a-f]+ %s/ { print }\n", $0) } ' > $awk_script
+
+
+if [ $which_side == "right" ] ; then
+  regex='^>'
+else
+  regex='^<'
+fi
+
+git log --oneline $branch_to_check | awk -f $awk_script
+
+# rm $b1_oneline $b2_oneline $diff_of_logs $awk_script

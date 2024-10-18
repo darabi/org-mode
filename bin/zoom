@@ -1,0 +1,14 @@
+#!/bin/bash
+
+usage() {
+  printf "\n`basename $0` text-scaling-factor\n\n"
+  printf "      Uses gsettings to set the text-scaling-factor (a float value between 0.5 and 3.0)\n\n"
+  printf "      The current factor is `gsettings get org.gnome.desktop.interface text-scaling-factor`\n\n"
+}
+
+if [ $# == 0 ] ; then
+  usage
+  exit 1
+fi
+
+gsettings set org.gnome.desktop.interface text-scaling-factor $1
