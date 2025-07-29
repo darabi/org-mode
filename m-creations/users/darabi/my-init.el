@@ -264,7 +264,7 @@
                          "~/vc/org/work"
                          "~/vc/org/life"))
 
-(setq org-directory "~/vc/org")
+(setq org-directory "~/vc/org/")
 
 (eval-after-load 'org
   '(progn
@@ -295,10 +295,16 @@
 
 (setq org-capture-templates
       `(
-        ("p" "Protocol" entry (file+headline ,(concat org-directory "/notes.org") "Inbox")
+        ("p" "Protocol" entry (file+headline ,org-default-notes-file "Inbox")
              "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
-        ("L" "Protocol Link" entry (file+headline ,(concat org-directory "/notes.org") "Inbox")
+        ("L" "Protocol Link" entry (file+headline ,org-default-notes-file "Inbox")
              "* %? [[%:link][%:description]] \nCaptured On: %U")))
+
+;; this is the default value of the constant, so absolutely no need to set it!
+;;
+;; (setq org-protocol-protocol-alist-default '(("org-capture" :protocol "capture" :function org-protocol-capture :kill-client t)
+;;                                             ("org-store-link" :protocol "store-link" :function org-protocol-store-link)
+;;                                             ("org-open-source" :protocol "open-source" :function org-protocol-open-source)))
 
 ;; (add-to-list 'helm-completing-read-handlers-alist '(org-capture . helm-org-completing-read-tags))
 ;; (add-to-list 'helm-completing-read-handlers-alist '(org-set-tags . helm-org-completing-read-tags))
