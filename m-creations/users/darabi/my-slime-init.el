@@ -266,6 +266,9 @@
 
 (add-to-list 'slime-lisp-implementations `(sbcl-system ("sbcl" "--dynamic-space-size 2000 --control-stack-size 32")))
 
+;; Do some standard SLIME configuration.
+(slime-setup '(slime-fancy slime-tramp))
+
 (setq slime-compilation-slime-maybe-show-compilation-log t)
 
 (defun kd-dwim-redefine-keys ()

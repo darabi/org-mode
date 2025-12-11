@@ -5,12 +5,12 @@
   ;; it's almost like (set-mark-command t) but that screws up marks when C-x C-x is used meanwhile
   (if nil
       (exchange-point-and-mark (not current-prefix-arg)) ; this branch preserves the current point
-      (progn
-        (when (and (first mark-ring)
-                   (equal (point) (marker-position (first mark-ring))))
-          (pop-mark)
-          (set-mark (car mark-ring)))
-        (goto-char (or (mark) (point)))))
+    (progn
+      (when (and (first mark-ring)
+                 (equal (point) (marker-position (first mark-ring))))
+        (pop-mark)
+        (set-mark (car mark-ring)))
+      (goto-char (or (mark) (point)))))
   (pop-mark)
   (set-mark (car mark-ring))
   (deactivate-mark))
@@ -61,14 +61,14 @@ and not a minibuffer's window, plus there is two or more windows."
                 (prog1
                     (cdr from)
                   (setq from (car from)))
-                (query-replace-read-to from prompt regexp-flag))))
+              (query-replace-read-to from prompt regexp-flag))))
     (list from to current-prefix-arg)))
 
 (defun dwim-query-replace-current-sexp (from-string to-string &optional delimited start end)
   (interactive (let ((common (dwim-query-replace-read-to-arg
                               (if (and transient-mark-mode mark-active)
                                   "Query replace in region"
-                                  "Query replace")
+                                "Query replace")
                               (slime-sexp-at-point)
                               nil)))
 		 (list (nth 0 common) (nth 1 common) (nth 2 common)
@@ -91,7 +91,7 @@ and not a minibuffer's window, plus there is two or more windows."
           (let ((x-select-enable-clipboard t))
             (x-select-text (buffer-substring-no-properties beg end)))
           (deactivate-mark))
-        (error "Region is not active"))
+      (error "Region is not active"))
     ;;(call-interactively 'cua-copy-region)
     ))
 
@@ -112,8 +112,8 @@ and not a minibuffer's window, plus there is two or more windows."
       (delete-region (point) (mark))
       (deactivate-mark))
     (let ((x-select-enable-clipboard t))
-      (insert (or (x-cut-buffer-or-selection-value)
-                  x-last-selected-text-clipboard)))
+      (insert (or (x-selection-value)
+                  gui--last-selected-text-clipboard)))
     ;;(x-clipboard-yank)
     ;;(call-interactively 'cua-paste)
     ))
@@ -143,8 +143,8 @@ and not a minibuffer's window, plus there is two or more windows."
            (not (zerop (buffer-size target-buffer))))
       (if (eq (current-buffer) target-buffer)
           (command-execute 'switch-to-other-buffer) ;or (switch-to-buffer (slime-recently-visited-buffer 'lisp-mode))
-          (switch-to-buffer target-buffer))
-      (message "No such buffer is available, or it's empty...")))
+        (switch-to-buffer target-buffer))
+    (message "No such buffer is available, or it's empty...")))
 
 (defun dwim-switch-between-slime-inspector-and-last-buffer ()
   (interactive)
@@ -173,13 +173,13 @@ and not a minibuffer's window, plus there is two or more windows."
   (interactive)
   (let ((target-buffer (get-buffer (slime-buffer-name :sprof))))
     (cond
-      ((and target-buffer
-            (eq (current-buffer) target-buffer))
-       (dwim-switch-between-target-buffer-and-last-buffer target-buffer))
-      (target-buffer
-       (switch-to-buffer target-buffer))
-      (t
-       (slime-sprof-browser)))))
+     ((and target-buffer
+           (eq (current-buffer) target-buffer))
+      (dwim-switch-between-target-buffer-and-last-buffer target-buffer))
+     (target-buffer
+      (switch-to-buffer target-buffer))
+     (t
+      (slime-sprof-browser)))))
 
 (defun dwim-switch-between-slime-selector-and-last-buffer (buffer-name slime-selector-key)
   (interactive)
@@ -187,9 +187,9 @@ and not a minibuffer's window, plus there is two or more windows."
     (if (and target-buffer
              (eq (current-buffer) target-buffer))
         (dwim-switch-between-target-buffer-and-last-buffer target-buffer)
-        (progn
-          (slime-selector slime-selector-key nil t)
-          (switch-to-buffer (get-buffer buffer-name))))))
+      (progn
+        (slime-selector slime-selector-key nil t)
+        (switch-to-buffer (get-buffer buffer-name))))))
 
 (defun dwim-switch-between-slime-thread-list-and-last-buffer ()
   (interactive)
@@ -203,7 +203,7 @@ and not a minibuffer's window, plus there is two or more windows."
   (interactive)
   (if (eq major-mode 'inferior-emacs-lisp-mode)
       (command-execute 'switch-to-other-buffer) ;or (switch-to-buffer (slime-recently-visited-buffer 'lisp-mode))
-      (ielm)))
+    (ielm)))
 
 (defun dwim-switch-between-debug-and-last-source-buffer ()
   (interactive)
@@ -213,7 +213,7 @@ and not a minibuffer's window, plus there is two or more windows."
                         (sldb-get-default-buffer))))
     (if (eq (current-buffer) debug-buffer)
         (switch-to-buffer (slime-recently-visited-buffer 'lisp-mode))
-        (switch-to-buffer debug-buffer))))
+      (switch-to-buffer debug-buffer))))
 
 ;;;;;;
 ;;; editing functions
@@ -233,14 +233,14 @@ and not a minibuffer's window, plus there is two or more windows."
           (goto-char region-end)
           (if (bolp)
               (backward-char)
-              (end-of-line))
+            (end-of-line))
           (setf line-end (1+ (point)))
           (deactivate-mark))
-        (progn
-          (end-of-line)
-          (setf line-end (1+ (point)))
-          (beginning-of-line)
-          (setf line-start (point))))
+      (progn
+        (end-of-line)
+        (setf line-end (1+ (point)))
+        (beginning-of-line)
+        (setf line-start (point))))
     (next-line 1)
     (beginning-of-line)
     (insert-buffer-substring (current-buffer) line-start line-end)
@@ -286,13 +286,13 @@ and not a minibuffer's window, plus there is two or more windows."
         (list start end)))))
 
 (defun* dwim-kill-whitespaces% (&key (backward t) (forward t))
- "Delete whitespaces (controlled by forwardp and backwardp) at position
+  "Delete whitespaces (controlled by forwardp and backwardp) at position
   and insert a space if not looking-at a paren."
- (let ((bounds (dwim-whitespace-bounds-at-point :backward backward :forward forward)))
-   (when bounds
-     (destructuring-bind (start end) bounds
-       (delete-region start end)
-       t))))
+  (let ((bounds (dwim-whitespace-bounds-at-point :backward backward :forward forward)))
+    (when bounds
+      (destructuring-bind (start end) bounds
+        (delete-region start end)
+        t))))
 
 (defun dwim-kill-line (&optional count)
   "Kills a line, tries to keep the caret at the same position."
@@ -304,9 +304,9 @@ and not a minibuffer's window, plus there is two or more windows."
     (setf start (point))
     (if count
         (forward-line count)
-        (if (eobp)
-            (signal 'end-of-buffer nil))
-        (forward-line 1))
+      (if (eobp)
+          (signal 'end-of-buffer nil))
+      (forward-line 1))
     (setf end (point))
     ;; do not store empty lines in the kill ring
     ;;(goto-char old-point)
@@ -330,8 +330,8 @@ and not a minibuffer's window, plus there is two or more windows."
                 (when (and (not (char-equal (following-char) ?\) ))
                            (not (char-equal (preceding-char) ?\( )))
                   (insert-string " ")))
-              (paredit-newline)))
-        (message "No whitespaces at point"))))
+            (paredit-newline)))
+      (message "No whitespaces at point"))))
 
 (defun dwim-kill-xml-tag ()
   (interactive)
@@ -350,12 +350,12 @@ and not a minibuffer's window, plus there is two or more windows."
   (when buffers
     (when cl
       (define-key (cond
-                    ((boundp 'slime-editing-map)
-                     slime-editing-map)
-                    ((boundp 'slime-parent-map)
-                     slime-parent-map)
-                    (t slime-mode-map))
-          key binding))
+                   ((boundp 'slime-editing-map)
+                    slime-editing-map)
+                   ((boundp 'slime-parent-map)
+                    slime-parent-map)
+                   (t slime-mode-map))
+                  key binding))
     (when elisp
       (define-key emacs-lisp-mode-map key binding))
     (when (and scheme (boundp 'scheme-mode-map))
@@ -371,16 +371,16 @@ and not a minibuffer's window, plus there is two or more windows."
   (let ((sexp (slime-sexp-at-point)))
     (if (featurep 'xemacs)
         (own-clipboard sexp)
-        (let ((x-select-enable-clipboard t))
-          (x-select-text sexp)))))
+      (let ((x-select-enable-clipboard t))
+        (x-select-text sexp)))))
 
 (defun dwim-copy-word-at-point ()
   (interactive)
   (let ((word (word-at-point)))
     (if (featurep 'xemacs)
         (own-clipboard word)
-        (let ((x-select-enable-clipboard t))
-          (x-select-text word)))))
+      (let ((x-select-enable-clipboard t))
+        (x-select-text word)))))
 
 (defun dwim-findr-search-sexp (files dir)
   (interactive (list (findr-read-file-regexp)
@@ -394,7 +394,7 @@ and not a minibuffer's window, plus there is two or more windows."
     (unless (hu.dwim.quasi-quote:after-sexp-separator-p)
       (beginning-of-thing (if (slime-symbol-at-point)
                               'slime-symbol
-                              'sexp)))
+                            'sexp)))
     (yank-clipboard-selection)
     (kill-sexp)
     (goto-char point)))
@@ -422,7 +422,7 @@ and not a minibuffer's window, plus there is two or more windows."
           (setq face (car face))))
     (if (featurep 'xemacs)
         (hyper-describe-face face)
-        (describe-face face))))
+      (describe-face face))))
 
 ;;;
 ;;; Convert source files in input-dir recursively to *.html in output-dir with the same dir structure

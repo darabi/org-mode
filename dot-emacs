@@ -1,10 +1,10 @@
 ;;; Initialisation
 
-; in case of errors during startup
-; (setq debug-on-error t)
+                                        ; in case of errors during startup
+                                        ; (setq debug-on-error t)
 (require 'warnings)
 
-; Common Lisp compatibility mode
+                                        ; Common Lisp compatibility mode
 (require 'cl-lib)
 
 ;; By default, emacs loads all installed packages at startup, which is not the best idea
@@ -13,7 +13,7 @@
 ;; all custom files are in .emacs.d/site-lisp or subdirs of it
 (add-to-list 'load-path (expand-file-name "~/.emacs.d/site-lisp"))
 (let ((default-directory (expand-file-name "~/.emacs.d/site-lisp")))
-          (load (expand-file-name "subdirs.el") t t t))
+  (load (expand-file-name "subdirs.el") t t t))
 
 (require 'use-package)
 
@@ -33,10 +33,10 @@
 
 (when quicklisp-home
   (cl-loop for dist in '("m-creations" "quicklisp")
-        do
-        (when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
-          (setq quicklisp-slime-helper-dist dist)
-          (return)))
+           do
+           (when (file-exists-p (concat quicklisp-home "/dists/" dist "/installed/systems/swank.txt"))
+             (setq quicklisp-slime-helper-dist dist)
+             (return)))
   (unless (boundp 'quicklisp-slime-helper-dist)
     (warn "You have no slime in your quicklisp installation at %s" quicklisp-home)))
 
@@ -48,17 +48,17 @@
 (setq slime-mount-path "/common-lisp/slime")
 
 (setq slime-docker-implementations `(("sbcl-mc" ("--dynamic-space-size" "200" "--eval" "(ql:quickload :swank)" "--eval" "(progn (swank-loader:init) (setf swank::*loopback-interface* \"0.0.0.0\") (swank:create-server))")
-                                                ;; :slime-mount-path ,slime-mount-path
-                                                :image-name "mcreations/sbcl"
-                                                :image-tag ,mc-sbcl-docker-tag
-                                                :mounts ((("/common-lisp" . "/common-lisp"))
-                                                         (("/cache" . "/cache"))
-                                                         ;;  ((,mc-slime-docker-host-swank-path . ,slime-docker-default-swank-path))
-                                                         )
-                                                :uid 0
-                                                :gid 0
-                                                :env (("HOME" . "/home/lisp"))
-                                                :ports ((:host-port 4005 :container-port 4005 :ip "127.0.0.1")))))
+                                      ;; :slime-mount-path ,slime-mount-path
+                                      :image-name "mcreations/sbcl"
+                                      :image-tag ,mc-sbcl-docker-tag
+                                      :mounts ((("/common-lisp" . "/common-lisp"))
+                                               (("/cache" . "/cache"))
+                                               ;;  ((,mc-slime-docker-host-swank-path . ,slime-docker-default-swank-path))
+                                               )
+                                      :uid 0
+                                      :gid 0
+                                      :env (("HOME" . "/home/lisp"))
+                                      :ports ((:host-port 4005 :container-port 4005 :ip "127.0.0.1")))))
 
 ;; A user-specific directory should be present in ~/.emacs.d/site-lisp/users/${USER}
 (add-to-load-path-if-exists (concat "~/.emacs.d/site-lisp/m-creations/users/" (getenv "USER") "/"))
@@ -69,12 +69,12 @@
 ;; slime-mode-hook, then it is too late to load my-slime-init
 (add-hook 'lisp-mode-hook
           '(lambda ()
-            (when (file-exists-p "/usr/share/doc/hyperspec/")
-              (setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/"))
-            (require 'dwim-slime)
-            ;; this creates a configuration file for ASDF for using the slime/swank in this repo
-            (add-emacs.d-swank-to-asdf-source-registry)
-            (require 'my-slime-init "my-slime-init" t)))
+             (when (file-exists-p "/usr/share/doc/hyperspec/")
+               (setq common-lisp-hyperspec-root "file:///usr/share/doc/hyperspec/"))
+             (require 'dwim-slime)
+             ;; this creates a configuration file for ASDF for using the slime/swank in this repo
+             (add-emacs.d-swank-to-asdf-source-registry)
+             (require 'my-slime-init "my-slime-init" t)))
 
 ;; increase the max number for variable bindings and unwind-protect
 (setf max-specpdl-size 4000)
@@ -98,7 +98,7 @@
 (let* ((sysname (system-name))
        (machine-rc (concat "~/.emacs." sysname)))
   (if (file-exists-p machine-rc)
-    (load machine-rc)
+      (load machine-rc)
     (message "No machine specific emacs rc file for %s" sysname)))
 
 ;;; Set the PATH which is visible in emacs to the one defined in the shell startup files
@@ -171,16 +171,24 @@
 (autoload 'java-mode "mc-java-dev-init.el" nil t)
 
 ;; jedi for python programming
-(autoload 'jedi:setup "jedi" "Python autocompletion for Emacs" t)
+;; (autoload 'jedi:setup "jedi" "Python autocompletion for Emacs" t)
 
-(setq jedi:complete-on-dot t)
+;; (setq jedi:complete-on-dot t)
 
-(add-hook 'python-mode-hook '(lambda ()
-                               (require 'python-environment)
-                               (setq jedi:environment-virtualenv
-                                     (append python-environment-virtualenv
-                                             '("--python" "python3")))
-                               (jedi:setup)))
+;; (add-hook 'python-mode-hook '(lambda ()
+;;                                (require 'python-environment)
+;;                                (setq jedi:environment-virtualenv
+;;                                      (append python-environment-virtualenv
+;;                                              '("--python" "python3")))
+;;                                (jedi:setup)))
+
+
+(straight-use-package 'lsp-mode)
+(use-package lsp-ui
+  :commands lsp-ui-mode
+  :straight t)
+
+(add-hook 'python-mode-hook 'lsp-deferred)
 
 ;; magit usage always starts with magit-status, so add an autoload
 (autoload 'magit-status "magit" "Magit" t)

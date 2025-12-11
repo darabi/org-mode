@@ -21,26 +21,26 @@
 
 ;; http://www.emacswiki.org/emacs/CopyAndPaste
 
-; (transient-mark-mode 1)  ; Now on by default: makes the region act quite like the text "highlight" in many apps.
-; (setq shift-select-mode t) ; Now on by default: allows shifted cursor-keys to control the region.
+                                        ; (transient-mark-mode 1)  ; Now on by default: makes the region act quite like the text "highlight" in many apps.
+                                        ; (setq shift-select-mode t) ; Now on by default: allows shifted cursor-keys to control the region.
 (setq mouse-drag-copy-region nil)  ; stops selection with a mouse being immediately injected to the kill ring
 (setq x-select-enable-primary nil)  ; stops killing/yanking interacting with primary X11 selection
 (setq x-select-enable-clipboard t)  ; makes killing/yanking interact with clipboard X11 selection
 
 ;; these will probably be already set to these values, leave them that way if so!
 (setq interprogram-cut-function 'x-select-text)
-(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+(setq interprogram-paste-function 'x-selection-value)
 
 ;; Shift movement selects region
 (setq shift-select-mode t)
 (setq unshifted-motion-keys-deselect-region t)
 (delete-selection-mode t)
 
-; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
-; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
-; if you're used to other modern apps (that is to say, the mere act of highlighting doesn't
-; overwrite the clipboard or alter the kill ring, but you can paste in merely highlighted
-; text with the mouse if you want to)
+                                        ; You need an emacs with bug #902 fixed for this to work properly. It has now been fixed in CVS HEAD.
+                                        ; it makes "highlight/middlebutton" style (X11 primary selection based) copy-paste work as expected
+                                        ; if you're used to other modern apps (that is to say, the mere act of highlighting doesn't
+                                        ; overwrite the clipboard or alter the kill ring, but you can paste in merely highlighted
+                                        ; text with the mouse if you want to)
 (setq select-active-regions t) ;  active region sets primary X11 selection
 (global-set-key [mouse-2] 'mouse-yank-primary)  ; make mouse middle-click only paste from primary X11 selection, not clipboard and kill ring.
 
@@ -59,7 +59,7 @@
 (if (getenv "DISPLAY")
     (setq browse-url-browser-function '(("http" . browse-url-firefox)
                                         ("file" . browse-url-firefox)))
-    (setq browse-url-browser-function 'w3m-browse-url))
+  (setq browse-url-browser-function 'w3m-browse-url))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -71,13 +71,13 @@
 (load custom-file)
 
 (custom-set-variables
-  ;; custom-set-variables was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
  '(calendar-week-start-day 1)
  '(org-time-stamp-custom-formats (quote ("<%a %Y-%m-%d>" "<%Y-%m-%d>" "<%Y-%m-%d %H:%M>")))
-;; '(paren-mode (quote paren) nil (paren))
+ ;; '(paren-mode (quote paren) nil (paren))
  '(show-paren-delay 0)
  '(show-paren-mode (quote paren) nil (paren))
  '(vc-follow-symlinks t)
@@ -105,8 +105,8 @@
 ;; string-insert-rectange
 (global-set-key "\C-ci" 'string-insert-rectangle)
 
-; this is the original setting
-; (global-set-key [(control backspace)] 'backward-kill-word)
+                                        ; this is the original setting
+                                        ; (global-set-key [(control backspace)] 'backward-kill-word)
 
 ;;;; Key binding for switching to next and previous buffer
 (global-set-key '[C-tab] 'bs-cycle-next)
@@ -131,7 +131,7 @@
 (global-set-key "\M-[1;5D"    'backward-word)      ; Ctrl+left   => backward word
 
 ;; and in rxvt, these:
-; rxvt's keycodes for C-<left> and C-<right> are M-O d and M-O c,
+                                        ; rxvt's keycodes for C-<left> and C-<right> are M-O d and M-O c,
 (global-set-key [(meta O) (a)] 'backward-paragraph)
 (global-set-key [(meta O) (b)] 'forward-paragraph)
 (global-set-key [(meta O) (c)] 'forward-word)
@@ -268,8 +268,8 @@
 
 (eval-after-load 'org
   '(progn
-    ;; C-right forward-word is important for me
-    (define-key org-mode-map (kbd "C-c t") 'org-set-tags)))
+     ;; C-right forward-word is important for me
+     (define-key org-mode-map (kbd "C-c t") 'org-set-tags)))
 
 ;; plantuml export for org-mode
 ;; active Org-babel languages
@@ -296,9 +296,9 @@
 (setq org-capture-templates
       `(
         ("p" "Protocol" entry (file+headline ,org-default-notes-file "Inbox")
-             "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
+         "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
         ("L" "Protocol Link" entry (file+headline ,org-default-notes-file "Inbox")
-             "* %? [[%:link][%:description]] \nCaptured On: %U")))
+         "* %? [[%:link][%:description]] \nCaptured On: %U")))
 
 ;; this is the default value of the constant, so absolutely no need to set it!
 ;;
@@ -352,7 +352,7 @@
 
 (add-hook 'magit-log-edit-mode-hook
           '(lambda ()
-            (set-fill-column 60)))
+             (set-fill-column 60)))
 
 (when (require 'my-x-functions "my-x-functions" nil)
   (save-excursion
@@ -476,12 +476,12 @@ performed, then slime-complete-symbol is called"
 
 (add-hook 'slime-mode-hook
           (lambda ()
-             (define-key slime-mode-map [tab] 'dar-slime-mode-tab)
-             (define-key slime-mode-map [?\C-\)] 'slime-close-all-sexp)
-             (define-key slime-mode-map [?\C-c ?c] 'comment-region)
-             (define-key slime-mode-map [?\C-c ?u] 'uncomment-region)
-             (unless (slime-connected-p)
-               (save-excursion (slime)))))
+            (define-key slime-mode-map [tab] 'dar-slime-mode-tab)
+            (define-key slime-mode-map [?\C-\)] 'slime-close-all-sexp)
+            (define-key slime-mode-map [?\C-c ?c] 'comment-region)
+            (define-key slime-mode-map [?\C-c ?u] 'uncomment-region)
+            (unless (slime-connected-p)
+              (save-excursion (slime)))))
 
 (setq slime-net-coding-system 'utf-8-unix)
 
@@ -530,7 +530,7 @@ performed, then slime-complete-symbol is called"
 ;;; It is always better to know current line and column number
 (column-number-mode t)
 (line-number-mode t)
-(add-hook 'prog-mode-hook 'linum-mode)
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
 ;;; Make all yes-or-no questions as y-or-n
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -543,20 +543,20 @@ performed, then slime-complete-symbol is called"
 
 (add-hook 'lisp-mode-hook
           '(lambda ()
-            (paredit-mode +1)
-            (require 'findr)))
+             (paredit-mode +1)
+             (require 'findr)))
 
 (eval-after-load 'paredit
   '(progn
      ;; C-right forward-word is important for me
      (define-key paredit-mode-map (kbd "M-<right>")
-       'paredit-forward-slurp-sexp)
+                 'paredit-forward-slurp-sexp)
      (define-key paredit-mode-map (kbd "C-<right>")
-       'forward-word)
+                 'forward-word)
      (define-key paredit-mode-map (kbd "M-<left>")
-       'paredit-forward-barf-sexp)
+                 'paredit-forward-barf-sexp)
      (define-key paredit-mode-map (kbd "C-<left>")
-       'backward-word)))
+                 'backward-word)))
 
 
 (add-hook 'slime-mode-hook
@@ -651,16 +651,16 @@ performed, then slime-complete-symbol is called"
 
 (eval-after-load 'org-agenda
   '(progn
-    (define-key org-agenda-mode-map "V" 'bh/view-next-project)
-    (define-key org-agenda-mode-map "P" 'bh/narrow-to-project)
-    (define-key org-agenda-mode-map "U" 'bh/narrow-up-one-level)
-    (define-key org-agenda-mode-map "F" 'bh/restrict-to-file-or-follow)
-    (define-key org-agenda-mode-map "N" 'bh/narrow-to-subtree)
-    (org-defkey org-agenda-mode-map "W" 'bh/widen)))
+     (define-key org-agenda-mode-map "V" 'bh/view-next-project)
+     (define-key org-agenda-mode-map "P" 'bh/narrow-to-project)
+     (define-key org-agenda-mode-map "U" 'bh/narrow-up-one-level)
+     (define-key org-agenda-mode-map "F" 'bh/restrict-to-file-or-follow)
+     (define-key org-agenda-mode-map "N" 'bh/narrow-to-subtree)
+     (org-defkey org-agenda-mode-map "W" 'bh/widen)))
 
-; Whether to prompt to confirm evaluation
-; This may be dangerous - make sure you understand the consequences
-; of setting this -- see the docstring for details
+                                        ; Whether to prompt to confirm evaluation
+                                        ; This may be dangerous - make sure you understand the consequences
+                                        ; of setting this -- see the docstring for details
 (setq org-confirm-babel-evaluate t)
 
 (add-hook 'org-invoice-heading-hook 'my-invoice-heading-hook)
@@ -842,7 +842,7 @@ in the buffer and update it."
 ;;     (let ((current-prefix-arg arg))
 ;;       (call-interactively orig))))
 
-; (advice-add #'org-set-tags-command :around #'org-set-tags-command-multiple)
+                                        ; (advice-add #'org-set-tags-command :around #'org-set-tags-command-multiple)
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ;;
@@ -929,8 +929,8 @@ in the buffer and update it."
 ;; ;;         (nil . "")))
 
 ;;; Helm setup
-; (require 'helm-ido-like)
-; (helm-ido-like)
+                                        ; (require 'helm-ido-like)
+                                        ; (helm-ido-like)
 
 ;; ;;;;;;
 ;; ;;; IDO setup
@@ -1169,10 +1169,10 @@ in the buffer and update it."
 
 (add-hook 'lisp-mode-hook
           '(lambda ()
-            (abbrev-mode t)
-            (paredit-mode +1)
-            ;; dash is not a word delimiter any more
-            (modify-syntax-entry ?- "w")))
+             (abbrev-mode t)
+             (paredit-mode +1)
+             ;; dash is not a word delimiter any more
+             (modify-syntax-entry ?- "w")))
 
 ;; ;;; We use left and right guillemet for quasi-quoted strings
 ;; (global-set-key [?\C-<] 'insert-left-guillemet)
@@ -1315,5 +1315,8 @@ in the buffer and update it."
 
 ;; (require 'default-text-scale)
 ;; (default-text-scale-mode)
+
+;; spell checking
+(setq ispell-program-name "aspell")
 
 (provide 'my-init)
